@@ -19,9 +19,11 @@ import {
 } from 'lucide-react';
 import { volunteerOpportunities } from '../data/donations';
 import { toast } from 'sonner';
+import { useNotifications } from '../context/NotificationContext';
 
 export function Volunteer() {
   const [selectedOpportunity, setSelectedOpportunity] = useState<string | null>(null);
+  const { addNotification } = useNotifications();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -37,7 +39,11 @@ export function Volunteer() {
       return;
     }
 
-    toast.success('تم تسجيلك بنجاح! سنتواصل معك قريباً');
+    addNotification({
+      type: 'success',
+      title: 'تم تسجيلك بنجاح!',
+      message: 'شكراً لانضمامك لفريق التطوع. سنتواصل معك قريباً.',
+    });
     setFormData({ name: '', email: '', phone: '', message: '' });
     setSelectedOpportunity(null);
   };

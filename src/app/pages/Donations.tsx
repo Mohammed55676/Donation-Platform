@@ -180,9 +180,6 @@ export function Donations() {
                     alt={donation.title}
                     className="w-full h-full object-cover"
                   />
-                  <Badge className={`absolute top-3 right-3 ${getUrgencyColor(donation.urgency)} text-white border-0`}>
-                    {donation.urgency}
-                  </Badge>
                   <Badge 
                     className={`absolute top-3 left-3 ${getConditionColor(donation.condition)}`}
                   >

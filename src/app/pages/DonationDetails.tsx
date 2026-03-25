@@ -16,12 +16,13 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { donations } from '../data/donations';
-import { toast } from 'sonner';
+import { useNotifications } from '../context/NotificationContext';
 
 export function DonationDetails() {
   const { id } = useParams();
   const donation = donations.find(d => d.id === id);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const { addNotification } = useNotifications();
 
   if (!donation) {
     return (
@@ -74,7 +75,12 @@ export function DonationDetails() {
     setIsRequesting(true);
     // Simulate a request to the server
     setTimeout(() => {
-      toast.success('تم طلب التبرع بنجاح!');
+      addNotification({
+        type: 'request',
+        title: 'تم طلب التبرع بنجاح!',
+        message: 'لقد قمت بطلب التبرع. سيتم التواصل معك قريباً.',
+        donationId: donation.id,
+      });
       setIsRequesting(false);
     }, 1000);
   };

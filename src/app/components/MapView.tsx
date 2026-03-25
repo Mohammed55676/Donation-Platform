@@ -16,7 +16,7 @@ interface MapViewProps {
   zoom?: number;
 }
 
-export function MapView({ locations, center = [24.7136, 46.6753], zoom = 10 }: MapViewProps) {
+export function MapView({ locations, center = [31.9522, 35.2332], zoom = 10 }: MapViewProps) {
   const donationIcon = new Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',

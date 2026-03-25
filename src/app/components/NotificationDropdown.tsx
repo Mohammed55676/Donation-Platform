@@ -1,88 +1,19 @@
-import { useState } from 'react';
+import { useNotifications } from '../context/NotificationContext';
 import { Bell, Check, Package, Heart, MessageSquare, Star, X } from 'lucide-react';
 import { Button } from './ui/button';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from './ui/popover';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { motion, AnimatePresence } from 'motion/react';
 
-interface Notification {
-  id: string;
-  type: 'request' | 'accept' | 'message' | 'rating' | 'delivered';
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-  donationId?: string;
-}
-
 export function NotificationDropdown() {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      type: 'request',
-      title: 'طلب جديد',
-      message: 'محمد يوسف طلب التبرع: ملابس شتوية للأطفال',
-      time: 'منذ 5 دقائق',
-      read: false,
-      donationId: '1',
-    },
-    {
-      id: '2',
-      type: 'accept',
-      title: 'تم قبول طلبك',
-      message: 'تم قبول طلبك للحصول على: كتب دراسية ومراجع',
-      time: 'منذ ساعة',
-      read: false,
-      donationId: '2',
-    },
-    {
-      id: '3',
-      type: 'message',
-      title: 'رسالة جديدة',
-      message: 'أحمد محمد أرسل لك رسالة حول التبرع',
-      time: 'منذ ساعتين',
-      read: false,
-    },
-    {
-      id: '4',
-      type: 'delivered',
-      title: 'تم التسليم',
-      message: 'تم تسليم التبرع: أثاث منزلي',
-      time: 'منذ يوم',
-      read: true,
-      donationId: '3',
-    },
-    {
-      id: '5',
-      type: 'rating',
-      title: 'تقييم جديد',
-      message: 'فاطمة علي قيمتك بـ 5 نجوم',
-      time: 'منذ يومين',
-      read: true,
-    },
-  ]);
-
+  const { notifications, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const unreadCount = notifications.filter(n => !n.read).length;
-
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
-  };
-
-  const deleteNotification = (id: string) => {
-    setNotifications(notifications.filter(n => n.id !== id));
-  };
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -119,9 +50,9 @@ export function NotificationDropdown() {
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+    <Popover>
+      <PopoverTrigger>
+        <div className="relative inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <motion.span
@@ -132,9 +63,9 @@ export function NotificationDropdown() {
               {unreadCount}
             </motion.span>
           )}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 p-0">
+        </div>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-0" sideOffset={8}>
         <div className="flex items-center justify-between p-4">
           <h3 className="font-semibold">الإشعارات</h3>
           {unreadCount > 0 && (
@@ -163,7 +94,7 @@ export function NotificationDropdown() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  className={`p-4 hover:bg-accent/50 transition-colors cursor-pointer border-b border-border/50 ${
+                  className={`p-4 hover:bg-accent/50 transition-colors cursor-pointer border-b border-border/50 group ${
                     !notification.read ? 'bg-accent/30' : ''
                   }`}
                   onClick={() => markAsRead(notification.id)}
@@ -178,7 +109,7 @@ export function NotificationDropdown() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
+                          className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={(e) => {
                             e.stopPropagation();
                             deleteNotification(notification.id);
@@ -205,7 +136,7 @@ export function NotificationDropdown() {
             </AnimatePresence>
           )}
         </ScrollArea>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </PopoverContent>
+    </Popover>
   );
 }

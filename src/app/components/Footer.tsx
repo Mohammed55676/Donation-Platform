@@ -52,15 +52,15 @@ export function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-center gap-2 text-muted-foreground">
                 <Phone className="h-4 w-4 text-primary" />
-                <span>+966 50 123 4567</span>
+                <span>+962 79 123 4567</span>
               </li>
               <li className="flex items-center gap-2 text-muted-foreground">
                 <Mail className="h-4 w-4 text-primary" />
-                <span>info@alkhair.sa</span>
+                <span>info@alkhair.jo</span>
               </li>
               <li className="flex items-center gap-2 text-muted-foreground">
                 <MapPin className="h-4 w-4 text-primary" />
-                <span>الرياض، المملكة العربية السعودية</span>
+                <span>عمّان، المملكة الأردنية الهاشمية</span>
               </li>
             </ul>
           </div>

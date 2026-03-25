@@ -9,8 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Upload, ArrowRight, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useNotifications } from '../context/NotificationContext';
+
 export function AddDonation() {
   const navigate = useNavigate();
+  const { addNotification } = useNotifications();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -43,7 +46,12 @@ export function AddDonation() {
     }
 
     // Simulate submission
-    toast.success('تم إضافة التبرع بنجاح!');
+    addNotification({
+      type: 'success',
+      title: 'تم إضافة التبرع بنجاح!',
+      message: `تم إضافة تبرع جديد: ${formData.title}`,
+    });
+    
     setTimeout(() => {
       navigate('/donations');
     }, 1500);

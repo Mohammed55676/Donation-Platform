@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -46,20 +46,36 @@ export function Dashboard() {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   // User state
-  const [user, setUser] = useState({
-    name: 'أحمد محمد',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
-    email: 'ahmed@example.com',
-    phone: '+966 50 123 4567',
-    location: 'الرياض',
-    joinDate: '2026-01-15',
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('dashboard_user');
+    if (saved) return JSON.parse(saved);
+    return {
+      name: 'أحمد محمد',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+      email: 'ahmed@example.com',
+      phone: '+966 50 123 4567',
+      location: 'الرياض',
+      joinDate: '2026-01-15',
+    };
   });
   const [editUserForm, setEditUserForm] = useState(user);
 
+  useEffect(() => {
+    localStorage.setItem('dashboard_user', JSON.stringify(user));
+  }, [user]);
+
   // Donations state
-  const [myDonations, setMyDonations] = useState(donations.slice(0, 3));
+  const [myDonations, setMyDonations] = useState(() => {
+    const saved = localStorage.getItem('dashboard_donations');
+    if (saved) return JSON.parse(saved);
+    return donations.slice(0, 3);
+  });
   const [isEditDonationOpen, setIsEditDonationOpen] = useState(false);
   const [donationToEdit, setDonationToEdit] = useState<any>(null);
+
+  useEffect(() => {
+    localStorage.setItem('dashboard_donations', JSON.stringify(myDonations));
+  }, [myDonations]);
 
   const handleEditProfile = (e: React.FormEvent) => {
     e.preventDefault();

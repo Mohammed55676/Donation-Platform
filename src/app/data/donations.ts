@@ -42,7 +42,7 @@ export const donations: Donation[] = [
     description: 'مجموعة من الملابس الشتوية للأطفال من عمر 5-10 سنوات، نظيفة وبحالة ممتازة',
     category: 'ملابس',
     condition: 'جيد جداً',
-    location: 'الرياض',
+    location: 'عمّان',
     urgency: 'عالية',
     image: 'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=500',
     donor: {
@@ -58,7 +58,7 @@ export const donations: Donation[] = [
     description: 'مجموعة من الكتب الدراسية والمراجع العلمية، مناسبة للمرحلة الثانوية',
     category: 'كتب',
     condition: 'جيد',
-    location: 'جدة',
+    location: 'إربد',
     urgency: 'متوسطة',
     image: 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=500',
     donor: {
@@ -74,7 +74,7 @@ export const donations: Donation[] = [
     description: 'طاولة طعام مع 4 كراسي، خشب طبيعي بحالة جيدة جداً',
     category: 'أثاث',
     condition: 'جيد جداً',
-    location: 'الدمام',
+    location: 'الزرقاء',
     urgency: 'منخفضة',
     image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500',
     donor: {
@@ -90,7 +90,7 @@ export const donations: Donation[] = [
     description: 'صناديق من المواد الغذائية المعلبة، صالحة للاستخدام',
     category: 'طعام',
     condition: 'جديد',
-    location: 'مكة المكرمة',
+    location: 'العقبة',
     urgency: 'عالية',
     image: 'https://images.unsplash.com/photo-1604578762246-41134e37f9cc?w=500',
     donor: {
@@ -106,7 +106,7 @@ export const donations: Donation[] = [
     description: 'بدلات رسمية وقمصان، مناسبة للعمل والمناسبات',
     category: 'ملابس',
     condition: 'جيد جداً',
-    location: 'الرياض',
+    location: 'عمّان',
     urgency: 'متوسطة',
     image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=500',
     donor: {
@@ -122,7 +122,7 @@ export const donations: Donation[] = [
     description: 'حقائب مدرسية، أقلام، دفاتر، ومستلزمات دراسية متنوعة',
     category: 'أخرى',
     condition: 'جديد',
-    location: 'جدة',
+    location: 'إربد',
     urgency: 'عالية',
     image: 'https://images.unsplash.com/photo-1581447109200-bf2769116351?w=500',
     donor: {
@@ -138,7 +138,7 @@ export const donations: Donation[] = [
     description: 'لابتوب وطابعة، تعمل بشكل جيد',
     category: 'أخرى',
     condition: 'جيد',
-    location: 'الخبر',
+    location: 'السلط',
     urgency: 'متوسطة',
     image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500',
     donor: {
@@ -154,7 +154,7 @@ export const donations: Donation[] = [
     description: 'ملابس نسائية متنوعة، نظيفة وبحالة ممتازة',
     category: 'ملابس',
     condition: 'جيد جداً',
-    location: 'الطائف',
+    location: 'جرش',
     urgency: 'منخفضة',
     image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=500',
     donor: {
@@ -201,7 +201,7 @@ export const volunteerOpportunities: VolunteerOpportunity[] = [
     id: '1',
     title: 'توزيع الملابس على المحتاجين',
     description: 'نحتاج متطوعين للمساعدة في فرز وتوزيع الملابس المتبرع بها',
-    location: 'الرياض',
+    location: 'عمّان',
     date: '2026-03-25',
     volunteers: 8,
     maxVolunteers: 15
@@ -210,7 +210,7 @@ export const volunteerOpportunities: VolunteerOpportunity[] = [
     id: '2',
     title: 'تنظيم حملة جمع التبرعات',
     description: 'المساعدة في تنظيم حملة جمع التبرعات في الأحياء السكنية',
-    location: 'جدة',
+    location: 'إربد',
     date: '2026-03-28',
     volunteers: 5,
     maxVolunteers: 10
@@ -219,7 +219,7 @@ export const volunteerOpportunities: VolunteerOpportunity[] = [
     id: '3',
     title: 'إعداد السلال الغذائية',
     description: 'تجهيز وتعبئة السلال الغذائية للأسر المحتاجة',
-    location: 'الدمام',
+    location: 'الزرقاء',
     date: '2026-03-30',
     volunteers: 12,
     maxVolunteers: 20
@@ -228,7 +228,7 @@ export const volunteerOpportunities: VolunteerOpportunity[] = [
     id: '4',
     title: 'زيارة دار الأيتام',
     description: 'تنظيم زيارة ترفيهية لدار الأيتام وتقديم الهدايا',
-    location: 'مكة المكرمة',
+    location: 'العقبة',
     date: '2026-04-05',
     volunteers: 3,
     maxVolunteers: 8
