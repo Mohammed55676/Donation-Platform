@@ -44,7 +44,7 @@ export const donations: Donation[] = [
     condition: 'جيد جداً',
     location: 'عمّان',
     urgency: 'عالية',
-    image: 'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=500',
+    image: 'https://ofhsoupkitchen.org/wp-content/uploads/2021/02/Where-to-Donate-Baby-Clothes-.jpg',
     donor: {
       name: 'أحمد محمد',
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100'
@@ -92,7 +92,7 @@ export const donations: Donation[] = [
     condition: 'جديد',
     location: 'العقبة',
     urgency: 'عالية',
-    image: 'https://images.unsplash.com/photo-1604578762246-41134e37f9cc?w=500',
+    image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRYSj0HSPkTc858icC4e78ADBaoX1bqEkIvmA&s',
     donor: {
       name: 'سارة حسن',
       avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100'
@@ -124,7 +124,7 @@ export const donations: Donation[] = [
     condition: 'جديد',
     location: 'إربد',
     urgency: 'عالية',
-    image: 'https://images.unsplash.com/photo-1581447109200-bf2769116351?w=500',
+    image: 'https://img.freepik.com/premium-photo/bunch-school-supplies-isolated-white_185193-18038.jpg?semt=ais_hybrid&w=740&q=80',
     donor: {
       name: 'نورة أحمد',
       avatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=100'
@@ -171,7 +171,7 @@ export const campaigns: Campaign[] = [
     id: '1',
     title: 'حملة الشتاء الدافئ',
     description: 'توفير ملابس شتوية للأسر المحتاجة',
-    image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=500&q=80',
+    image: 'https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=500&q=80',
     target: 1000,
     current: 680,
     urgency: 'عالية'
@@ -180,7 +180,7 @@ export const campaigns: Campaign[] = [
     id: '2',
     title: 'حقيبة مدرسية',
     description: 'توفير المستلزمات الدراسية للطلاب',
-    image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=500&q=80',
+    image: 'https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?w=500&q=80',
     target: 500,
     current: 320,
     urgency: 'عالية'
@@ -189,7 +189,7 @@ export const campaigns: Campaign[] = [
     id: '3',
     title: 'إطعام مسكين',
     description: 'توزيع وجبات طعام للمحتاجين',
-    image: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=500&q=80',
+    image: 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=500&q=80',
     target: 800,
     current: 450,
     urgency: 'متوسطة'

@@ -6,27 +6,46 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Eye, EyeOff, Mail, Lock, Heart } from 'lucide-react';
 import { toast } from 'sonner';
+import { isValidEmail } from '../../utils/validators';
+
+type Errors = { email?: string; password?: string };
 
 export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Errors>({});
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as any)?.from?.pathname;
 
   const roleRedirectMap: Record<string, string> = {
-    user: '/dashboard/user',
+    donor: '/dashboard/donor',
+    beneficiary: '/dashboard/beneficiary',
     volunteer: '/dashboard/volunteer',
     admin: '/dashboard/admin',
   };
 
+  const validate = (): Errors => {
+    const e: Errors = {};
+    if (!email.trim()) {
+      e.email = 'البريد الإلكتروني مطلوب';
+    } else if (!isValidEmail(email)) {
+      e.email = 'البريد الإلكتروني غير صحيح';
+    }
+    if (!password) {
+      e.password = 'كلمة المرور مطلوبة';
+    }
+    return e;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error('يرجى ملء جميع الحقول');
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
       return;
     }
     setLoading(true);
@@ -34,7 +53,6 @@ export function Login() {
     setLoading(false);
     if (result.success) {
       toast.success('مرحباً بك!');
-      // Get user from storage to determine redirect
       const raw = localStorage.getItem('auth_user');
       const user = raw ? JSON.parse(raw) : null;
       const redirect = from || (user ? roleRedirectMap[user.role] : '/');
@@ -97,7 +115,7 @@ export function Login() {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
+        <div className="space-y-1">
           <Label htmlFor="email">البريد الإلكتروني</Label>
           <div className="relative">
             <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -105,21 +123,19 @@ export function Login() {
               id="email"
               type="email"
               placeholder="example@email.com"
-              className="pr-10 border-2 focus:border-primary"
+              className={`pr-10 border-2 focus:border-primary ${errors.email ? 'border-destructive' : ''}`}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setErrors(prev => ({ ...prev, email: undefined })); }}
               dir="ltr"
             />
           </div>
+          {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           <div className="flex items-center justify-between">
             <Label htmlFor="password">كلمة المرور</Label>
-            <Link
-              to="/forgot-password"
-              className="text-xs text-primary hover:underline"
-            >
+            <Link to="/forgot-password" className="text-xs text-primary hover:underline">
               نسيت كلمة المرور؟
             </Link>
           </div>
@@ -129,9 +145,9 @@ export function Login() {
               id="password"
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
-              className="pr-10 pl-10 border-2 focus:border-primary"
+              className={`pr-10 pl-10 border-2 focus:border-primary ${errors.password ? 'border-destructive' : ''}`}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: undefined })); }}
               dir="ltr"
             />
             <button
@@ -142,6 +158,7 @@ export function Login() {
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
+          {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
         </div>
 
         <Button

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router';
-import { Heart, Home, Gift, Users, Menu, Moon, Sun, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
+import { Heart, Home, Gift, Users, Menu, Moon, Sun, LogIn, LogOut, LayoutDashboard, MessageCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from './ui/sheet';
@@ -13,7 +13,8 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
 const roleRoutes: Record<string, string> = {
-  user: '/dashboard/user',
+  donor: '/dashboard/donor',
+  beneficiary: '/dashboard/beneficiary',
   volunteer: '/dashboard/volunteer',
   admin: '/dashboard/admin',
 };
@@ -44,8 +45,8 @@ export function Navbar() {
 
   const navItems = [
     { name: 'الرئيسية', path: '/', icon: Home },
+    { name: 'المجتمع', path: '/community', icon: MessageCircle },
     { name: 'التبرعات', path: '/donations', icon: Gift },
-    { name: 'الطلبات', path: '/requests', icon: Heart },
     { name: 'التطوع', path: '/volunteer', icon: Users },
   ];
 
@@ -67,7 +68,7 @@ export function Navbar() {
           <div className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.path;
+              const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
               return (
                 <Link key={item.path} to={item.path}>
                   <Button variant={isActive ? 'default' : 'ghost'} className={isActive ? 'bg-primary text-white hover:bg-primary/90' : ''}>
@@ -140,7 +141,7 @@ export function Navbar() {
 
                     {navItems.map((item) => {
                       const Icon = item.icon;
-                      const isActive = location.pathname === item.path;
+                      const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
                       return (
                         <Link
                           key={item.path}

@@ -5,7 +5,6 @@ import { Donations } from './pages/Donations';
 import { DonationDetails } from './pages/DonationDetails';
 import { AddDonation } from './pages/AddDonation';
 import { Volunteer } from './pages/Volunteer';
-import { Requests } from './pages/Requests';
 import { NotFound } from './pages/NotFound';
 
 // Auth
@@ -14,11 +13,16 @@ import { Login } from './pages/auth/Login';
 import { Signup } from './pages/auth/Signup';
 import { ForgotPassword } from './pages/auth/ForgotPassword';
 
-// Dashboards
-import { UserDashboard } from './pages/UserDashboard';
+import { DonorDashboard } from './pages/DonorDashboard';
+import { BeneficiaryDashboard } from './pages/BeneficiaryDashboard';
 import { VolunteerDashboard } from './pages/VolunteerDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
+
+// Community
+import { Feed } from './pages/community/Feed';
+import { CreatePostPage } from './pages/community/Create';
+import { Details } from './pages/community/Details';
 
 export const router = createBrowserRouter([
   // Auth pages (no navbar/footer)
@@ -33,10 +37,18 @@ export const router = createBrowserRouter([
 
   // Role-specific dashboards (protected, no shared layout)
   {
-    path: '/dashboard/user',
+    path: '/dashboard/donor',
     element: (
-      <ProtectedRoute allowedRole="user">
-        <UserDashboard />
+      <ProtectedRoute allowedRole="donor">
+        <DonorDashboard />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/beneficiary',
+    element: (
+      <ProtectedRoute allowedRole="beneficiary">
+        <BeneficiaryDashboard />
       </ProtectedRoute>
     ),
   },
@@ -58,7 +70,7 @@ export const router = createBrowserRouter([
   },
 
   // Legacy redirect
-  { path: '/dashboard', element: <Navigate to="/dashboard/user" replace /> },
+  { path: '/dashboard', element: <Navigate to="/dashboard/donor" replace /> },
 
   // Main public layout
   {
@@ -70,7 +82,9 @@ export const router = createBrowserRouter([
       { path: 'donations/:id', Component: DonationDetails },
       { path: 'add-donation', Component: AddDonation },
       { path: 'volunteer', Component: Volunteer },
-      { path: 'requests', Component: Requests },
+      { path: 'community', element: <ProtectedRoute><Feed /></ProtectedRoute> },
+      { path: 'community/create', element: <ProtectedRoute><CreatePostPage /></ProtectedRoute> },
+      { path: 'community/:postId', element: <ProtectedRoute><Details /></ProtectedRoute> },
       { path: '*', Component: NotFound },
     ],
   },

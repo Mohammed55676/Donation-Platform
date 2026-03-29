@@ -38,20 +38,20 @@ const mockTasks: Task[] = [
   {
     id: '2', type: 'delivery', title: 'توصيل أدوات مدرسية',
     donor: 'نورة أحمد', recipient: 'مدرسة الأمل',
-    pickupAddress: 'إربد - الحي الشرقي', deliveryAddress: 'إربد - شارع الجامعة',
+    pickupAddress: 'عمّان - الرابية', deliveryAddress: 'عمّان - شارع الجامعة',
     status: 'in_progress', urgency: 'medium', distance: '5.8 كم', items: 'حقائب وأدوات مدرسية (8 طلاب)',
   },
   {
     id: '3', type: 'delivery', title: 'توصيل مواد غذائية',
     donor: 'سارة حسن', recipient: 'أسرة الزهراني',
-    pickupAddress: 'الزرقاء - الزواهرة', deliveryAddress: 'الزرقاء - الغويرية',
+    pickupAddress: 'عمّان - الصويفية', deliveryAddress: 'عمّان - مرج الحمام',
     status: 'completed', urgency: 'high', distance: '2.1 كم', items: 'مواد غذائية معلبة (20 صندوق)',
   },
   {
     id: '4', type: 'pickup', title: 'استلام أثاث منزلي',
     donor: 'خالد عبدالله', recipient: 'عائلة السيد',
-    pickupAddress: 'العقبة - المحدود', deliveryAddress: 'العقبة - العاشرة',
-    status: 'pending', urgency: 'low', distance: '7.4 كم', items: 'طاولة وكراسي',
+    pickupAddress: 'عمّان - تلاع العلي', deliveryAddress: 'عمّان - الأردن الجديد',
+    status: 'pending', urgency: 'low', distance: '4.5 كم', items: 'طاولة وكراسي',
   },
 ];
 
@@ -93,7 +93,7 @@ export function VolunteerDashboard() {
         <div className="rounded-2xl bg-gradient-to-l from-secondary to-primary p-5 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold mb-1">مرحباً، {user?.name?.split(' ')[0]} 🚚</h2>
+              <h2 className="text-xl font-bold mb-1">مرحباً، {user?.name?.split(' ')[0]} 🙌</h2>
               <p className="text-white/80 text-sm">لديك {pending + inProgress} مهام تنتظر إنجازها</p>
             </div>
             <div className="text-4xl">🦸</div>
@@ -123,11 +123,12 @@ export function VolunteerDashboard() {
 
           {/* OVERVIEW */}
           <TabsContent value="overview" className="mt-6 space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {[
                 { label: 'إجمالي المهام', value: tasks.length, icon: Truck, color: 'text-primary', bg: 'bg-primary/10' },
-                { label: 'مكتملة', value: completed, icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-100 dark:bg-green-900/30' },
                 { label: 'جارية', value: inProgress, icon: Navigation, color: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900/30' },
+                { label: 'مكتملة', value: completed, icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-100 dark:bg-green-900/30' },
+                { label: 'نقاط التطوع', value: '340 🏅', icon: Star, color: 'text-purple-500', bg: 'bg-purple-100 dark:bg-purple-900/30' },
                 { label: 'تقييمي', value: '4.8 ⭐', icon: Star, color: 'text-yellow-500', bg: 'bg-yellow-100 dark:bg-yellow-900/30' },
               ].map((s, i) => {
                 const Icon = s.icon;
@@ -248,12 +249,15 @@ export function VolunteerDashboard() {
                 <CardDescription>مواقع الاستلام والتسليم لمهامك النشطة</CardDescription>
               </CardHeader>
               <CardContent className="p-0 overflow-hidden rounded-b-lg">
-                <MapView locations={[
-                { id: 'p1', title: 'استلام ملابس شتوية', lat: 31.96, lng: 35.22, type: 'donation' },
-                { id: 'd1', title: 'تسليم ملابس شتوية', lat: 31.94, lng: 35.24, type: 'request' },
-                { id: 'p2', title: 'استلام أدوات مدرسية', lat: 31.97, lng: 35.21, type: 'donation' },
-                { id: 'd2', title: 'تسليم أدوات مدرسية', lat: 31.93, lng: 35.25, type: 'request' },
-              ]} />
+                <MapView
+                  center={[31.9539, 35.9106]}
+                  zoom={12}
+                  locations={[
+                  { id: 'p1', title: 'استلام ملابس شتوية — عبدون', lat: 31.9762, lng: 35.8825, type: 'donation' },
+                  { id: 'd1', title: 'تسليم ملابس شتوية — دابوق', lat: 31.9822, lng: 35.8535, type: 'request' },
+                  { id: 'p2', title: 'استلام أدوات مدرسية — الرابية', lat: 31.9904, lng: 35.8742, type: 'donation' },
+                  { id: 'd2', title: 'تسليم أدوات مدرسية — شارع الجامعة', lat: 31.9736, lng: 35.9037, type: 'request' },
+                ]} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -273,11 +277,12 @@ export function VolunteerDashboard() {
                     <Badge className="mt-1 bg-secondary/10 text-secondary">متطوع</Badge>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3 pt-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
                   {[
                     { label: 'مهام مكتملة', value: completed },
+                    { label: 'نقاط التطوع', value: '340 🏅' },
                     { label: 'تقييمي', value: '4.8 ⭐' },
-                    { label: 'نقاط التطوع', value: '340' },
+                    { label: 'مهام جارية', value: inProgress },
                   ].map((s) => (
                     <div key={s.label} className="bg-muted rounded-xl p-3 text-center">
                       <div className="text-xl font-bold">{s.value}</div>

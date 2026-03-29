@@ -15,14 +15,18 @@ import {
   Heart,
   ArrowRight
 } from 'lucide-react';
-import { donations } from '../data/donations';
+import { useDonations } from '../context/DonationContext';
 import { useNotifications } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 
 export function DonationDetails() {
   const { id } = useParams();
+  const { donations } = useDonations();
   const donation = donations.find(d => d.id === id);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const { addNotification } = useNotifications();
+  const { user, toggleWishlist } = useAuth();
 
   if (!donation) {
     return (
@@ -85,6 +89,17 @@ export function DonationDetails() {
     }, 1000);
   };
 
+  const handleShare = () => {
+    const url = `${window.location.origin}/donations/${donation.id}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url);
+      toast.success('تم نسخ الرابط! يمكنك الآن مشاركته ❤️');
+    } else {
+      // Fallback
+      toast.success(`شارك هذا الرابط: ${url}`);
+    }
+  };
+
   return (
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4">
@@ -107,14 +122,11 @@ export function DonationDetails() {
                   alt={donation.title}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute top-4 right-4 flex gap-2">
-                  <Badge className={`${getUrgencyColor(donation.urgency)} text-white border-0`}>
-                    {donation.urgency}
-                  </Badge>
-                  <Badge className={getConditionColor(donation.condition)}>
-                    {donation.condition}
-                  </Badge>
-                </div>
+                  <div className="absolute top-4 right-4 flex gap-2">
+                    <Badge className={`${getUrgencyColor(donation.urgency)} text-white border-0`}>
+                      {donation.urgency}
+                    </Badge>
+                  </div>
               </div>
             </Card>
 
@@ -137,8 +149,19 @@ export function DonationDetails() {
                     <CardTitle className="text-3xl mb-3">{donation.title}</CardTitle>
                     <CardDescription className="text-base">{donation.description}</CardDescription>
                   </div>
-                  <Button variant="ghost" size="icon">
-                    <Heart className="h-5 w-5" />
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className={user?.wishlist?.includes(donation.id) ? 'text-red-500' : 'text-gray-500'}
+                    onClick={() => {
+                      if (!user) {
+                        toast.error('يجب تسجيل الدخول لحفظ التبرعات');
+                        return;
+                      }
+                      toggleWishlist(donation.id);
+                    }}
+                  >
+                    <Heart className={`h-5 w-5 ${user?.wishlist?.includes(donation.id) ? 'fill-current' : ''}`} />
                   </Button>
                 </div>
               </CardHeader>
@@ -168,8 +191,8 @@ export function DonationDetails() {
                       <Package className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">الحالة</p>
-                      <p className="font-semibold">{donation.condition}</p>
+                      <p className="text-sm text-muted-foreground">الفئة</p>
+                      <p className="font-semibold">{donation.category}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -276,7 +299,7 @@ export function DonationDetails() {
                     {donation.status}
                   </Button>
                 )}
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" onClick={handleShare}>
                   <Share2 className="ml-2 h-5 w-5" />
                   مشاركة
                 </Button>

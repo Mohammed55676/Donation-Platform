@@ -18,7 +18,8 @@ export function ProtectedRoute({ children, allowedRole }: ProtectedRouteProps) {
   if (allowedRole && user?.role !== allowedRole) {
     // Redirect to the appropriate dashboard for their actual role
     const roleRoutes: Record<UserRole, string> = {
-      user: '/dashboard/user',
+      donor: '/dashboard/donor',
+      beneficiary: '/dashboard/beneficiary',
       volunteer: '/dashboard/volunteer',
       admin: '/dashboard/admin',
     };

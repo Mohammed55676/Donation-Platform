@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
+import { isValidEmail, isLettersOnly, sanitizePhone } from '../utils/validators';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -44,6 +45,7 @@ export function Dashboard() {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [profileErrors, setProfileErrors] = useState<{ name?: string; email?: string; phone?: string; location?: string }>({});
 
   // User state
   const [user, setUser] = useState(() => {
@@ -79,13 +81,35 @@ export function Dashboard() {
 
   const handleEditProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    const errs: typeof profileErrors = {};
+    if (!editUserForm.name.trim()) {
+      errs.name = 'الاسم مطلوب';
+    } else if (!isLettersOnly(editUserForm.name)) {
+      errs.name = 'الاسم يجب أن يحتوي على حروف فقط';
+    } else if (editUserForm.name.trim().length < 3) {
+      errs.name = 'الاسم يجب أن يكون 3 أحرف على الأقل';
+    }
+    if (editUserForm.email && !isValidEmail(editUserForm.email)) {
+      errs.email = 'البريد الإلكتروني غير صحيح';
+    }
+    if (editUserForm.phone && !/^07[789]\d{7}$/.test(editUserForm.phone.trim())) {
+      errs.phone = 'يجب أن يبدأ بـ 077 أو 078 أو 079 ومكوّن من 10 أرقام';
+    }
+    if (editUserForm.location && editUserForm.location.trim().length < 2) {
+      errs.location = 'يرجى كتابة موقع صحيح';
+    }
+    if (Object.keys(errs).length > 0) {
+      setProfileErrors(errs);
+      return;
+    }
+    setProfileErrors({});
     setUser(editUserForm);
     toast.success('تم تحديث الملف الشخصي بنجاح!');
     setIsEditProfileOpen(false);
   };
 
   const handleDeleteItem = () => {
-    setMyDonations(myDonations.filter(d => d.id !== itemToDelete));
+    setMyDonations(myDonations.filter((d: any) => d.id !== itemToDelete));
     toast.success('تم حذف العنصر بنجاح!');
     setIsDeleteDialogOpen(false);
     setItemToDelete(null);
@@ -93,7 +117,7 @@ export function Dashboard() {
 
   const handleEditDonation = (e: React.FormEvent) => {
     e.preventDefault();
-    setMyDonations(myDonations.map(d => d.id === donationToEdit.id ? donationToEdit : d));
+    setMyDonations(myDonations.map((d: any) => d.id === donationToEdit.id ? donationToEdit : d));
     toast.success('تم تحديث التبرع بنجاح!');
     setIsEditDonationOpen(false);
   };
@@ -184,10 +208,10 @@ export function Dashboard() {
                 <AvatarImage src={user.avatar} alt={user.name} />
                 <AvatarFallback>AM</AvatarFallback>
               </Avatar>
-              <div className="flex-1">
+              <div className="flex-1 text-right">
                 <h2 className="text-2xl mb-1">{user.name}</h2>
                 <p className="text-muted-foreground mb-3">{user.email}</p>
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground rtl:justify-start sm:justify-start justify-end">
                   <span>📱 {user.phone}</span>
                   <span>📍 {user.location}</span>
                   <span>📅 انضم في {new Date(user.joinDate).toLocaleDateString('ar-SA')}</span>
@@ -255,7 +279,7 @@ export function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {myDonations.map((donation) => (
+                  {myDonations.map((donation: any) => (
                     <Card key={donation.id} className="overflow-hidden">
                       <div className="flex flex-col md:flex-row gap-4 p-4">
                         <img
@@ -387,49 +411,33 @@ export function Dashboard() {
             <DialogDescription>قم بتحديث معلوماتك الشخصية.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditProfile}>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                الاسم
-              </Label>
-              <Input
-                id="name"
-                value={editUserForm.name}
-                className="col-span-3"
-                onChange={(e) => setEditUserForm({ ...editUserForm, name: e.target.value })}
-              />
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="name" className="text-right pt-2">الاسم</Label>
+              <div className="col-span-3 space-y-1">
+                <Input id="name" value={editUserForm.name} className={profileErrors.name ? 'border-destructive' : ''} onChange={(e) => { setEditUserForm({ ...editUserForm, name: e.target.value }); setProfileErrors(p => ({ ...p, name: undefined })); }} />
+                {profileErrors.name && <p className="text-xs text-destructive">{profileErrors.name}</p>}
+              </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
-                البريد الإلكتروني
-              </Label>
-              <Input
-                id="email"
-                value={editUserForm.email}
-                className="col-span-3"
-                onChange={(e) => setEditUserForm({ ...editUserForm, email: e.target.value })}
-              />
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="email" className="text-right pt-2">البريد الإلكتروني</Label>
+              <div className="col-span-3 space-y-1">
+                <Input id="email" value={editUserForm.email} className={profileErrors.email ? 'border-destructive' : ''} onChange={(e) => { setEditUserForm({ ...editUserForm, email: e.target.value }); setProfileErrors(p => ({ ...p, email: undefined })); }} dir="ltr" />
+                {profileErrors.email && <p className="text-xs text-destructive">{profileErrors.email}</p>}
+              </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="phone" className="text-right">
-                الهاتف
-              </Label>
-              <Input
-                id="phone"
-                value={editUserForm.phone}
-                className="col-span-3"
-                onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value })}
-              />
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="phone" className="text-right pt-2">الهاتف</Label>
+              <div className="col-span-3 space-y-1">
+                <Input id="phone" value={editUserForm.phone} maxLength={10} className={profileErrors.phone ? 'border-destructive' : ''} onChange={(e) => { const v = sanitizePhone(e.target.value); setEditUserForm({ ...editUserForm, phone: v }); setProfileErrors(p => ({ ...p, phone: undefined })); }} dir="ltr" placeholder="07X XXXX XXXX" />
+                {profileErrors.phone && <p className="text-xs text-destructive">{profileErrors.phone}</p>}
+              </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4 mt-4">
-              <Label htmlFor="location" className="text-right">
-                الموقع
-              </Label>
-              <Input
-                id="location"
-                value={editUserForm.location}
-                className="col-span-3"
-                onChange={(e) => setEditUserForm({ ...editUserForm, location: e.target.value })}
-              />
+            <div className="grid grid-cols-4 items-start gap-4 mt-4">
+              <Label htmlFor="location" className="text-right pt-2">الموقع</Label>
+              <div className="col-span-3 space-y-1">
+                <Input id="location" value={editUserForm.location} className={profileErrors.location ? 'border-destructive' : ''} onChange={(e) => { setEditUserForm({ ...editUserForm, location: e.target.value }); setProfileErrors(p => ({ ...p, location: undefined })); }} />
+                {profileErrors.location && <p className="text-xs text-destructive">{profileErrors.location}</p>}
+              </div>
             </div>
             <DialogFooter>
               <Button type="submit">حفظ التغييرات</Button>

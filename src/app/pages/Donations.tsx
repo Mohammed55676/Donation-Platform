@@ -1,19 +1,38 @@
-import { useState } from 'react';
-import { Link } from 'react-router';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Input } from '../components/ui/input';
-import { MapPin, Search, Filter } from 'lucide-react';
-import { donations, type Donation } from '../data/donations';
+import { MapPin, Search, Filter, Gift, Heart } from 'lucide-react';
+import { useDonations, type ExtendedDonation } from '../context/DonationContext';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router';
 
 export function Donations() {
-  const [filteredDonations, setFilteredDonations] = useState<Donation[]>(donations);
+  const { user, toggleWishlist } = useAuth();
+  const { donations } = useDonations();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Filter out pending and rejected from public view
+  const publicDonations = donations.filter(d => d.status === 'متاح' || d.status === 'محجوز' || d.status === 'تم التسليم');
+
+  const [filteredDonations, setFilteredDonations] = useState<ExtendedDonation[]>(publicDonations);
   const [categoryFilter, setCategoryFilter] = useState<string>('الكل');
   const [urgencyFilter, setUrgencyFilter] = useState<string>('الكل');
   const [conditionFilter, setConditionFilter] = useState<string>('الكل');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Apply category filter from URL query param on first load
+  useEffect(() => {
+    const cat = searchParams.get('category');
+    if (cat) {
+      setCategoryFilter(cat);
+      setFilteredDonations(publicDonations.filter(d => d.category === cat));
+    }
+  }, [searchParams, donations]);
 
   const applyFilters = (
     category: string,
@@ -21,7 +40,7 @@ export function Donations() {
     condition: string,
     search: string
   ) => {
-    let filtered = donations;
+    let filtered = publicDonations;
 
     if (category !== 'الكل') {
       filtered = filtered.filter(d => d.category === category);
@@ -98,13 +117,23 @@ export function Donations() {
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl mb-2">جميع التبرعات</h1>
-          <p className="text-muted-foreground">تصفح التبرعات المتاحة واطلب ما تحتاج</p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl md:text-4xl mb-2">جميع التبرعات</h1>
+            <p className="text-muted-foreground">تصفح التبرعات المتاحة واطلب ما تحتاج</p>
+          </div>
+          <Button 
+            size="lg" 
+            onClick={() => user ? navigate('/add-donation') : navigate('/login')}
+            className="bg-primary hover:bg-primary/90 text-white w-full sm:w-auto shadow-md hover:shadow-primary/50 transition-all"
+          >
+            <Gift className="ml-2 h-5 w-5" />
+            تبرع الآن
+          </Button>
         </div>
 
         {/* Filters */}
-        <Card className="mb-8">
+        <Card className="mb-8 border border-border/60 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Filter className="h-5 w-5" />
@@ -153,7 +182,6 @@ export function Donations() {
                 <SelectContent>
                   <SelectItem value="الكل">جميع الحالات</SelectItem>
                   <SelectItem value="جديد">جديد</SelectItem>
-                  <SelectItem value="جيد جداً">جيد جداً</SelectItem>
                   <SelectItem value="جيد">جيد</SelectItem>
                   <SelectItem value="مستعمل">مستعمل</SelectItem>
                 </SelectContent>
@@ -173,18 +201,34 @@ export function Donations() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredDonations.map((donation) => (
             <Link key={donation.id} to={`/donations/${donation.id}`}>
-              <Card className="overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer h-full">
+              <Card className="overflow-hidden hover:shadow-xl border border-border/60 hover:border-primary/40 transition-all hover:-translate-y-1 cursor-pointer h-full bg-card/95">
                 <div className="relative h-48">
                   <img
                     src={donation.image}
                     alt={donation.title}
                     className="w-full h-full object-cover"
                   />
-                  <Badge 
-                    className={`absolute top-3 left-3 ${getConditionColor(donation.condition)}`}
-                  >
-                    {donation.condition}
-                  </Badge>
+                  {/* Remove Condition Badge as requested */}
+                  <div className="absolute top-3 right-3 flex flex-col gap-2">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className={`h-8 w-8 rounded-full bg-white/80 hover:bg-white dark:bg-black/50 dark:hover:bg-black shadow-sm ${
+                        user?.wishlist?.includes(donation.id) ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
+                      }`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!user) {
+                          navigate('/login');
+                          return;
+                        }
+                        toggleWishlist(donation.id);
+                      }}
+                    >
+                      <Heart className={`h-4 w-4 ${user?.wishlist?.includes(donation.id) ? 'fill-current' : ''}`} />
+                    </Button>
+                  </div>
                 </div>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between mb-2">
@@ -235,7 +279,7 @@ export function Donations() {
                 setUrgencyFilter('الكل');
                 setConditionFilter('الكل');
                 setSearchQuery('');
-                setFilteredDonations(donations);
+                setFilteredDonations(publicDonations);
               }}
             >
               إعادة تعيين الفلاتر

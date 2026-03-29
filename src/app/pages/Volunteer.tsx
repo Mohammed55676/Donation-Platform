@@ -20,32 +20,95 @@ import {
 import { volunteerOpportunities } from '../data/donations';
 import { toast } from 'sonner';
 import { useNotifications } from '../context/NotificationContext';
+import { isValidEmail, isLettersOnly, sanitizePhone } from '../utils/validators';
+
+type VolunteerErrors = { name?: string; email?: string; phone?: string };
+type ContactErrors = { name?: string; email?: string; message?: string };
 
 export function Volunteer() {
+  const [opportunities, setOpportunities] = useState(volunteerOpportunities);
   const [selectedOpportunity, setSelectedOpportunity] = useState<string | null>(null);
   const { addNotification } = useNotifications();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: '',
-  });
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', message: '' });
+  const [errors, setErrors] = useState<VolunteerErrors>({});
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
+  const [contactErrors, setContactErrors] = useState<ContactErrors>({});
+  const [isContactSending, setIsContactSending] = useState(false);
+
+  const validate = (): VolunteerErrors => {
+    const e: VolunteerErrors = {};
+    if (!formData.name.trim()) {
+      e.name = 'الاسم مطلوب';
+    } else if (!isLettersOnly(formData.name)) {
+      e.name = 'الاسم يجب أن يحتوي على حروف فقط';
+    } else if (formData.name.trim().length < 3) {
+      e.name = 'الاسم يجب أن يكون 3 أحرف على الأقل';
+    }
+    if (!formData.email.trim()) {
+      e.email = 'البريد الإلكتروني مطلوب';
+    } else if (!isValidEmail(formData.email)) {
+      e.email = 'البريد الإلكتروني غير صحيح';
+    }
+    if (!formData.phone.trim()) {
+      e.phone = 'رقم الهاتف مطلوب';
+    } else if (!/^07[789]\d{7}$/.test(formData.phone.trim())) {
+      e.phone = 'يجب أن يبدأ بـ 077 أو 078 أو 079 ومكوّن من 10 أرقام';
+    }
+    return e;
+  };
 
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.name || !formData.email || !formData.phone) {
-      toast.error('يرجى ملء جميع الحقول المطلوبة');
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
       return;
     }
-
     addNotification({
       type: 'success',
       title: 'تم تسجيلك بنجاح!',
       message: 'شكراً لانضمامك لفريق التطوع. سنتواصل معك قريباً.',
     });
+    
+    // Update progress locally
+    if (selectedOpportunity) {
+      setOpportunities(prev => prev.map(opp => 
+        opp.id === selectedOpportunity 
+          ? { ...opp, volunteers: opp.volunteers + 1 }
+          : opp
+      ));
+    }
+
+    toast.success('تم تسجيلك بنجاح!');
     setFormData({ name: '', email: '', phone: '', message: '' });
+    setErrors({});
     setSelectedOpportunity(null);
+  };
+
+  const validateContact = (): ContactErrors => {
+    const e: ContactErrors = {};
+    if (!contactForm.name.trim()) e.name = 'الاسم مطلوب';
+    else if (contactForm.name.trim().length < 3) e.name = 'الاسم يجب أن يكون 3 أحرف على الأقل';
+    if (!contactForm.email.trim()) e.email = 'البريد مطلوب';
+    else if (!isValidEmail(contactForm.email)) e.email = 'بريد إلكتروني غير صحيح';
+    if (!contactForm.message.trim()) e.message = 'الرسالة مطلوبة';
+    else if (contactForm.message.trim().length < 10) e.message = 'الرسالة يجب أن تحتوي على 10 أحرف على الأقل';
+    return e;
+  };
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const errs = validateContact();
+    if (Object.keys(errs).length > 0) { setContactErrors(errs); return; }
+    setIsContactSending(true);
+    await new Promise(r => setTimeout(r, 1200));
+    addNotification({ type: 'success', title: 'تم إرسال رسالتك', message: 'شكراً لتواصلك معنا! سنرد عليك قريباً.' });
+    toast.success('تم إرسال رسالتك بنجاح ❤️');
+    setContactForm({ name: '', email: '', message: '' });
+    setContactErrors({});
+    setIsContactSending(false);
+    setIsContactOpen(false);
   };
 
   const stats = [
@@ -93,21 +156,9 @@ export function Volunteer() {
             <h2 className="text-2xl md:text-3xl mb-6 text-center">لماذا التطوع معنا؟</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
-                {
-                  icon: Heart,
-                  title: 'اصنع فرقاً',
-                  description: 'ساهم في تحسين حياة الأشخاص المحتاجين',
-                },
-                {
-                  icon: Users,
-                  title: 'تعرف على أصدقاء جدد',
-                  description: 'انضم إلى مجتمع من المتطوعين الملتزمين',
-                },
-                {
-                  icon: TrendingUp,
-                  title: 'اكتسب خبرات جديدة',
-                  description: 'طور مهاراتك وتعلم أشياء جديدة',
-                },
+                { icon: Heart, title: 'اصنع فرقاً', description: 'ساهم في تحسين حياة الأشخاص المحتاجين' },
+                { icon: Users, title: 'تعرف على أصدقاء جدد', description: 'انضم إلى مجتمع من المتطوعين الملتزمين' },
+                { icon: TrendingUp, title: 'اكتسب خبرات جديدة', description: 'طور مهاراتك وتعلم أشياء جديدة' },
               ].map((item, index) => {
                 const Icon = item.icon;
                 return (
@@ -131,7 +182,7 @@ export function Volunteer() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {volunteerOpportunities.map((opportunity) => {
+          {opportunities.map((opportunity) => {
             const progress = (opportunity.volunteers / opportunity.maxVolunteers) * 100;
             const spotsLeft = opportunity.maxVolunteers - opportunity.volunteers;
 
@@ -158,18 +209,12 @@ export function Volunteer() {
                     <div className="flex items-center gap-2 text-sm">
                       <Calendar className="h-4 w-4 text-primary" />
                       <span className="text-muted-foreground">
-                        {new Date(opportunity.date).toLocaleDateString('ar-SA', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
+                        {new Date(opportunity.date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Users className="h-4 w-4 text-primary" />
-                      <span className="text-muted-foreground">
-                        {opportunity.volunteers} من {opportunity.maxVolunteers} متطوع
-                      </span>
+                      <span className="text-muted-foreground">{opportunity.volunteers} من {opportunity.maxVolunteers} متطوع</span>
                     </div>
                   </div>
 
@@ -181,72 +226,79 @@ export function Volunteer() {
                     <Progress value={progress} className="h-2" />
                   </div>
 
-                  <Dialog>
+                  <Dialog open={selectedOpportunity === opportunity.id} onOpenChange={(open) => { if (!open) setSelectedOpportunity(null); }}>
                     <DialogTrigger asChild>
                       <Button 
                         className="w-full bg-primary hover:bg-primary/90 text-white"
-                        onClick={() => setSelectedOpportunity(opportunity.id)}
+                        onClick={() => { setSelectedOpportunity(opportunity.id); setErrors({}); setFormData({ name: '', email: '', phone: '', message: '' }); }}
                         disabled={spotsLeft === 0}
                       >
                         {spotsLeft === 0 ? (
-                          <>
-                            <CheckCircle className="ml-2 h-4 w-4" />
-                            مكتمل
-                          </>
+                          <><CheckCircle className="ml-2 h-4 w-4" />مكتمل</>
                         ) : (
-                          <>
-                            <Users className="ml-2 h-4 w-4" />
-                            سجل الآن
-                          </>
+                          <><Users className="ml-2 h-4 w-4" />سجل الآن</>
                         )}
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
+                    <DialogContent className="sm:max-w-md" dir="rtl">
                       <DialogHeader>
                         <DialogTitle>التسجيل في فرصة التطوع</DialogTitle>
                         <DialogDescription>{opportunity.title}</DialogDescription>
                       </DialogHeader>
                       <form onSubmit={handleSignUp} className="space-y-4">
-                        <div>
-                          <Label htmlFor="name">الاسم *</Label>
+                        {/* Name */}
+                        <div className="space-y-1">
+                          <Label htmlFor="vol-name">الاسم الكامل *</Label>
                           <Input
-                            id="name"
+                            id="vol-name"
                             placeholder="أدخل اسمك الكامل"
                             value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="mt-2"
+                            onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setErrors(prev => ({ ...prev, name: undefined })); }}
+                            className={errors.name ? 'border-destructive' : ''}
                           />
+                          {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
                         </div>
-                        <div>
-                          <Label htmlFor="email">البريد الإلكتروني *</Label>
+                        {/* Email */}
+                        <div className="space-y-1">
+                          <Label htmlFor="vol-email">البريد الإلكتروني *</Label>
                           <Input
-                            id="email"
+                            id="vol-email"
                             type="email"
                             placeholder="example@email.com"
                             value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            className="mt-2"
+                            onChange={(e) => { setFormData({ ...formData, email: e.target.value }); setErrors(prev => ({ ...prev, email: undefined })); }}
+                            className={errors.email ? 'border-destructive' : ''}
+                            dir="ltr"
                           />
+                          {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                         </div>
-                        <div>
-                          <Label htmlFor="phone">رقم الجوال *</Label>
+                        {/* Phone */}
+                        <div className="space-y-1">
+                          <Label htmlFor="vol-phone">رقم الجوال *</Label>
                           <Input
-                            id="phone"
-                            placeholder="+966 50 123 4567"
+                            id="vol-phone"
+                            placeholder="07X XXXX XXXX"
                             value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            className="mt-2"
+                            onChange={(e) => {
+                              const clean = sanitizePhone(e.target.value);
+                              setFormData({ ...formData, phone: clean });
+                              setErrors(prev => ({ ...prev, phone: undefined }));
+                            }}
+                            className={errors.phone ? 'border-destructive' : ''}
+                            dir="ltr"
+                            maxLength={10}
                           />
+                          {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                         </div>
-                        <div>
-                          <Label htmlFor="message">رسالة (اختياري)</Label>
+                        {/* Message */}
+                        <div className="space-y-1">
+                          <Label htmlFor="vol-message">رسالة (اختياري)</Label>
                           <Textarea
-                            id="message"
+                            id="vol-message"
                             placeholder="أخبرنا لماذا ترغب في التطوع..."
                             value={formData.message}
                             onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                             rows={3}
-                            className="mt-2"
                           />
                         </div>
                         <Button type="submit" className="w-full bg-secondary hover:bg-secondary/90 text-white">
@@ -270,12 +322,65 @@ export function Volunteer() {
             <p className="text-lg mb-6 opacity-90 max-w-2xl mx-auto">
               تواصل معنا وأخبرنا عن اهتماماتك، سنبقيك على اطلاع بالفرص الجديدة
             </p>
-            <Button size="lg" variant="secondary">
+            <Button size="lg" variant="secondary" onClick={() => setIsContactOpen(true)}>
               <Users className="ml-2 h-5 w-5" />
               تواصل معنا
             </Button>
           </CardContent>
         </Card>
+
+        {/* Contact Us Dialog */}
+        <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
+          <DialogContent className="sm:max-w-md" dir="rtl">
+            <DialogHeader>
+              <DialogTitle>تواصل معنا</DialogTitle>
+              <DialogDescription>أخبرنا عن اهتماماتك وسنتواصل معك قريباً</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleContactSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <Label htmlFor="contact-name">الاسم الكامل</Label>
+                <Input
+                  id="contact-name"
+                  placeholder="محمد أحمد"
+                  value={contactForm.name}
+                  onChange={e => { setContactForm(f => ({ ...f, name: e.target.value })); setContactErrors(c => ({ ...c, name: undefined })); }}
+                  className={contactErrors.name ? 'border-destructive' : ''}
+                />
+                {contactErrors.name && <p className="text-xs text-destructive">{contactErrors.name}</p>}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="contact-email">البريد الإلكتروني</Label>
+                <Input
+                  id="contact-email"
+                  placeholder="example@email.com"
+                  dir="ltr"
+                  value={contactForm.email}
+                  onChange={e => { setContactForm(f => ({ ...f, email: e.target.value })); setContactErrors(c => ({ ...c, email: undefined })); }}
+                  className={contactErrors.email ? 'border-destructive' : ''}
+                />
+                {contactErrors.email && <p className="text-xs text-destructive">{contactErrors.email}</p>}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="contact-message">رسالتك</Label>
+                <Textarea
+                  id="contact-message"
+                  placeholder="أخبرنا عن اهتماماتك وكيف تريد المساهمة..."
+                  rows={4}
+                  value={contactForm.message}
+                  onChange={e => { setContactForm(f => ({ ...f, message: e.target.value })); setContactErrors(c => ({ ...c, message: undefined })); }}
+                  className={contactErrors.message ? 'border-destructive' : ''}
+                />
+                {contactErrors.message && <p className="text-xs text-destructive">{contactErrors.message}</p>}
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button type="submit" disabled={isContactSending} className="flex-1 bg-primary hover:bg-primary/90 text-white">
+                  {isContactSending ? 'جاري الإرسال...' : 'إرسال الرسالة'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setIsContactOpen(false)} disabled={isContactSending}>إلغاء</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

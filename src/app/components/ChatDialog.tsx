@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
@@ -28,26 +28,40 @@ interface ChatDialogProps {
 }
 
 export function ChatDialog({ open, onOpenChange, recipientName, recipientAvatar }: ChatDialogProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      sender: 'other',
-      text: 'مرحباً! شكراً لاهتمامك بالتبرع',
-      time: '10:30 ص',
-    },
-    {
-      id: '2',
-      sender: 'me',
-      text: 'أهلاً، متى يمكنني استلام التبرع؟',
-      time: '10:32 ص',
-    },
-    {
-      id: '3',
-      sender: 'other',
-      text: 'يمكنك الاستلام اليوم بعد الساعة 3 عصراً',
-      time: '10:35 ص',
-    },
-  ]);
+  const CHAT_KEY = `chat_history_${recipientName}`;
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const saved = localStorage.getItem(CHAT_KEY);
+    if (saved) return JSON.parse(saved);
+    return [
+      {
+        id: '1',
+        sender: 'other',
+        text: 'مرحباً! شكراً لاهتمامك بالتبرع',
+        time: '10:30 ص',
+      },
+      {
+        id: '2',
+        sender: 'me',
+        text: 'أهلاً، متى يمكنني استلام التبرع؟',
+        time: '10:32 ص',
+      },
+      {
+        id: '3',
+        sender: 'other',
+        text: 'يمكنك الاستلام اليوم بعد الساعة 3 عصراً',
+        time: '10:35 ص',
+      },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem(CHAT_KEY, JSON.stringify(messages));
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  }, [messages, recipientName]);
 
   const [newMessage, setNewMessage] = useState('');
 
@@ -110,6 +124,7 @@ export function ChatDialog({ open, onOpenChange, recipientName, recipientAvatar 
                 </motion.div>
               ))}
             </AnimatePresence>
+            <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
 

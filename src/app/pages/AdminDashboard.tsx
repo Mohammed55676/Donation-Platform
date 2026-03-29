@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { useSearchParams, Link } from 'react-router';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -11,6 +11,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '../components/ui/alert-dialog';
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '../components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line,
 } from 'recharts';
 import {
@@ -18,7 +22,8 @@ import {
   Trash2, Check, X, Eye, ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { donations } from '../data/donations';
+import { useDonations } from '../context/DonationContext';
+import { useAuth } from '../context/AuthContext';
 
 // ── Mock Data ──────────────────────────────────────────────────
 const monthlyData = [
@@ -49,22 +54,7 @@ const mockUsers: ManagedUser[] = [
   { id: '5', name: 'محمد يوسف', email: 'mohy@example.com', role: 'volunteer', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100', joinDate: '2026-02-14', status: 'active', donations: 0 },
 ];
 
-interface AdminDonation {
-  id: string;
-  title: string;
-  donor: string;
-  category: string;
-  status: 'pending_review' | 'approved' | 'rejected';
-  urgency: string;
-  date: string;
-}
-
-const mockAdminDonations: AdminDonation[] = [
-  { id: 'd1', title: 'ملابس شتوية للأطفال', donor: 'أحمد محمد', category: 'ملابس', status: 'pending_review', urgency: 'عالية', date: '2026-03-20' },
-  { id: 'd2', title: 'كتب دراسية', donor: 'فاطمة علي', category: 'كتب', status: 'approved', urgency: 'متوسطة', date: '2026-03-19' },
-  { id: 'd3', title: 'أدوات مدرسية', donor: 'نورة أحمد', category: 'أخرى', status: 'pending_review', urgency: 'عالية', date: '2026-03-21' },
-  { id: 'd4', title: 'أثاث منزلي', donor: 'خالد عبدالله', category: 'أثاث', status: 'rejected', urgency: 'منخفضة', date: '2026-03-18' },
-];
+// Removed static mockAdminDonations
 
 const urgentCases = [
   { id: 'u1', title: 'أسرة محتاجة بعجلة', description: 'أسرة من 5 أفراد تحتاج ملابس شتوية وغذاء عاجل', category: 'ملابس + غذاء', location: 'الرياض - النسيم', severity: 'critical' },
@@ -76,9 +66,14 @@ export function AdminDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'analytics';
 
-  const [users, setUsers] = useState<ManagedUser[]>(mockUsers);
-  const [adminDonations, setAdminDonations] = useState<AdminDonation[]>(mockAdminDonations);
+  const { donations, updateDonationStatus } = useDonations();
+  const { getAllUsers } = useAuth();
+  const allUsers = getAllUsers();
+
+  const [users, setUsers] = useState<any[]>(allUsers);
   const [confirmAction, setConfirmAction] = useState<{ type: string; id: string; label: string } | null>(null);
+  const [assignCase, setAssignCase] = useState<typeof urgentCases[0] | null>(null);
+  const [selectedVolunteer, setSelectedVolunteer] = useState('');
 
   const setTab = (tab: string) => setSearchParams(tab === 'analytics' ? {} : { tab });
 
@@ -93,19 +88,20 @@ export function AdminDashboard() {
       setUsers((prev) => prev.filter((u) => u.id !== id));
       toast.success('تم حذف المستخدم');
     } else if (type === 'approve') {
-      setAdminDonations((prev) => prev.map((d) => d.id === id ? { ...d, status: 'approved' } : d));
+      updateDonationStatus(id, 'متاح');
       toast.success('تم قبول التبرع');
     } else if (type === 'reject') {
-      setAdminDonations((prev) => prev.map((d) => d.id === id ? { ...d, status: 'rejected' } : d));
+      updateDonationStatus(id, 'مرفوض');
       toast.error('تم رفض التبرع');
     }
     setConfirmAction(null);
   };
 
-  const totalUsers = users.length;
-  const totalDonations = adminDonations.length;
-  const completedDeliveries = 162;
-  const pendingReview = adminDonations.filter((d) => d.status === 'pending_review').length;
+  const totalUsers = allUsers.length;
+  const adminDonationsList = donations.filter(d => ['قيد المراجعة', 'متاح', 'مرفوض'].includes(d.status));
+  const totalDonations = donations.length;
+  const completedDeliveries = donations.filter(d => d.status === 'تم التسليم').length;
+  const pendingReview = donations.filter((d) => d.status === 'قيد المراجعة').length;
 
   return (
     <DashboardLayout>
@@ -133,7 +129,7 @@ export function AdminDashboard() {
           ].map((s, i) => {
             const Icon = s.icon;
             return (
-              <Card key={i} className="hover:shadow-md transition-shadow">
+              <Card key={i} className="hover:shadow-md transition-shadow border border-border/50 bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-5">
                   <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center mb-3`}>
                     <Icon className={`h-5 w-5 ${s.color}`} />
@@ -237,7 +233,7 @@ export function AdminDashboard() {
               <CardHeader><CardTitle>إدارة التبرعات</CardTitle><CardDescription>مراجعة وقبول أو رفض التبرعات</CardDescription></CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {adminDonations.map((d) => (
+                  {adminDonationsList.map((d) => (
                     <div key={d.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border bg-background hover:bg-muted/40 transition-colors">
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -245,16 +241,16 @@ export function AdminDashboard() {
                           <Badge variant="outline" className="text-xs">{d.category}</Badge>
                           {d.urgency === 'عالية' && <Badge className="bg-red-100 text-red-600 dark:bg-red-900/30 text-xs">عاجل</Badge>}
                           <Badge className={
-                            d.status === 'approved' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 text-xs' :
-                            d.status === 'rejected' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 text-xs' :
+                            d.status === 'متاح' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 text-xs' :
+                            d.status === 'مرفوض' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 text-xs' :
                             'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 text-xs'
                           }>
-                            {d.status === 'approved' ? 'مقبول' : d.status === 'rejected' ? 'مرفوض' : 'بانتظار المراجعة'}
+                            {d.status === 'متاح' ? 'مقبول' : d.status === 'مرفوض' ? 'مرفوض' : 'بانتظار المراجعة'}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground">بواسطة: {d.donor} • {new Date(d.date).toLocaleDateString('ar-SA')}</p>
+                        <p className="text-xs text-muted-foreground">بواسطة: {d.donor.name} • {new Date(d.createdAt).toLocaleDateString('ar-SA')}</p>
                       </div>
-                      {d.status === 'pending_review' && (
+                      {d.status === 'قيد المراجعة' && (
                         <div className="flex gap-2 flex-shrink-0">
                           <Button size="sm" className="h-8 bg-green-600 hover:bg-green-700 text-white gap-1" onClick={() => setConfirmAction({ type: 'approve', id: d.id, label: `قبول تبرع "${d.title}"؟` })}>
                             <Check className="h-3.5 w-3.5" /> قبول
@@ -293,9 +289,11 @@ export function AdminDashboard() {
                         </div>
                         <p className="text-xs text-muted-foreground">من: {d.donor.name} • {d.location}</p>
                       </div>
-                      <Button variant="outline" size="sm" className="h-8 gap-1 flex-shrink-0">
-                        <Eye className="h-3.5 w-3.5" /> عرض
-                      </Button>
+                      <Link to={`/donations/${d.id}`}>
+                        <Button variant="outline" size="sm" className="h-8 gap-1 flex-shrink-0">
+                          <Eye className="h-3.5 w-3.5" /> عرض
+                        </Button>
+                      </Link>
                     </div>
                   ))}
                 </div>
@@ -328,8 +326,21 @@ export function AdminDashboard() {
                           <span>📍 {c.location}</span>
                         </div>
                         <div className="flex gap-2 mt-3">
-                          <Button size="sm" className="bg-primary text-white text-xs h-8">تعيين متطوع</Button>
-                          <Button variant="outline" size="sm" className="text-xs h-8">عرض التفاصيل</Button>
+                          <Button
+                            size="sm"
+                            className="bg-primary text-white text-xs h-8"
+                            onClick={() => { setAssignCase(c); setSelectedVolunteer(''); }}
+                          >
+                            تعيين متطوع
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-8"
+                            onClick={() => toast.info(`📋 ${c.title} — ${c.description}`)}
+                          >
+                            عرض التفاصيل
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -340,6 +351,46 @@ export function AdminDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Assign Volunteer Dialog */}
+      <Dialog open={!!assignCase} onOpenChange={(open) => { if (!open) setAssignCase(null); }}>
+        <DialogContent dir="rtl" className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>تعيين متطوع للحالة</DialogTitle>
+            <DialogDescription>{assignCase?.title}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">{assignCase?.description}</p>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">اختر متطوعاً</label>
+              <Select value={selectedVolunteer} onValueChange={setSelectedVolunteer}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر من قائمة المتطوعين" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.filter(u => u.role === 'volunteer' && u.status === 'active').map(v => (
+                    <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignCase(null)}>إلغاء</Button>
+            <Button
+              className="bg-primary text-white"
+              disabled={!selectedVolunteer}
+              onClick={() => {
+                const vol = users.find(u => u.id === selectedVolunteer);
+                toast.success(`تم تعيين ${vol?.name} للحالة: ${assignCase?.title}`);
+                setAssignCase(null);
+              }}
+            >
+              تأكيد التعيين
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Global confirm dialog */}
       <AlertDialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>

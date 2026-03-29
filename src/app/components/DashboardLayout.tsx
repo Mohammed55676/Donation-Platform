@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
@@ -24,6 +24,8 @@ import {
   Heart,
   LogOut,
   Menu,
+  Moon,
+  Sun,
   Settings,
   User,
   LayoutDashboard,
@@ -47,14 +49,19 @@ interface SidebarItem {
 }
 
 const sidebarByRole: Record<string, SidebarItem[]> = {
-  user: [
-    { label: 'نظرة عامة', path: '/dashboard/user', icon: LayoutDashboard },
-    { label: 'تبرعاتي', path: '/dashboard/user?tab=donations', icon: Gift },
-    { label: 'طلباتي', path: '/dashboard/user?tab=requests', icon: ClipboardList },
-    { label: 'الملف الشخصي', path: '/dashboard/user?tab=profile', icon: User },
+  donor: [
+    { label: 'نظرة عامة', path: '/dashboard/donor', icon: LayoutDashboard },
+    { label: 'تبرعاتي', path: '/dashboard/donor?tab=donations', icon: Gift },
+    { label: 'الملف الشخصي', path: '/dashboard/donor?tab=profile', icon: User },
+  ],
+  beneficiary: [
+    { label: 'نظرة عامة', path: '/dashboard/beneficiary', icon: LayoutDashboard },
+    { label: 'طلباتي', path: '/dashboard/beneficiary?tab=requests', icon: ClipboardList },
+    { label: 'المحفوظات', path: '/dashboard/beneficiary?tab=wishlist', icon: Heart },
+    { label: 'الملف الشخصي', path: '/dashboard/beneficiary?tab=profile', icon: User },
   ],
   volunteer: [
-    { label: 'لوحة التحكم', path: '/dashboard/volunteer', icon: LayoutDashboard },
+    { label: 'نظرة عامة', path: '/dashboard/volunteer', icon: LayoutDashboard },
     { label: 'مهامي', path: '/dashboard/volunteer?tab=tasks', icon: Truck },
     { label: 'الخريطة', path: '/dashboard/volunteer?tab=map', icon: MapPin },
     { label: 'الملف الشخصي', path: '/dashboard/volunteer?tab=profile', icon: User },
@@ -69,7 +76,8 @@ const sidebarByRole: Record<string, SidebarItem[]> = {
 };
 
 const roleTitles: Record<string, string> = {
-  user: 'حساب المستخدم',
+  donor: 'حساب المتبرع',
+  beneficiary: 'حساب المستفيد',
   volunteer: 'حساب المتطوع',
   admin: 'لوحة الإدارة',
 };
@@ -151,7 +159,7 @@ function Sidebar({ items, onClose }: { items: SidebarItem[]; onClose?: () => voi
           <div className="font-bold text-sm bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             منصة الخير
           </div>
-          <div className="text-xs text-muted-foreground truncate">{roleTitles[user?.role ?? 'user']}</div>
+          <div className="text-xs text-muted-foreground truncate">{roleTitles[user?.role ?? 'donor']}</div>
         </div>
         {onClose && (
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
@@ -220,8 +228,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
-  const items = sidebarByRole[user?.role ?? 'user'];
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [darkMode]);
+
+  const items = sidebarByRole[user?.role ?? 'donor'];
 
   const handleLogout = () => {
     logout();
@@ -263,12 +282,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </Sheet>
 
             <div className="hidden lg:block">
-              <h1 className="font-semibold text-lg">{roleTitles[user?.role ?? 'user']}</h1>
+              <h1 className="font-semibold text-lg">{roleTitles[user?.role ?? 'donor']}</h1>
             </div>
             <div className="lg:hidden font-semibold text-base">منصة الخير</div>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Theme toggle */}
+            <Button variant="ghost" size="icon" onClick={() => setDarkMode(!darkMode)} title="تبديل المظهر">
+              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
+
             <NotificationBell />
 
             {/* Profile dropdown */}

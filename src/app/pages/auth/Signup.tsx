@@ -6,42 +6,56 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Eye, EyeOff, Mail, Lock, User, Heart, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { isValidEmail, isLettersOnly } from '../../utils/validators';
 
-type Role = 'user' | 'volunteer';
+type Role = 'donor' | 'beneficiary' | 'volunteer';
 
 const roles: { value: Role; label: string; description: string; icon: typeof User }[] = [
-  {
-    value: 'user',
-    label: 'مستخدم',
-    description: 'متبرع أو مستفيد',
-    icon: User,
-  },
-  {
-    value: 'volunteer',
-    label: 'متطوع',
-    description: 'أساعد في التوصيل',
-    icon: Users,
-  },
+  { value: 'donor', label: 'متبرع', description: 'أرغب بتقديم المساعدة', icon: Heart },
+  { value: 'beneficiary', label: 'مستفيد', description: 'أبحث عن دعم أو مساعدة', icon: User },
+  { value: 'volunteer', label: 'متطوع', description: 'أساعد في عمليات التوصيل', icon: Users },
 ];
+
+type Errors = { name?: string; email?: string; password?: string };
 
 export function Signup() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<Role>('user');
+  const [selectedRole, setSelectedRole] = useState<Role>('donor');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Errors>({});
   const { signup } = useAuth();
   const navigate = useNavigate();
 
+  const validate = (): Errors => {
+    const e: Errors = {};
+    if (!name.trim()) {
+      e.name = 'الاسم مطلوب';
+    } else if (!isLettersOnly(name)) {
+      e.name = 'الاسم يجب أن يحتوي على حروف فقط';
+    } else if (name.trim().length < 3) {
+      e.name = 'الاسم يجب أن يكون 3 أحرف على الأقل';
+    }
+    if (!email.trim()) {
+      e.email = 'البريد الإلكتروني مطلوب';
+    } else if (!isValidEmail(email)) {
+      e.email = 'البريد الإلكتروني غير صحيح';
+    }
+    if (!password) {
+      e.password = 'كلمة المرور مطلوبة';
+    } else if (password.length < 6) {
+      e.password = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+    }
+    return e;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password) {
-      toast.error('يرجى ملء جميع الحقول');
-      return;
-    }
-    if (password.length < 6) {
-      toast.error('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
       return;
     }
     setLoading(true);
@@ -50,7 +64,8 @@ export function Signup() {
     if (result.success) {
       toast.success('تم إنشاء حسابك بنجاح!');
       const redirectMap: Record<Role, string> = {
-        user: '/dashboard/user',
+        donor: '/dashboard/donor',
+        beneficiary: '/dashboard/beneficiary',
         volunteer: '/dashboard/volunteer',
       };
       navigate(redirectMap[selectedRole], { replace: true });
@@ -75,7 +90,7 @@ export function Signup() {
       {/* Role Selection */}
       <div className="mb-6">
         <Label className="text-sm font-medium mb-3 block">نوع الحساب</Label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {roles.map((role) => {
             const Icon = role.icon;
             const isSelected = selectedRole === role.value;
@@ -108,21 +123,22 @@ export function Signup() {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
+        <div className="space-y-1">
           <Label htmlFor="name">الاسم الكامل</Label>
           <div className="relative">
             <User className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="name"
               placeholder="أدخل اسمك الكامل"
-              className="pr-10 border-2 focus:border-primary"
+              className={`pr-10 border-2 focus:border-primary ${errors.name ? 'border-destructive' : ''}`}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => { setName(e.target.value); setErrors(prev => ({ ...prev, name: undefined })); }}
             />
           </div>
+          {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           <Label htmlFor="email">البريد الإلكتروني</Label>
           <div className="relative">
             <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -130,15 +146,16 @@ export function Signup() {
               id="email"
               type="email"
               placeholder="example@email.com"
-              className="pr-10 border-2 focus:border-primary"
+              className={`pr-10 border-2 focus:border-primary ${errors.email ? 'border-destructive' : ''}`}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setErrors(prev => ({ ...prev, email: undefined })); }}
               dir="ltr"
             />
           </div>
+          {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           <Label htmlFor="password">كلمة المرور</Label>
           <div className="relative">
             <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -146,9 +163,9 @@ export function Signup() {
               id="password"
               type={showPassword ? 'text' : 'password'}
               placeholder="6 أحرف على الأقل"
-              className="pr-10 pl-10 border-2 focus:border-primary"
+              className={`pr-10 pl-10 border-2 focus:border-primary ${errors.password ? 'border-destructive' : ''}`}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: undefined })); }}
               dir="ltr"
             />
             <button
@@ -159,9 +176,7 @@ export function Signup() {
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-          {password && password.length < 6 && (
-            <p className="text-xs text-destructive">كلمة المرور قصيرة جداً</p>
-          )}
+          {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
         </div>
 
         <Button

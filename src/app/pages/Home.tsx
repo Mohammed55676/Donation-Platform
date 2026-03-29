@@ -1,6 +1,7 @@
 import { campaigns, donations } from '../data/donations';
 import { motion } from 'motion/react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
+import { useAuth } from '../context/AuthContext';
 import { 
   Shirt, UtensilsCrossed, Armchair, BookOpen, Package, 
   Gift, Users, Heart, ArrowLeft, TrendingUp, Clock 
@@ -11,12 +12,22 @@ import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
 
 export function Home() {
+  const { user, toggleWishlist } = useAuth();
+  const navigate = useNavigate();
+
+  const handleDonateClick = () => {
+    if (user) {
+      navigate('/add-donation');
+    } else {
+      navigate('/login');
+    }
+  };
   const categories = [
-    { name: 'ملابس', icon: Shirt, color: 'bg-blue-500', count: 45 },
-    { name: 'طعام', icon: UtensilsCrossed, color: 'bg-green-500', count: 32 },
-    { name: 'أثاث', icon: Armchair, color: 'bg-purple-500', count: 18 },
-    { name: 'كتب', icon: BookOpen, color: 'bg-orange-500', count: 28 },
-    { name: 'أخرى', icon: Package, color: 'bg-pink-500', count: 15 },
+    { name: 'ملابس', icon: Shirt, color: 'bg-blue-500', count: donations.filter(d => d.category === 'ملابس').length },
+    { name: 'طعام', icon: UtensilsCrossed, color: 'bg-green-500', count: donations.filter(d => d.category === 'طعام').length },
+    { name: 'أثاث', icon: Armchair, color: 'bg-purple-500', count: donations.filter(d => d.category === 'أثاث').length },
+    { name: 'كتب', icon: BookOpen, color: 'bg-orange-500', count: donations.filter(d => d.category === 'كتب').length },
+    { name: 'أخرى', icon: Package, color: 'bg-pink-500', count: donations.filter(d => d.category === 'أخرى').length },
   ];
 
   const stats = [
@@ -40,14 +51,12 @@ export function Home() {
               انضم إلينا في رحلة العطاء. كل تبرع يصنع فرقاً في حياة شخص محتاج
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/add-donation">
-                <Button size="lg" className="bg-primary hover:bg-primary/90 text-white w-full sm:w-auto">
-                  <Gift className="ml-2 h-5 w-5" />
-                  تبرع الآن
-                </Button>
-              </Link>
-              <Link to="/donations">
-                <Button size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/10 w-full sm:w-auto">
+              <Button size="lg" onClick={handleDonateClick} className="bg-primary hover:bg-primary/90 text-white w-full sm:w-auto shadow-lg hover:shadow-primary/50 transition-all">
+                <Gift className="ml-2 h-5 w-5" />
+                تبرع الآن
+              </Button>
+              <Link to="/requests" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/10 w-full shadow-sm hover:shadow-md transition-all">
                   <Heart className="ml-2 h-5 w-5" />
                   اطلب مساعدة
                 </Button>
@@ -64,17 +73,25 @@ export function Home() {
             {stats.map((stat, index) => {
               const Icon = stat.icon;
               return (
-                <Card key={index} className="border-none shadow-lg hover:shadow-xl transition-shadow">
-                  <CardContent className="p-6 flex items-center gap-4">
-                    <div className={`p-4 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 ${stat.color}`}>
-                      <Icon className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <p className="text-3xl font-bold">{stat.value}</p>
-                      <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  key={index}
+                >
+                  <Card className="border-none shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 bg-card">
+                    <CardContent className="p-6 flex items-center gap-4">
+                      <div className={`p-4 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 ${stat.color}`}>
+                        <Icon className="h-8 w-8" />
+                      </div>
+                      <div>
+                        <p className="text-3xl font-bold">{stat.value}</p>
+                        <p className="text-sm text-muted-foreground">{stat.label}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               );
             })}
           </div>
@@ -159,12 +176,10 @@ export function Home() {
                         </span>
                       </div>
                       <Progress value={progress} className="h-2" />
-                      <Link to="/add-donation">
-                        <Button className="w-full bg-secondary hover:bg-secondary/90 text-white">
-                          <TrendingUp className="ml-2 h-4 w-4" />
-                          ساهم الآن
-                        </Button>
-                      </Link>
+                      <Button onClick={handleDonateClick} className="w-full bg-secondary hover:bg-secondary/90 text-white shadow-md hover:shadow-secondary/50 transition-all">
+                        <TrendingUp className="ml-2 h-4 w-4" />
+                        ساهم الآن
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -199,10 +214,22 @@ export function Home() {
                       alt={donation.title}
                       className="w-full h-full object-cover"
                     />
-                    <Badge className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white border-0">
-                      <Clock className="ml-1 h-3 w-3" />
-                      عاجل
-                    </Badge>
+                    <div className="absolute top-3 right-3 flex flex-col gap-2">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className={`h-8 w-8 rounded-full bg-white/80 hover:bg-white dark:bg-black/50 dark:hover:bg-black shadow-sm ${
+                          user?.wishlist?.includes(donation.id) ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
+                        }`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleWishlist(donation.id);
+                        }}
+                      >
+                        <Heart className={`h-4 w-4 ${user?.wishlist?.includes(donation.id) ? 'fill-current' : ''}`} />
+                      </Button>
+                    </div>
                   </div>
                   <CardHeader>
                     <CardTitle className="line-clamp-1">{donation.title}</CardTitle>
@@ -239,18 +266,16 @@ export function Home() {
             انضم إلى آلاف المتطوعين والمتبرعين في صنع فرق حقيقي في حياة الآخرين
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/volunteer">
-              <Button size="lg" variant="secondary" className="w-full sm:w-auto">
+            <Link to="/volunteer" className="w-full sm:w-auto">
+              <Button size="lg" variant="secondary" className="w-full shadow-lg hover:shadow-secondary/50 transition-all">
                 <Users className="ml-2 h-5 w-5" />
                 انضم كمتطوع
               </Button>
             </Link>
-            <Link to="/add-donation">
-              <Button size="lg" variant="outline" className="bg-white/10 border-white text-white hover:bg-white/20 w-full sm:w-auto">
-                <Gift className="ml-2 h-5 w-5" />
-                ابدأ التبرع
-              </Button>
-            </Link>
+            <Button size="lg" variant="outline" onClick={handleDonateClick} className="bg-white/10 border-white text-white hover:bg-white/20 w-full sm:w-auto shadow-lg transition-all">
+              <Gift className="ml-2 h-5 w-5" />
+              ابدأ التبرع
+            </Button>
           </div>
         </div>
       </section>

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
-export type UserRole = 'user' | 'volunteer' | 'admin';
+export type UserRole = 'donor' | 'beneficiary' | 'volunteer' | 'admin';
 
 export interface AuthUser {
   id: string;
@@ -12,6 +12,7 @@ export interface AuthUser {
   location?: string;
   joinDate: string;
   profileComplete: number; // 0–100
+  wishlist?: string[];
 }
 
 interface AuthContextValue {
@@ -22,10 +23,12 @@ interface AuthContextValue {
     name: string,
     email: string,
     password: string,
-    role: 'user' | 'volunteer'
+    role: 'donor' | 'beneficiary' | 'volunteer'
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateUser: (updates: Partial<AuthUser>) => void;
+  toggleWishlist: (donationId: string) => void;
+  getAllUsers: () => AuthUser[];
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -102,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const signup = async (name: string, email: string, password: string, role: 'user' | 'volunteer') => {
+  const signup = async (name: string, email: string, password: string, role: 'donor' | 'beneficiary' | 'volunteer') => {
     const accounts = getAccounts();
     const key = email.toLowerCase();
     if (accounts[key]) {
@@ -124,6 +127,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => setUser(null);
 
+  const getAllUsers = (): AuthUser[] => {
+    const accounts = getAccounts();
+    return Object.values(accounts).map((acc) => acc.user);
+  };
+
   const updateUser = (updates: Partial<AuthUser>) => {
     setUser((prev) => {
       if (!prev) return prev;
@@ -139,8 +147,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const toggleWishlist = (donationId: string) => {
+    if (!user) return;
+    const currentWishlist = user.wishlist || [];
+    const isSaved = currentWishlist.includes(donationId);
+    const newWishlist = isSaved
+      ? currentWishlist.filter(id => id !== donationId)
+      : [...currentWishlist, donationId];
+
+    updateUser({ wishlist: newWishlist });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, signup, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, signup, logout, updateUser, toggleWishlist, getAllUsers }}>
       {children}
     </AuthContext.Provider>
   );
