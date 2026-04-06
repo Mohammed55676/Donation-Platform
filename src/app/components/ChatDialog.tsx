@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 interface Message {
   id: string;
-  sender: 'me' | 'other';
+  senderName: string;
   text: string;
   time: string;
 }
@@ -25,10 +25,15 @@ interface ChatDialogProps {
   onOpenChange: (open: boolean) => void;
   recipientName: string;
   recipientAvatar: string;
+  currentUser?: { name: string; avatar?: string };
 }
 
-export function ChatDialog({ open, onOpenChange, recipientName, recipientAvatar }: ChatDialogProps) {
-  const CHAT_KEY = `chat_history_${recipientName}`;
+export function ChatDialog({ open, onOpenChange, recipientName, recipientAvatar, currentUser }: ChatDialogProps) {
+  const currentUserName = currentUser?.name || 'زائر';
+  
+  // Create a symmetric key so both users see the same chat
+  const chatParticipants = [currentUserName, recipientName].sort();
+  const CHAT_KEY = `chat_history_${chatParticipants[0]}_${chatParticipants[1]}`;
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -37,19 +42,19 @@ export function ChatDialog({ open, onOpenChange, recipientName, recipientAvatar 
     return [
       {
         id: '1',
-        sender: 'other',
+        senderName: recipientName,
         text: 'مرحباً! شكراً لاهتمامك بالتبرع',
         time: '10:30 ص',
       },
       {
         id: '2',
-        sender: 'me',
+        senderName: currentUserName,
         text: 'أهلاً، متى يمكنني استلام التبرع؟',
         time: '10:32 ص',
       },
       {
         id: '3',
-        sender: 'other',
+        senderName: recipientName,
         text: 'يمكنك الاستلام اليوم بعد الساعة 3 عصراً',
         time: '10:35 ص',
       },
@@ -70,7 +75,7 @@ export function ChatDialog({ open, onOpenChange, recipientName, recipientAvatar 
     if (newMessage.trim()) {
       const message: Message = {
         id: Date.now().toString(),
-        sender: 'me',
+        senderName: currentUserName,
         text: newMessage,
         time: new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
       };
@@ -103,11 +108,11 @@ export function ChatDialog({ open, onOpenChange, recipientName, recipientAvatar 
                   key={message.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${message.sender === 'me' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${message.senderName === currentUserName ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
                     className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                      message.sender === 'me'
+                      message.senderName === currentUserName
                         ? 'bg-primary text-white'
                         : 'bg-muted text-foreground'
                     }`}
@@ -115,7 +120,7 @@ export function ChatDialog({ open, onOpenChange, recipientName, recipientAvatar 
                     <p className="text-sm">{message.text}</p>
                     <p
                       className={`text-xs mt-1 ${
-                        message.sender === 'me' ? 'text-white/70' : 'text-muted-foreground'
+                        message.senderName === currentUserName ? 'text-white/70' : 'text-muted-foreground'
                       }`}
                     >
                       {message.time}

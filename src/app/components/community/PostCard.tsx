@@ -6,8 +6,9 @@ import { Avatar } from "./Avatar";
 import { IconButton } from "./IconButton";
 import type { Post } from "../../context/CommunityContext";
 import { Card, CardContent } from "../ui/card";
-import { MessageCircle, Hand } from "lucide-react";
+import { MessageCircle, Hand, Phone } from "lucide-react";
 import { Button } from "../ui/button";
+import { motion } from "motion/react";
 
 type PostCardProps = {
   post: Post;
@@ -26,7 +27,14 @@ export const PostCard: React.FC<PostCardProps> = ({
   onClick,
   isLiked = false,
 }) => (
-  <Card 
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, margin: "-50px" }}
+    whileHover={{ y: -5 }}
+    transition={{ duration: 0.3 }}
+  >
+    <Card 
     className={`overflow-hidden transition-all hover:shadow-md border border-border/60 hover:border-primary/30 ${onClick ? 'cursor-pointer' : ''}`}
     onClick={onClick}
   >
@@ -74,17 +82,30 @@ export const PostCard: React.FC<PostCardProps> = ({
           </div>
         </div>
 
-        <Button 
-          variant={post.status === "open" ? "default" : "outline"} 
-          size="sm" 
-          onClick={(e) => { e.stopPropagation(); onHelp(); }}
-          disabled={post.status === "completed"}
-          className="gap-2"
-        >
-          <Hand className="w-4 h-4" />
-          {post.status === "open" ? "تقديم مساعدة" : post.status === "in_progress" ? "قيد التنفيذ" : "مكتمل"}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={(e) => { e.stopPropagation(); window.location.href = 'mailto:' + (post.author.email || 'contact@example.com'); }}
+            className="gap-2"
+          >
+            <Phone className="w-4 h-4" />
+            <span className="hidden sm:inline">تواصل</span>
+          </Button>
+
+          <Button 
+            variant={post.status === "open" ? "default" : "secondary"} 
+            size="sm" 
+            onClick={(e) => { e.stopPropagation(); onHelp(); }}
+            disabled={post.status === "completed"}
+            className="gap-2"
+          >
+            <Hand className="w-4 h-4" />
+            {post.status === "open" ? "تقديم مساعدة" : post.status === "in_progress" ? "قيد التنفيذ" : "مكتمل"}
+          </Button>
+        </div>
       </div>
     </CardContent>
   </Card>
+  </motion.div>
 );

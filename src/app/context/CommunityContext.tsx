@@ -7,6 +7,7 @@ export type PostStatus = "open" | "in_progress" | "completed";
 export type CommunityUser = {
   id: string;
   name: string;
+  email?: string;
   role: "user" | "volunteer" | "admin";
   avatarUrl?: string;
 };
@@ -33,6 +34,7 @@ export type Post = {
   location?: string;
   image?: string;
   likes: number;
+  likedBy?: string[];
   createdAt: string;
   status: PostStatus;
   author: CommunityUser;
@@ -66,7 +68,7 @@ type CommunityState = {
   notifications: CommunityNotification[];
   fetchPosts: () => Promise<void>;
   createPost: (payload: NewPostPayload, currentUser: any) => Promise<void>;
-  likePost: (postId: string) => void;
+  likePost: (postId: string, userId: string) => void;
   addComment: (postId: string, text: string, currentUser: any) => Promise<void>;
   acceptRequest: (postId: string, currentUser: any) => Promise<void>;
   completeRequest: (postId: string) => Promise<void>;
@@ -82,6 +84,7 @@ const mockPosts: Post[] = [
     category: "Medical",
     urgency: "🔥 Urgent",
     likes: 12,
+    likedBy: [],
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
     status: "open",
     author: {
@@ -99,6 +102,7 @@ const mockPosts: Post[] = [
     category: "Food",
     urgency: "Normal",
     likes: 45,
+    likedBy: [],
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
     status: "in_progress",
     author: {
@@ -141,6 +145,7 @@ export const useCommunityStore = create<CommunityState>()(
         urgency: payload.urgency,
         image: typeof payload.image === "string" ? payload.image : undefined,
         likes: 0,
+        likedBy: [],
         createdAt: new Date().toISOString(),
         status: "open",
         author: {
@@ -155,25 +160,21 @@ export const useCommunityStore = create<CommunityState>()(
 
       set((state) => ({
         posts: [newPost, ...state.posts],
-        notifications: [
-          ...state.notifications,
-          {
-            id: crypto.randomUUID(),
-            title: "نجاح",
-            message: "تم إنشاء طلبك بنجاح.",
-            type: "success",
-          },
-        ],
       }));
       
       toast.success("تم إنشاء طلبك بنجاح");
     },
 
-    likePost: (postId) => {
+    likePost: (postId, userId) => {
       set((state) => ({
-        posts: state.posts.map((p) =>
-          p.id === postId ? { ...p, likes: p.likes + 1 } : p
-        ),
+        posts: state.posts.map((p) => {
+          if (p.id === postId) {
+            const likedBy = p.likedBy || [];
+            if (likedBy.includes(userId)) return p;
+            return { ...p, likes: p.likes + 1, likedBy: [...likedBy, userId] };
+          }
+          return p;
+        }),
       }));
     },
 

@@ -18,7 +18,6 @@ type DonationErrors = {
   category?: string;
   condition?: string;
   location?: string;
-  urgency?: string;
 };
 
 export function AddDonation() {
@@ -33,7 +32,6 @@ export function AddDonation() {
     category: '',
     condition: '',
     location: '',
-    urgency: '',
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<DonationErrors>({});
@@ -66,7 +64,6 @@ export function AddDonation() {
     } else if (formData.location.trim().length < 2) {
       e.location = 'يرجى كتابة موقع صحيح';
     }
-    if (!formData.urgency) e.urgency = 'يرجى اختيار مستوى الأولوية';
     return e;
   };
 
@@ -102,7 +99,7 @@ export function AddDonation() {
         category: formData.category as any,
         condition: formData.condition as any,
         location: formData.location,
-        urgency: formData.urgency as any,
+        urgency: 'متوسطة' as any,
         image: imagePreview || 'https://via.placeholder.com/500',
         donor: {
           name: user.name,
@@ -233,34 +230,17 @@ export function AddDonation() {
                 </div>
               </div>
 
-              {/* Location and Urgency */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="location">الموقع *</Label>
-                  <Input
-                    id="location"
-                    placeholder="مثال: عمّان"
-                    value={formData.location}
-                    onChange={(e) => set('location', e.target.value)}
-                    className={`mt-1 bg-background focus-visible:ring-primary ${errors.location ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                  />
-                  {errors.location && <p className="text-xs text-destructive">{errors.location}</p>}
-                </div>
-
-                <div className="space-y-1">
-                  <Label>مستوى الأولوية *</Label>
-                  <Select value={formData.urgency} onValueChange={(v) => set('urgency', v)}>
-                    <SelectTrigger className={`mt-1 bg-background focus:ring-primary ${errors.urgency ? 'border-destructive focus:ring-destructive' : ''}`}>
-                      <SelectValue placeholder="اختر مستوى الأولوية" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="عالية">عالية</SelectItem>
-                      <SelectItem value="متوسطة">متوسطة</SelectItem>
-                      <SelectItem value="منخفضة">منخفضة</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.urgency && <p className="text-xs text-destructive">{errors.urgency}</p>}
-                </div>
+              {/* Location */}
+              <div className="space-y-1">
+                <Label htmlFor="location">الموقع *</Label>
+                <Input
+                  id="location"
+                  placeholder="مثال: عمّان"
+                  value={formData.location}
+                  onChange={(e) => set('location', e.target.value)}
+                  className={`mt-1 bg-background focus-visible:ring-primary ${errors.location ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                />
+                {errors.location && <p className="text-xs text-destructive">{errors.location}</p>}
               </div>
 
               {/* Info Card */}

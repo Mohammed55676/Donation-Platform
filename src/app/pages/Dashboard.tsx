@@ -1,267 +1,273 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router';
+import { useState, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router';
 import { isValidEmail, isLettersOnly, sanitizePhone } from '../utils/validators';
+import { DashboardLayout } from '../components/DashboardLayout';
+import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { Progress } from '../components/ui/progress';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '../components/ui/dialog';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '../components/ui/alert-dialog';
-import { Label } from '../components/ui/label';
-import { Input } from '../components/ui/input';
-import { 
-  Package, 
-  Heart, 
-  TrendingUp, 
-  Clock,
-  CheckCircle,
-  XCircle,
-  Edit,
-  Trash2,
-  Eye
-} from 'lucide-react';
-import { donations } from '../data/donations';
+import { Package, CheckCircle, Clock, Edit, Trash2, Eye, Gift, Heart, TrendingUp, HelpCircle, Star, Navigation, Truck, MapPin, Play, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNotifications } from '../context/NotificationContext';
+import { useDonations } from '../context/DonationContext';
+import { MapView } from '../components/MapView';
+import { RatingDialog } from '../components/RatingDialog';
+
+interface Task {
+  id: string;
+  type: 'pickup' | 'delivery';
+  title: string;
+  donor: string;
+  recipient: string;
+  pickupAddress: string;
+  deliveryAddress: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  urgency: 'high' | 'medium' | 'low';
+  distance: string;
+  items: string;
+}
+
+const mockTasks: Task[] = [
+  {
+    id: '1', type: 'pickup', title: 'استلام ملابس شتوية',
+    donor: 'أحمد محمد', recipient: 'عائلة الأحمدي',
+    pickupAddress: 'عمّان - عبدون', deliveryAddress: 'عمّان - دابوق',
+    status: 'pending', urgency: 'high', distance: '3.2 كم', items: 'ملابس شتوية (15 قطعة)',
+  },
+  {
+    id: '2', type: 'delivery', title: 'توصيل أدوات مدرسية',
+    donor: 'نورة أحمد', recipient: 'مدرسة الأمل',
+    pickupAddress: 'عمّان - الرابية', deliveryAddress: 'عمّان - شارع الجامعة',
+    status: 'in_progress', urgency: 'medium', distance: '5.8 كم', items: 'حقائب وأدوات مدرسية',
+  },
+];
+
+const taskStatusLabels = { pending: 'قيد الانتظار', in_progress: 'جارٍ التنفيذ', completed: 'مكتمل' };
+const taskStatusColors = {
+  pending: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  in_progress: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+};
+const taskUrgencyColors = {
+  high: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+  medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  low: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+};
+const taskUrgencyLabels = { high: 'عاجل', medium: 'متوسط', low: 'منخفض' };
+
+function StatCard({ label, value, icon: Icon, color, bgColor, trend }: any) {
+  return (
+    <Card className="hover:shadow-lg transition-all border border-border/60 hover:border-primary/40 bg-card/90">
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className={`p-2.5 rounded-xl ${bgColor}`}>
+            <Icon className={`h-5 w-5 ${color}`} />
+          </div>
+          {trend && (
+            <span className="text-xs text-green-600 font-medium flex items-center gap-0.5">
+              <TrendingUp className="h-3 w-3" /> {trend}
+            </span>
+          )}
+        </div>
+        <p className="text-2xl font-bold">{value}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">{label}</p>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function Dashboard() {
-  const [activeTab, setActiveTab] = useState('my-donations');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'overview';
+  const { user, updateUser } = useAuth();
+  const { addNotification } = useNotifications();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // States
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [profileErrors, setProfileErrors] = useState<{ name?: string; email?: string; phone?: string; location?: string }>({});
-
-  // User state
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('dashboard_user');
-    if (saved) return JSON.parse(saved);
-    return {
-      name: 'أحمد محمد',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
-      email: 'ahmed@example.com',
-      phone: '+966 50 123 4567',
-      location: 'الرياض',
-      joinDate: '2026-01-15',
-    };
+  const [editUserForm, setEditUserForm] = useState({
+    name: user?.name ?? '',
+    email: user?.email ?? '',
+    phone: user?.phone ?? '',
+    location: user?.location ?? '',
+    avatar: user?.avatar ?? '',
   });
-  const [editUserForm, setEditUserForm] = useState(user);
 
-  useEffect(() => {
-    localStorage.setItem('dashboard_user', JSON.stringify(user));
-  }, [user]);
-
-  // Donations state
-  const [myDonations, setMyDonations] = useState(() => {
-    const saved = localStorage.getItem('dashboard_donations');
-    if (saved) return JSON.parse(saved);
-    return donations.slice(0, 3);
-  });
+  // Donations mapping
+  const { donations, deleteDonation, updateDonation } = useDonations();
+  const myDonations = donations.filter(d => d.donor.name === user?.name);
   const [isEditDonationOpen, setIsEditDonationOpen] = useState(false);
   const [donationToEdit, setDonationToEdit] = useState<any>(null);
+  
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem('dashboard_donations', JSON.stringify(myDonations));
-  }, [myDonations]);
+  // Requests mapping
+  const myRequests = donations
+    .filter(d => ['محجوز', 'تم التسليم'].includes(d.status) && d.donor.name !== user?.name)
+    .map(d => ({
+      id: d.id,
+      donation: d,
+      status: d.status === 'تم التسليم' ? 'تم التسليم' : 'قيد المراجعة',
+      requestDate: d.createdAt
+    }));
+  const [showRating, setShowRating] = useState(false);
+
+  // Volunteer Tasks State
+  const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const completedTasks = tasks.filter((t) => t.status === 'completed').length;
+  const inProgressTasks = tasks.filter((t) => t.status === 'in_progress').length;
+  const pendingTasks = tasks.filter((t) => t.status === 'pending').length;
+
+  // Saved items
+  const savedDonations = donations.filter(d => user?.wishlist?.includes(d.id));
+
+  // Stats
+  const stats = [
+    { label: 'تبرعاتي', value: myDonations.length, icon: Package, color: 'text-primary', bgColor: 'bg-primary/10' },
+    { label: 'طلباتي', value: myRequests.length, icon: Heart, color: 'text-secondary', bgColor: 'bg-secondary/10' },
+    { label: 'المهام التطوعية النشطة', value: inProgressTasks + pendingTasks, icon: Clock, color: 'text-orange-500', bgColor: 'bg-orange-100 dark:bg-orange-900/30' },
+    { label: 'المهام المكتملة', value: completedTasks, icon: CheckCircle, color: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-900/30' },
+  ];
+
+  const updateTaskStatus = (id: string, newStatus: Task['status']) => {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t)));
+    const labels = { in_progress: 'بدأت المهمة!', completed: 'أحسنت! أتممت المهمة بنجاح 🎉' };
+    toast.success(labels[newStatus as keyof typeof labels] ?? 'تم التحديث');
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'تم التسليم': return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400';
+      case 'قيد المراجعة': return 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400';
+      default: return '';
+    }
+  };
+
+  const setTab = (tab: string) => setSearchParams(tab === 'overview' ? {} : { tab });
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditUserForm({ ...editUserForm, avatar: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleEditProfile = (e: React.FormEvent) => {
     e.preventDefault();
     const errs: typeof profileErrors = {};
-    if (!editUserForm.name.trim()) {
-      errs.name = 'الاسم مطلوب';
-    } else if (!isLettersOnly(editUserForm.name)) {
-      errs.name = 'الاسم يجب أن يحتوي على حروف فقط';
-    } else if (editUserForm.name.trim().length < 3) {
-      errs.name = 'الاسم يجب أن يكون 3 أحرف على الأقل';
-    }
-    if (editUserForm.email && !isValidEmail(editUserForm.email)) {
-      errs.email = 'البريد الإلكتروني غير صحيح';
-    }
-    if (editUserForm.phone && !/^07[789]\d{7}$/.test(editUserForm.phone.trim())) {
-      errs.phone = 'يجب أن يبدأ بـ 077 أو 078 أو 079 ومكوّن من 10 أرقام';
-    }
-    if (editUserForm.location && editUserForm.location.trim().length < 2) {
-      errs.location = 'يرجى كتابة موقع صحيح';
-    }
-    if (Object.keys(errs).length > 0) {
-      setProfileErrors(errs);
-      return;
-    }
+    if (!editUserForm.name.trim()) errs.name = 'الاسم مطلوب';
+    else if (!isLettersOnly(editUserForm.name)) errs.name = 'الاسم يجب أن يحتوي على حروف فقط';
+    else if (editUserForm.name.trim().length < 3) errs.name = 'الاسم يجب أن يكون 3 أحرف على الأقل';
+    if (editUserForm.email && !isValidEmail(editUserForm.email)) errs.email = 'البريد الإلكتروني غير صحيح';
+    if (editUserForm.phone && !/^07[789]\d{7}$/.test(editUserForm.phone.trim())) errs.phone = 'يجب أن يبدأ بـ 077 أو 078 أو 079 ومكوّن من 10 أرقام';
+    if (editUserForm.location && editUserForm.location.trim().length < 2) errs.location = 'يرجى كتابة موقع صحيح';
+    if (Object.keys(errs).length > 0) { setProfileErrors(errs); return; }
     setProfileErrors({});
-    setUser(editUserForm);
-    toast.success('تم تحديث الملف الشخصي بنجاح!');
+    updateUser(editUserForm);
     setIsEditProfileOpen(false);
+    toast.success('تم تحديث الملف الشخصي بنجاح');
   };
 
   const handleDeleteItem = () => {
-    setMyDonations(myDonations.filter((d: any) => d.id !== itemToDelete));
-    toast.success('تم حذف العنصر بنجاح!');
+    if (itemToDelete) deleteDonation(itemToDelete);
+    toast.success('تم حذف التبرع!');
     setIsDeleteDialogOpen(false);
     setItemToDelete(null);
   };
 
   const handleEditDonation = (e: React.FormEvent) => {
     e.preventDefault();
-    setMyDonations(myDonations.map((d: any) => d.id === donationToEdit.id ? donationToEdit : d));
-    toast.success('تم تحديث التبرع بنجاح!');
+    if (donationToEdit) updateDonation(donationToEdit.id, donationToEdit);
+    toast.success('تم تحديث التبرع!');
     setIsEditDonationOpen(false);
   };
 
-  // Mock requests (keep same, but usually would be state too)
-  // Mock requests
-  const myRequests = [
-    {
-      id: '1',
-      donation: donations[3],
-      status: 'قيد المراجعة',
-      requestDate: '2026-03-18',
-    },
-    {
-      id: '2',
-      donation: donations[4],
-      status: 'تم القبول',
-      requestDate: '2026-03-17',
-    },
-    {
-      id: '3',
-      donation: donations[5],
-      status: 'تم التسليم',
-      requestDate: '2026-03-15',
-    },
-  ];
-
-  const stats = [
-    {
-      label: 'تبرعاتي',
-      value: myDonations.length,
-      icon: Package,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
-    },
-    {
-      label: 'طلباتي',
-      value: myRequests.length,
-      icon: Heart,
-      color: 'text-secondary',
-      bgColor: 'bg-secondary/10',
-    },
-    {
-      label: 'تم التسليم',
-      value: myRequests.filter(r => r.status === 'تم التسليم').length,
-      icon: CheckCircle,
-      color: 'text-green-500',
-      bgColor: 'bg-green-100',
-    },
-    {
-      label: 'قيد المراجعة',
-      value: myRequests.filter(r => r.status === 'قيد المراجعة').length,
-      icon: Clock,
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-100',
-    },
-  ];
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'تم التسليم':
-        return 'bg-green-100 text-green-700 border-green-200';
-      case 'تم القبول':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'قيد المراجعة':
-        return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'تم الرفض':
-        return 'bg-red-100 text-red-700 border-red-200';
-      default:
-        return '';
-    }
-  };
-
   return (
-    <div className="min-h-screen py-8">
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl mb-2">لوحة التحكم</h1>
-          <p className="text-muted-foreground">إدارة تبرعاتك وطلباتك</p>
-        </div>
-
-        {/* User Profile Card */}
-        <Card className="mb-8">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback>AM</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 text-right">
-                <h2 className="text-2xl mb-1">{user.name}</h2>
-                <p className="text-muted-foreground mb-3">{user.email}</p>
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground rtl:justify-start sm:justify-start justify-end">
-                  <span>📱 {user.phone}</span>
-                  <span>📍 {user.location}</span>
-                  <span>📅 انضم في {new Date(user.joinDate).toLocaleDateString('ar-SA')}</span>
-                </div>
-              </div>
-              <Button variant="outline" onClick={() => { setEditUserForm(user); setIsEditProfileOpen(true); }}>
-                <Edit className="ml-2 h-4 w-4" />
-                تعديل الملف الشخصي
-              </Button>
+    <DashboardLayout>
+      <div className="space-y-6 max-w-6xl mx-auto">
+        {/* Banner */}
+        <div className="rounded-2xl bg-gradient-to-l from-primary to-secondary p-5 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold mb-1">مرحباً، {user?.name?.split(' ')[0]} 👋</h2>
+              <p className="text-white/80 text-sm">مرحباً بك في لوحة تحكم مجتمع الخير</p>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={index}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-                      <p className="text-3xl font-bold">{stat.value}</p>
-                    </div>
-                    <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                      <Icon className={`h-6 w-6 ${stat.color}`} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+            <div className="text-4xl">🌟</div>
+          </div>
+          <div className="mt-4">
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-white/80">اكتمال الملف الشخصي</span>
+              <span className="font-bold">{user?.profileComplete ?? 40}%</span>
+            </div>
+            <Progress value={user?.profileComplete ?? 40} className="h-2 bg-white/30 [&>div]:bg-white" />
+          </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full md:w-auto grid-cols-2 mb-6">
-            <TabsTrigger value="my-donations" className="gap-2">
-              <Package className="h-4 w-4" />
-              تبرعاتي
-            </TabsTrigger>
-            <TabsTrigger value="my-requests" className="gap-2">
-              <Heart className="h-4 w-4" />
-              طلباتي
-            </TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setTab}>
+          <TabsList className="flex flex-wrap gap-1 h-auto rounded-xl p-1 bg-muted">
+            <TabsTrigger value="overview" className="rounded-lg">نظرة عامة</TabsTrigger>
+            <TabsTrigger value="donations" className="rounded-lg">تبرعاتي</TabsTrigger>
+            <TabsTrigger value="requests" className="rounded-lg">طلباتي</TabsTrigger>
+            <TabsTrigger value="volunteer" className="rounded-lg">تطوعي</TabsTrigger>
+            <TabsTrigger value="saved" className="rounded-lg">المحفوظات</TabsTrigger>
+            <TabsTrigger value="profile" className="rounded-lg">الملف الشخصي</TabsTrigger>
           </TabsList>
 
-          {/* My Donations Tab */}
-          <TabsContent value="my-donations">
+          {/* 1. OVERVIEW */}
+          <TabsContent value="overview" className="space-y-6 mt-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {stats.map((s, i) => <StatCard key={i} {...s} />)}
+            </div>
+
+            <Card>
+              <CardHeader><CardTitle>الإجراءات السريعة</CardTitle></CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: 'إضافة تبرع', icon: Gift, path: '/add-donation', color: 'bg-primary/10 hover:bg-primary/20 text-primary' },
+                    { label: 'تصفح التبرعات', icon: Package, path: '/donations', color: 'bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-400' },
+                    { label: 'المجتمع', icon: Heart, path: '/community', color: 'bg-pink-50 hover:bg-pink-100 text-pink-600 dark:bg-pink-900/20 dark:hover:bg-pink-900/30 dark:text-pink-400' },
+                    { label: 'خريطة المهام', icon: Navigation, path: '?tab=volunteer', color: 'bg-green-50 hover:bg-green-100 text-green-600 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-green-400' },
+                  ].map((action) => {
+                    const Icon = action.icon;
+                    return (
+                      <Link key={action.label} to={action.path}>
+                        <div className={`flex flex-col items-center gap-2 p-4 rounded-xl cursor-pointer transition-colors ${action.color}`}>
+                          <Icon className="h-6 w-6" />
+                          <span className="text-sm font-medium text-center">{action.label}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* 2. MY DONATIONS */}
+          <TabsContent value="donations" className="mt-6">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -269,133 +275,264 @@ export function Dashboard() {
                     <CardTitle>تبرعاتي</CardTitle>
                     <CardDescription>التبرعات التي قمت بإضافتها</CardDescription>
                   </div>
-                  <Link to="/add-donation">
-                    <Button>
-                      <Package className="ml-2 h-4 w-4" />
-                      إضافة تبرع
-                    </Button>
-                  </Link>
+                  <Link to="/add-donation"><Button><Package className="ml-2 h-4 w-4" />إضافة تبرع</Button></Link>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {myDonations.map((donation: any) => (
-                    <Card key={donation.id} className="overflow-hidden">
-                      <div className="flex flex-col md:flex-row gap-4 p-4">
-                        <img
-                          src={donation.image}
-                          alt={donation.title}
-                          className="w-full md:w-32 h-32 object-cover rounded-lg"
-                        />
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <h3 className="font-semibold mb-1">{donation.title}</h3>
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {donation.description}
-                              </p>
+                {myDonations.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+                    <p className="text-muted-foreground">لم تقدم أي تبرعات بعد</p>
+                    <Link to="/add-donation"><Button variant="outline" className="mt-4">أضف تبرعاً الآن</Button></Link>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {myDonations.map((donation: any) => (
+                      <Card key={donation.id} className="overflow-hidden hover:shadow-md border border-border/60 hover:border-primary/30 transition-all">
+                        <div className="flex flex-col sm:flex-row gap-4 p-4">
+                          <img src={donation.image} alt={donation.title} className="w-full sm:w-28 h-28 object-cover rounded-xl flex-shrink-0" />
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-semibold">{donation.title}</h3>
+                              <Badge variant={donation.status === 'قيد المراجعة' ? 'secondary' : 'default'} className={donation.status === 'قيد المراجعة' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30' : ''}>{donation.status}</Badge>
                             </div>
-                            <Badge 
-                              variant={donation.status === 'متاح' ? 'default' : 'secondary'}
-                              className={donation.status === 'متاح' ? 'bg-secondary text-white' : ''}
-                            >
-                              {donation.status}
-                            </Badge>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant="outline">{donation.category}</Badge>
-                            <Badge variant="outline">{donation.condition}</Badge>
-                            <Badge variant="outline">{donation.location}</Badge>
-                          </div>
-                          <div className="flex gap-2 pt-2">
-                            <Link to={`/donations/${donation.id}`}>
-                              <Button variant="outline" size="sm">
-                                <Eye className="ml-2 h-4 w-4" />
-                                عرض
-                              </Button>
-                            </Link>
-                            <Button variant="outline" size="sm" onClick={() => { setDonationToEdit(donation); setIsEditDonationOpen(true); }}>
-                              <Edit className="ml-2 h-4 w-4" />
-                              تعديل
-                            </Button>
-                            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setItemToDelete(donation.id); setIsDeleteDialogOpen(true); }}>
-                              <Trash2 className="ml-2 h-4 w-4" />
-                              حذف
-                            </Button>
+                            <p className="text-sm text-muted-foreground line-clamp-2">{donation.description}</p>
+                            <div className="flex flex-wrap gap-2">
+                              <Badge variant="outline">{donation.category}</Badge>
+                              <span className="text-xs text-muted-foreground mt-1">📅 {new Date(donation.createdAt).toLocaleDateString('ar-SA')}</span>
+                            </div>
+                            <div className="flex gap-2 pt-1">
+                              <Link to={`/donations/${donation.id}`}><Button variant="outline" size="sm"><Eye className="ml-2 h-4 w-4" />عرض</Button></Link>
+                              <Button variant="outline" size="sm" onClick={() => { setDonationToEdit(donation); setIsEditDonationOpen(true); }}><Edit className="ml-2 h-4 w-4" />تعديل</Button>
+                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setItemToDelete(donation.id); setIsDeleteDialogOpen(true); }}><Trash2 className="ml-2 h-4 w-4" />حذف</Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* My Requests Tab */}
-          <TabsContent value="my-requests">
+          {/* 3. MY REQUESTS */}
+          <TabsContent value="requests" className="mt-6">
             <Card>
               <CardHeader>
                 <CardTitle>طلباتي</CardTitle>
-                <CardDescription>التبرعات التي طلبتها</CardDescription>
+                <CardDescription>طَلَبات المساعدة التي قدمتها</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {myRequests.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+                    <p className="text-muted-foreground">لا توجد طلبات حالياً</p>
+                    <Link to="/donations"><Button variant="outline" className="mt-4">تصفح التبرعات</Button></Link>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {myRequests.map((request) => (
+                      <Card key={request.id} className="overflow-hidden hover:shadow-md border border-border/60 hover:border-primary/30 transition-all">
+                        <div className="flex flex-col sm:flex-row gap-4 p-4">
+                          <img src={request.donation.image} alt={request.donation.title} className="w-full sm:w-28 h-28 object-cover rounded-xl flex-shrink-0" />
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="font-semibold">{request.donation.title}</h3>
+                              <Badge className={getStatusColor(request.status)}>{request.status}</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground line-clamp-2">{request.donation.description}</p>
+                            <div className="flex flex-wrap gap-2">
+                              <Badge variant="outline">{request.donation.category}</Badge>
+                              <Badge variant="outline">📅 {new Date(request.requestDate).toLocaleDateString('ar-SA')}</Badge>
+                            </div>
+                            <div className="flex items-center gap-2 pt-1">
+                              <Link to={`/donations/${request.donation.id}`}><Button variant="outline" size="sm"><Eye className="ml-2 h-4 w-4" />عرض</Button></Link>
+                              {request.status === 'تم التسليم' && (
+                                <Button variant="outline" size="sm" onClick={() => setShowRating(true)}><Star className="ml-2 h-4 w-4" />تقييم</Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* 4. VOLUNTEER TASKS */}
+          <TabsContent value="volunteer" className="mt-6 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>المهام التطوعية</CardTitle>
+                <CardDescription>شارك في توصيل التبرعات وكسب النقاط</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {myRequests.map((request) => (
-                    <Card key={request.id} className="overflow-hidden">
-                      <div className="flex flex-col md:flex-row gap-4 p-4">
-                        <img
-                          src={request.donation.image}
-                          alt={request.donation.title}
-                          className="w-full md:w-32 h-32 object-cover rounded-lg"
-                        />
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <h3 className="font-semibold mb-1">{request.donation.title}</h3>
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {request.donation.description}
-                              </p>
+                  {tasks.filter((t) => t.status !== 'completed').map((task) => (
+                    <Card key={task.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-5">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${task.type === 'pickup' ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-blue-100 dark:bg-blue-900/30'}`}>
+                            {task.type === 'pickup' ? <Package className="h-5 w-5 text-orange-500" /> : <Truck className="h-5 w-5 text-blue-500" />}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <h3 className="font-semibold">{task.title}</h3>
+                              <Badge className={taskStatusColors[task.status]}>{taskStatusLabels[task.status]}</Badge>
+                              <Badge className={taskUrgencyColors[task.urgency]}>{taskUrgencyLabels[task.urgency]}</Badge>
                             </div>
-                            <Badge className={getStatusColor(request.status)}>
-                              {request.status}
-                            </Badge>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant="outline">{request.donation.category}</Badge>
-                            <Badge variant="outline">{request.donation.location}</Badge>
-                            <Badge variant="outline">
-                              📅 {new Date(request.requestDate).toLocaleDateString('ar-SA')}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-3 pt-2">
-                            <img
-                              src={request.donation.donor.avatar}
-                              alt={request.donation.donor.name}
-                              className="w-8 h-8 rounded-full object-cover"
-                            />
-                            <span className="text-sm text-muted-foreground">
-                              المتبرع: {request.donation.donor.name}
-                            </span>
-                          </div>
-                          <div className="flex gap-2 pt-2">
-                            <Link to={`/donations/${request.donation.id}`}>
-                              <Button variant="outline" size="sm">
-                                <Eye className="ml-2 h-4 w-4" />
-                                عرض التفاصيل
-                              </Button>
-                            </Link>
-                            {request.status === 'قيد المراجعة' && (
-                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                                <XCircle className="ml-2 h-4 w-4" />
-                                إلغاء الطلب
-                              </Button>
-                            )}
+                            <p className="text-sm text-muted-foreground mb-3">{task.items}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-3">
+                              <div className="flex items-center gap-1.5 text-muted-foreground">
+                                <MapPin className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                                <span>استلام: {task.pickupAddress}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-muted-foreground">
+                                <MapPin className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                                <span>تسليم: {task.deliveryAddress}</span>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                <Navigation className="h-4 w-4" />
+                                <span>{task.distance}</span>
+                              </div>
+                              <div className="flex gap-2">
+                                {task.status === 'pending' && (
+                                  <Button size="sm" className="bg-primary text-white gap-1" onClick={() => updateTaskStatus(task.id, 'in_progress')}>
+                                    <Play className="h-3.5 w-3.5" /> ابدأ المهمة
+                                  </Button>
+                                )}
+                                {task.status === 'in_progress' && (
+                                  <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white gap-1" onClick={() => updateTaskStatus(task.id, 'completed')}>
+                                    <CheckCircle className="h-3.5 w-3.5" /> إتمام المهمة
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      </CardContent>
                     </Card>
                   ))}
+                  {tasks.filter((t) => t.status === 'completed').length > 0 && (
+                    <>
+                      <h3 className="font-medium text-muted-foreground pt-4">المهام المكتملة</h3>
+                      {tasks.filter((t) => t.status === 'completed').map((task) => (
+                        <Card key={task.id} className="opacity-70">
+                          <CardContent className="p-4 flex items-center gap-3">
+                            <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{task.title}</p>
+                              <p className="text-xs text-muted-foreground">{task.items}</p>
+                            </div>
+                            <Badge className={taskStatusColors.completed}>{taskStatusLabels.completed}</Badge>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>خريطة المهام</CardTitle>
+                <CardDescription>مواقع الاستلام والتسليم لمهامك النشطة</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 overflow-hidden rounded-b-lg border-t">
+                <MapView
+                  center={[31.9539, 35.9106]}
+                  zoom={12}
+                  locations={[
+                  { id: '1-p', title: 'استلام — عبدون', lat: 31.9762, lng: 35.8825, type: 'donation' },
+                  { id: '1-d', title: 'تسليم — دابوق', lat: 31.9822, lng: 35.8535, type: 'request' },
+                  { id: '2-p', title: 'استلام — الرابية', lat: 31.9904, lng: 35.8742, type: 'donation' },
+                  { id: '2-d', title: 'تسليم — شارع الجامعة', lat: 31.9736, lng: 35.9037, type: 'request' },
+                ]} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* 5. SAVED */}
+          <TabsContent value="saved" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>المحفوظات</CardTitle>
+                <CardDescription>التبرعات التي قمت بحفظها للإطلاع عليها لاحقاً</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {savedDonations.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {savedDonations.map((donation) => (
+                      <Card key={donation.id} className="overflow-hidden hover:shadow-md border border-border/60 hover:border-primary/30 transition-all">
+                        <div className="flex flex-col sm:flex-row gap-4 p-4">
+                          <img src={donation.image} alt={donation.title} className="w-full sm:w-24 h-24 object-cover rounded-xl flex-shrink-0" />
+                          <div className="flex-1 space-y-2">
+                            <h3 className="font-semibold">{donation.title}</h3>
+                            <p className="text-sm text-muted-foreground line-clamp-1">{donation.description}</p>
+                            <div className="flex items-center justify-between">
+                              <Badge variant="outline">{donation.category}</Badge>
+                              <Link to={`/donations/${donation.id}`}>
+                                <Button variant="outline" size="sm">عرض التفاصيل</Button>
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+                    <p className="text-muted-foreground">لا توجد عناصر محفوظة حالياً</p>
+                    <Link to="/donations"><Button variant="outline" className="mt-4">تصفح التبرعات</Button></Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* 6. PROFILE */}
+          <TabsContent value="profile" className="mt-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>الملف الشخصي</CardTitle>
+                  <Button variant="outline" onClick={() => { setEditUserForm({ name: user?.name ?? '', email: user?.email ?? '', phone: user?.phone ?? '', location: user?.location ?? '', avatar: user?.avatar ?? '' }); setIsEditProfileOpen(true); }}>
+                    <Edit className="ml-2 h-4 w-4" />تعديل
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row items-start gap-6">
+                  <Avatar className="h-24 w-24 flex-shrink-0">
+                    <AvatarImage src={user?.avatar} />
+                    <AvatarFallback className="text-2xl bg-primary text-white">{user?.name?.slice(0, 2)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-4 text-right">
+                    <div>
+                      <h3 className="text-xl font-bold">{user?.name}</h3>
+                      <p className="text-muted-foreground">{user?.email}</p>
+                      <Badge className="mt-1 bg-primary/10 text-primary">مستخدم موثق</Badge>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {user?.phone && <div className="flex items-center justify-end gap-2 text-sm">{user.phone}<span className="text-muted-foreground">📱</span></div>}
+                      {user?.location && <div className="flex items-center justify-end gap-2 text-sm">{user.location}<span className="text-muted-foreground">📍</span></div>}
+                      <div className="flex items-center justify-end gap-2 text-sm">انضم في {user?.joinDate ? new Date(user.joinDate).toLocaleDateString('ar-SA') : '-'}<span className="text-muted-foreground">📅</span></div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="font-medium">{user?.profileComplete ?? 40}%</span>
+                        <span className="text-muted-foreground">اكتمال الملف الشخصي</span>
+                      </div>
+                      <Progress value={user?.profileComplete ?? 40} className="h-2" />
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -405,105 +542,90 @@ export function Dashboard() {
 
       {/* Edit Profile Dialog */}
       <Dialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>تعديل الملف الشخصي</DialogTitle>
-            <DialogDescription>قم بتحديث معلوماتك الشخصية.</DialogDescription>
+        <DialogContent className="sm:max-w-md p-6" dir="rtl">
+          <DialogHeader className="text-right mb-4">
+            <DialogTitle className="text-2xl font-bold">تعديل الملف الشخصي</DialogTitle>
+            <DialogDescription>قم بتحديث معلوماتك الشخصية لضمان سهولة التواصل</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleEditProfile}>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="name" className="text-right pt-2">الاسم</Label>
-              <div className="col-span-3 space-y-1">
-                <Input id="name" value={editUserForm.name} className={profileErrors.name ? 'border-destructive' : ''} onChange={(e) => { setEditUserForm({ ...editUserForm, name: e.target.value }); setProfileErrors(p => ({ ...p, name: undefined })); }} />
-                {profileErrors.name && <p className="text-xs text-destructive">{profileErrors.name}</p>}
+          <form onSubmit={handleEditProfile} className="space-y-5">
+            <div className="flex flex-col items-center justify-center space-y-4 mb-2">
+              <div className="relative">
+                <Avatar className="h-24 w-24 border-2 border-primary/20">
+                  <AvatarImage src={editUserForm.avatar} />
+                  <AvatarFallback className="text-3xl bg-primary text-white">
+                    {editUserForm.name?.slice(0, 2) || (user?.name?.slice(0, 2) ?? 'U')}
+                  </AvatarFallback>
+                </Avatar>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={handleAvatarChange}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  className="absolute bottom-0 right-0 h-8 w-8 rounded-full shadow-sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
               </div>
+              <p className="text-xs text-muted-foreground">اضغط على زر التعديل لتغيير الصورة (الحد الأقصى 5MB)</p>
             </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="email" className="text-right pt-2">البريد الإلكتروني</Label>
-              <div className="col-span-3 space-y-1">
-                <Input id="email" value={editUserForm.email} className={profileErrors.email ? 'border-destructive' : ''} onChange={(e) => { setEditUserForm({ ...editUserForm, email: e.target.value }); setProfileErrors(p => ({ ...p, email: undefined })); }} dir="ltr" />
-                {profileErrors.email && <p className="text-xs text-destructive">{profileErrors.email}</p>}
-              </div>
+            
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">الاسم الجميّل</Label>
+              <Input value={editUserForm.name} className={`bg-muted/50 ${profileErrors.name ? 'border-destructive' : ''}`} onChange={(e) => { setEditUserForm({ ...editUserForm, name: e.target.value }); setProfileErrors(p => ({ ...p, name: undefined })); }} />
+              {profileErrors.name && <p className="text-xs text-destructive">{profileErrors.name}</p>}
             </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="phone" className="text-right pt-2">الهاتف</Label>
-              <div className="col-span-3 space-y-1">
-                <Input id="phone" value={editUserForm.phone} maxLength={10} className={profileErrors.phone ? 'border-destructive' : ''} onChange={(e) => { const v = sanitizePhone(e.target.value); setEditUserForm({ ...editUserForm, phone: v }); setProfileErrors(p => ({ ...p, phone: undefined })); }} dir="ltr" placeholder="07X XXXX XXXX" />
-                {profileErrors.phone && <p className="text-xs text-destructive">{profileErrors.phone}</p>}
-              </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">البريد الإلكتروني</Label>
+              <Input value={editUserForm.email} className={`bg-muted/50 text-left dir-ltr ${profileErrors.email ? 'border-destructive' : ''}`} onChange={(e) => { setEditUserForm({ ...editUserForm, email: e.target.value }); setProfileErrors(p => ({ ...p, email: undefined })); }} dir="ltr" />
+              {profileErrors.email && <p className="text-xs text-destructive">{profileErrors.email}</p>}
             </div>
-            <div className="grid grid-cols-4 items-start gap-4 mt-4">
-              <Label htmlFor="location" className="text-right pt-2">الموقع</Label>
-              <div className="col-span-3 space-y-1">
-                <Input id="location" value={editUserForm.location} className={profileErrors.location ? 'border-destructive' : ''} onChange={(e) => { setEditUserForm({ ...editUserForm, location: e.target.value }); setProfileErrors(p => ({ ...p, location: undefined })); }} />
-                {profileErrors.location && <p className="text-xs text-destructive">{profileErrors.location}</p>}
-              </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">رقم الهاتف</Label>
+              <Input value={editUserForm.phone} placeholder="07X XXXX XXXX" maxLength={10} className={`bg-muted/50 text-left dir-ltr ${profileErrors.phone ? 'border-destructive' : ''}`} onChange={(e) => { const v = sanitizePhone(e.target.value); setEditUserForm({ ...editUserForm, phone: v }); setProfileErrors(p => ({ ...p, phone: undefined })); }} dir="ltr" />
+              {profileErrors.phone && <p className="text-xs text-destructive">{profileErrors.phone}</p>}
             </div>
-            <DialogFooter>
-              <Button type="submit">حفظ التغييرات</Button>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">الموقع أو العنوان</Label>
+              <Input value={editUserForm.location} placeholder="إربد محيط الجامعة" className={`bg-muted/50 ${profileErrors.location ? 'border-destructive' : ''}`} onChange={(e) => { setEditUserForm({ ...editUserForm, location: e.target.value }); setProfileErrors(p => ({ ...p, location: undefined })); }} />
+              {profileErrors.location && <p className="text-xs text-destructive">{profileErrors.location}</p>}
+            </div>
+            <DialogFooter className="mt-8 gap-3 sm:justify-end">
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setIsEditProfileOpen(false)}>إلغاء</Button>
+              <Button type="submit" className="w-full sm:w-auto">يخفظ التغييرات</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Item Dialog */}
+      {/* Delete Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-            <AlertDialogDescription>
-              هل أنت متأكد من أنك تريد حذف هذا العنصر؟ لا يمكن استعادة هذا العنصر بعد الحذف.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteItem}>حذف</AlertDialogAction>
-          </AlertDialogFooter>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader><AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle><AlertDialogDescription>لا يمكن استعادة التبرع بعد الحذف.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>إلغاء</AlertDialogCancel><AlertDialogAction onClick={handleDeleteItem} className="bg-destructive hover:bg-destructive/90">حذف</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       {/* Edit Donation Dialog */}
       <Dialog open={isEditDonationOpen} onOpenChange={setIsEditDonationOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>تعديل التبرع</DialogTitle>
-            <DialogDescription>قم بتحديث معلومات التبرع الخاص بك.</DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-md" dir="rtl">
+          <DialogHeader><DialogTitle>تعديل التبرع</DialogTitle></DialogHeader>
           {donationToEdit && (
-            <form onSubmit={handleEditDonation}>
-              <div className="space-y-4">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="donation-title">العنوان</Label>
-                  <Input
-                    id="donation-title"
-                    value={donationToEdit.title}
-                    onChange={(e) => setDonationToEdit({ ...donationToEdit, title: e.target.value })}
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="donation-desc">الوصف</Label>
-                  <Input
-                    id="donation-desc"
-                    value={donationToEdit.description}
-                    onChange={(e) => setDonationToEdit({ ...donationToEdit, description: e.target.value })}
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="donation-condition">الحالة</Label>
-                  <Input
-                    id="donation-condition"
-                    value={donationToEdit.condition}
-                    onChange={(e) => setDonationToEdit({ ...donationToEdit, condition: e.target.value })}
-                  />
-                </div>
-              </div>
-              <DialogFooter className="mt-6">
-                <Button type="submit">حفظ التغييرات</Button>
-              </DialogFooter>
+            <form onSubmit={handleEditDonation} className="space-y-4">
+              <div className="space-y-2"><Label>العنوان</Label><Input value={donationToEdit.title} onChange={(e) => setDonationToEdit({ ...donationToEdit, title: e.target.value })} /></div>
+              <div className="space-y-2"><Label>الوصف</Label><Input value={donationToEdit.description} onChange={(e) => setDonationToEdit({ ...donationToEdit, description: e.target.value })} /></div>
+              <DialogFooter><Button type="submit">حفظ</Button></DialogFooter>
             </form>
           )}
         </DialogContent>
       </Dialog>
-    </div>
+      
+      <RatingDialog open={showRating} onOpenChange={setShowRating} userName="المراكز" />
+    </DashboardLayout>
   );
 }

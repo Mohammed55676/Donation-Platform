@@ -7,8 +7,11 @@ import { useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { Plus } from "lucide-react";
 
+import { useAuth } from "../../context/AuthContext";
+
 export const Feed: React.FC = () => {
   const { posts, fetchPosts, likePost } = useCommunityStore();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -73,7 +76,7 @@ export const Feed: React.FC = () => {
             <PostCard
               key={p.id}
               post={p}
-              onLike={() => likePost(p.id)}
+              onLike={() => { if (user) likePost(p.id, user.id) }}
               onComment={() => navigate(`/community/${p.id}`)}
               onHelp={() => navigate(`/community/${p.id}`)}
               onClick={() => navigate(`/community/${p.id}`)}

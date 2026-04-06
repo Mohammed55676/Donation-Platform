@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
-export type UserRole = 'donor' | 'beneficiary' | 'volunteer' | 'admin';
+export type UserRole = 'user' | 'admin';
 
 export interface AuthUser {
   id: string;
@@ -22,8 +22,7 @@ interface AuthContextValue {
   signup: (
     name: string,
     email: string,
-    password: string,
-    role: 'donor' | 'beneficiary' | 'volunteer'
+    password: string
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateUser: (updates: Partial<AuthUser>) => void;
@@ -49,7 +48,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
+      if (raw) {
+        const parsed: AuthUser = JSON.parse(raw);
+        // Migration: Treat legacy roles as 'user'
+        if (['donor', 'beneficiary', 'volunteer'].includes(parsed.role)) {
+          parsed.role = 'user';
+        }
+        return parsed;
+      }
+      return null;
     } catch {
       return null;
     }
@@ -105,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
-  const signup = async (name: string, email: string, password: string, role: 'donor' | 'beneficiary' | 'volunteer') => {
+  const signup = async (name: string, email: string, password: string) => {
     const accounts = getAccounts();
     const key = email.toLowerCase();
     if (accounts[key]) {
@@ -115,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       id: generateId(),
       name,
       email,
-      role,
+      role: 'user',
       joinDate: new Date().toISOString().split('T')[0],
       profileComplete: calcProfileComplete({ name, email }),
     };

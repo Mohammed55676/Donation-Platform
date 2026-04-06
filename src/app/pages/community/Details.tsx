@@ -78,7 +78,7 @@ export const Details: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           <PostCard
             post={post}
-            onLike={() => likePost(post.id)}
+            onLike={() => { if (user) likePost(post.id, user.id) }}
             onComment={() => document.getElementById("comment-input")?.focus()}
             onHelp={handleHelp}
           />

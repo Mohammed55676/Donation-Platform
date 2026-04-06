@@ -90,12 +90,12 @@ export function DonationDetails() {
   };
 
   const handleShare = () => {
-    const url = `${window.location.origin}/donations/${donation.id}`;
+    const url = window.location.href;
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(url);
-      toast.success('تم نسخ الرابط! يمكنك الآن مشاركته ❤️');
+      navigator.clipboard.writeText(url)
+        .then(() => toast.success('تم نسخ الرابط! يمكنك الآن مشاركته ❤️'))
+        .catch(() => toast.success(`شارك هذا الرابط: ${url}`));
     } else {
-      // Fallback
       toast.success(`شارك هذا الرابط: ${url}`);
     }
   };
@@ -340,6 +340,7 @@ export function DonationDetails() {
         onOpenChange={setIsChatOpen}
         recipientName={donation.donor.name}
         recipientAvatar={donation.donor.avatar}
+        currentUser={user || undefined}
       />
     </div>
   );

@@ -8,13 +8,6 @@ import { Eye, EyeOff, Mail, Lock, User, Heart, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { isValidEmail, isLettersOnly } from '../../utils/validators';
 
-type Role = 'donor' | 'beneficiary' | 'volunteer';
-
-const roles: { value: Role; label: string; description: string; icon: typeof User }[] = [
-  { value: 'donor', label: 'متبرع', description: 'أرغب بتقديم المساعدة', icon: Heart },
-  { value: 'beneficiary', label: 'مستفيد', description: 'أبحث عن دعم أو مساعدة', icon: User },
-  { value: 'volunteer', label: 'متطوع', description: 'أساعد في عمليات التوصيل', icon: Users },
-];
 
 type Errors = { name?: string; email?: string; password?: string };
 
@@ -23,7 +16,6 @@ export function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<Role>('donor');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const { signup } = useAuth();
@@ -59,16 +51,11 @@ export function Signup() {
       return;
     }
     setLoading(true);
-    const result = await signup(name, email, password, selectedRole);
+    const result = await signup(name, email, password);
     setLoading(false);
     if (result.success) {
       toast.success('تم إنشاء حسابك بنجاح!');
-      const redirectMap: Record<Role, string> = {
-        donor: '/dashboard/donor',
-        beneficiary: '/dashboard/beneficiary',
-        volunteer: '/dashboard/volunteer',
-      };
-      navigate(redirectMap[selectedRole], { replace: true });
+      navigate('/dashboard', { replace: true });
     } else {
       toast.error(result.error || 'حدث خطأ، حاول مرة أخرى');
     }
@@ -87,39 +74,7 @@ export function Signup() {
         <p className="text-muted-foreground text-sm">انضم لمجتمع الخير واصنع فرقاً</p>
       </div>
 
-      {/* Role Selection */}
-      <div className="mb-6">
-        <Label className="text-sm font-medium mb-3 block">نوع الحساب</Label>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {roles.map((role) => {
-            const Icon = role.icon;
-            const isSelected = selectedRole === role.value;
-            return (
-              <button
-                key={role.value}
-                type="button"
-                onClick={() => setSelectedRole(role.value)}
-                className={`relative p-4 rounded-xl border-2 text-right transition-all ${
-                  isSelected
-                    ? 'border-primary bg-primary/5 shadow-sm shadow-primary/20'
-                    : 'border-border hover:border-primary/40 hover:bg-muted/30'
-                }`}
-              >
-                {isSelected && (
-                  <div className="absolute top-2 left-2 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-white" />
-                  </div>
-                )}
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-2 ${isSelected ? 'bg-primary/10' : 'bg-muted'}`}>
-                  <Icon className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
-                </div>
-                <div className={`font-semibold text-sm ${isSelected ? 'text-primary' : ''}`}>{role.label}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{role.description}</div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">

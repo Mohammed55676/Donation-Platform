@@ -17,19 +17,24 @@ import {
   CheckCircle,
   Award
 } from 'lucide-react';
-import { volunteerOpportunities } from '../data/donations';
 import { toast } from 'sonner';
 import { useNotifications } from '../context/NotificationContext';
 import { isValidEmail, isLettersOnly, sanitizePhone } from '../utils/validators';
 
-type VolunteerErrors = { name?: string; email?: string; phone?: string };
+type VolunteerErrors = { name?: string; email?: string; phone?: string; nationality?: string; program?: string };
 type ContactErrors = { name?: string; email?: string; message?: string };
 
+const tuaPrograms = [
+  { id: '1', title: 'تعبئة الطرود الغذائية', description: 'يشارك المتطوعون في تعبئة الطرود في مستودعات القسطل تمهيداً لتوزيعها.', location: 'مستودعات القسطل', volunteers: 15, maxVolunteers: 50 },
+  { id: '2', title: 'توزيع الطرود الغذائية', description: 'توزيع الطرود الغذائية على الأسر المحتاجة في مختلف محافظات المملكة.', location: 'مختلف محافظات الأردن', volunteers: 10, maxVolunteers: 30 },
+  { id: '3', title: 'سكب وجبات الطعام', description: 'مساعدة فريق تكية أم علي في سكب وجبات الغداء الساخنة وتقديمها للمحتاجين.', location: 'المقر الرئيسي لتكية أم علي', volunteers: 5, maxVolunteers: 20 },
+];
+
 export function Volunteer() {
-  const [opportunities, setOpportunities] = useState(volunteerOpportunities);
+  const [opportunities] = useState(tuaPrograms);
   const [selectedOpportunity, setSelectedOpportunity] = useState<string | null>(null);
   const { addNotification } = useNotifications();
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', message: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', nationality: 'أردني', program: '', message: '' });
   const [errors, setErrors] = useState<VolunteerErrors>({});
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
@@ -55,6 +60,9 @@ export function Volunteer() {
     } else if (!/^07[789]\d{7}$/.test(formData.phone.trim())) {
       e.phone = 'يجب أن يبدأ بـ 077 أو 078 أو 079 ومكوّن من 10 أرقام';
     }
+    if (!formData.program) {
+      e.program = 'يرجى اختيار البرنامج';
+    }
     return e;
   };
 
@@ -65,23 +73,9 @@ export function Volunteer() {
       setErrors(errs);
       return;
     }
-    addNotification({
-      type: 'success',
-      title: 'تم تسجيلك بنجاح!',
-      message: 'شكراً لانضمامك لفريق التطوع. سنتواصل معك قريباً.',
-    });
     
-    // Update progress locally
-    if (selectedOpportunity) {
-      setOpportunities(prev => prev.map(opp => 
-        opp.id === selectedOpportunity 
-          ? { ...opp, volunteers: opp.volunteers + 1 }
-          : opp
-      ));
-    }
-
     toast.success('تم تسجيلك بنجاح!');
-    setFormData({ name: '', email: '', phone: '', message: '' });
+    setFormData({ name: '', email: '', phone: '', nationality: 'أردني', program: '', message: '' });
     setErrors({});
     setSelectedOpportunity(null);
   };
@@ -206,12 +200,7 @@ export function Volunteer() {
                       <MapPin className="h-4 w-4 text-primary" />
                       <span className="text-muted-foreground">{opportunity.location}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-primary" />
-                      <span className="text-muted-foreground">
-                        {new Date(opportunity.date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })}
-                      </span>
-                    </div>
+
                     <div className="flex items-center gap-2 text-sm">
                       <Users className="h-4 w-4 text-primary" />
                       <span className="text-muted-foreground">{opportunity.volunteers} من {opportunity.maxVolunteers} متطوع</span>
@@ -230,7 +219,7 @@ export function Volunteer() {
                     <DialogTrigger asChild>
                       <Button 
                         className="w-full bg-primary hover:bg-primary/90 text-white"
-                        onClick={() => { setSelectedOpportunity(opportunity.id); setErrors({}); setFormData({ name: '', email: '', phone: '', message: '' }); }}
+                        onClick={() => { setSelectedOpportunity(opportunity.id); setErrors({}); setFormData({ name: '', email: '', phone: '', nationality: 'أردني', program: opportunity.title, message: '' }); }}
                         disabled={spotsLeft === 0}
                       >
                         {spotsLeft === 0 ? (
@@ -289,6 +278,39 @@ export function Volunteer() {
                             maxLength={10}
                           />
                           {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+                        </div>
+                        {/* Nationality */}
+                        <div className="space-y-1">
+                          <Label htmlFor="vol-nationality">الجنسية *</Label>
+                          <select 
+                            id="vol-nationality"
+                            value={formData.nationality}
+                            onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          >
+                            <option value="أردني">أردني</option>
+                            <option value="فلسطيني">فلسطيني</option>
+                            <option value="سوري">سوري</option>
+                            <option value="عراقي">عراقي</option>
+                            <option value="مصري">مصري</option>
+                            <option value="جنسية أخرى">جنسية أخرى</option>
+                          </select>
+                        </div>
+                        {/* Program */}
+                        <div className="space-y-1">
+                          <Label htmlFor="vol-program">البرنامج المختار *</Label>
+                          <select 
+                            id="vol-program"
+                            value={formData.program}
+                            onChange={(e) => { setFormData({ ...formData, program: e.target.value }); setErrors(prev => ({ ...prev, program: undefined })); }}
+                            className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${errors.program ? 'border-destructive' : ''}`}
+                          >
+                            <option value="">اختر البرنامج</option>
+                            {opportunities.map(opp => (
+                              <option key={opp.id} value={opp.title}>{opp.title}</option>
+                            ))}
+                          </select>
+                          {errors.program && <p className="text-xs text-destructive">{errors.program}</p>}
                         </div>
                         {/* Message */}
                         <div className="space-y-1">

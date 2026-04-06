@@ -22,9 +22,7 @@ export function Login() {
   const from = (location.state as any)?.from?.pathname;
 
   const roleRedirectMap: Record<string, string> = {
-    donor: '/dashboard/donor',
-    beneficiary: '/dashboard/beneficiary',
-    volunteer: '/dashboard/volunteer',
+    user: '/dashboard',
     admin: '/dashboard/admin',
   };
 

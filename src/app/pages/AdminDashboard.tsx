@@ -18,9 +18,10 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line,
 } from 'recharts';
 import {
-  Users, Gift, CheckCircle, AlertTriangle, TrendingUp, Ban,
-  Trash2, Check, X, Eye, ShieldCheck,
+  Trash2, Check, X, Eye, ShieldCheck, Search, Plus,
+  Users, Gift, CheckCircle, AlertTriangle, TrendingUp, Ban
 } from 'lucide-react';
+import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
 import { useDonations } from '../context/DonationContext';
 import { useAuth } from '../context/AuthContext';
@@ -74,6 +75,15 @@ export function AdminDashboard() {
   const [confirmAction, setConfirmAction] = useState<{ type: string; id: string; label: string } | null>(null);
   const [assignCase, setAssignCase] = useState<typeof urgentCases[0] | null>(null);
   const [selectedVolunteer, setSelectedVolunteer] = useState('');
+  
+  const [userSearch, setUserSearch] = useState('');
+  const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+
+  const displayedUsers = users.filter(u => 
+    u.name.toLowerCase().includes(userSearch.toLowerCase()) || 
+    u.email.toLowerCase().includes(userSearch.toLowerCase())
+  );
 
   const setTab = (tab: string) => setSearchParams(tab === 'analytics' ? {} : { tab });
 
@@ -163,9 +173,9 @@ export function AdminDashboard() {
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip />
+                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} />
+                    <YAxis tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--background))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }} />
                     <Bar dataKey="users" fill="hsl(var(--primary))" name="المستخدمون" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="donations" fill="hsl(var(--secondary))" name="التبرعات" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="deliveries" fill="#22c55e" name="التسليمات" radius={[4, 4, 0, 0]} />
@@ -179,9 +189,9 @@ export function AdminDashboard() {
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={monthlyData}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip />
+                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} />
+                    <YAxis tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--background))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }} />
                     <Line type="monotone" dataKey="users" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} name="مستخدمون" />
                   </LineChart>
                 </ResponsiveContainer>
@@ -192,10 +202,27 @@ export function AdminDashboard() {
           {/* USERS */}
           <TabsContent value="users" className="mt-6">
             <Card>
-              <CardHeader><CardTitle>إدارة المستخدمين</CardTitle><CardDescription>{totalUsers} مستخدم مسجل</CardDescription></CardHeader>
+              <CardHeader className="flex flex-row items-start justify-between">
+                <div>
+                  <CardTitle>إدارة المستخدمين</CardTitle>
+                  <CardDescription>{totalUsers} مستخدم مسجل</CardDescription>
+                </div>
+                <Button onClick={() => setIsAddUserOpen(true)} className="gap-2">
+                  <Plus className="h-4 w-4" /> إضافة مستخدم
+                </Button>
+              </CardHeader>
               <CardContent>
+                <div className="mb-4 relative">
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="ابحث بالاسم أو البريد..." 
+                    className="pr-10"
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                  />
+                </div>
                 <div className="space-y-3">
-                  {users.map((u) => (
+                  {displayedUsers.map((u) => (
                     <div key={u.id} className={`flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border transition-colors ${u.status === 'banned' ? 'bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-900' : 'bg-background hover:bg-muted/40'}`}>
                       <Avatar className="h-10 w-10 flex-shrink-0">
                         <AvatarImage src={u.avatar} />
@@ -210,14 +237,22 @@ export function AdminDashboard() {
                         <p className="text-xs text-muted-foreground" dir="ltr">{u.email}</p>
                         <p className="text-xs text-muted-foreground">انضم في {new Date(u.joinDate).toLocaleDateString('ar-SA')} • {u.donations} تبرع</p>
                       </div>
-                      <div className="flex gap-2 flex-shrink-0">
-                        <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => setConfirmAction({ type: u.status === 'active' ? 'ban' : 'unban', id: u.id, label: u.status === 'active' ? `تعليق حساب ${u.name}؟` : `رفع تعليق حساب ${u.name}؟` })}>
-                          <Ban className="h-3.5 w-3.5" />
-                          {u.status === 'active' ? 'تعليق' : 'رفع التعليق'}
+                      <div className="flex flex-wrap gap-2 flex-shrink-0">
+                        {u.status === 'active' && (
+                          <Button variant="outline" size="sm" className="h-8 gap-1 text-destructive hover:bg-destructive hover:text-white" onClick={() => setConfirmAction({ type: 'ban', id: u.id, label: `حظر حساب ${u.name}؟` })}>
+                            <Ban className="h-3.5 w-3.5" /> حظر
+                          </Button>
+                        )}
+                        {u.status === 'banned' && (
+                          <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => setConfirmAction({ type: 'unban', id: u.id, label: `إلغاء حظر حساب ${u.name}؟` })}>
+                            <CheckCircle className="h-3.5 w-3.5" /> إلغاء الحظر
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => setSelectedUser(u)}>
+                          <Eye className="h-3.5 w-3.5" /> تفاصيل
                         </Button>
-                        <Button variant="outline" size="sm" className="h-8 text-destructive hover:text-destructive gap-1" onClick={() => setConfirmAction({ type: 'delete_user', id: u.id, label: `حذف حساب ${u.name} نهائياً؟` })}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                          حذف
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setConfirmAction({ type: 'delete_user', id: u.id, label: `حذف حساب ${u.name} نهائياً؟` })}>
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
@@ -405,6 +440,85 @@ export function AdminDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* User Details Modal */}
+      <Dialog open={!!selectedUser} onOpenChange={(open) => { if (!open) setSelectedUser(null); }}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>بيانات المستخدم</DialogTitle>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={selectedUser.avatar} />
+                  <AvatarFallback>{selectedUser.name.slice(0, 2)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-xl font-bold">{selectedUser.name}</h3>
+                  <p className="text-muted-foreground">{selectedUser.email}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-xs text-muted-foreground">تاريخ الانضمام</p>
+                  <p className="font-semibold">{selectedUser.joinDate}</p>
+                </div>
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-xs text-muted-foreground">عدد التبرعات</p>
+                  <p className="font-semibold">{selectedUser.donations}</p>
+                </div>
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-xs text-muted-foreground">الدور</p>
+                  <p className="font-semibold">{selectedUser.role === 'volunteer' ? 'متطوع' : 'مستخدم'}</p>
+                </div>
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-xs text-muted-foreground">الحالة</p>
+                  <p className={`font-semibold ${selectedUser.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
+                    {selectedUser.status === 'active' ? 'نشط' : 'محظور'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add User Modal */}
+      <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>إضافة مستخدم جديد</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">الاسم</label>
+              <Input placeholder="أدخل اسم المستخدم" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">البريد الإلكتروني</label>
+              <Input placeholder="user@example.com" dir="ltr" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">الدور</label>
+              <Select defaultValue="user">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">مستخدم عادي</SelectItem>
+                  <SelectItem value="volunteer">متطوع</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="mt-6">
+            <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>إلغاء</Button>
+            <Button onClick={() => { setIsAddUserOpen(false); toast.success('تمت إضافة المستخدم بنجاح'); }}>إضافة</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </DashboardLayout>
   );
 }

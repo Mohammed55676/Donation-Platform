@@ -49,22 +49,13 @@ interface SidebarItem {
 }
 
 const sidebarByRole: Record<string, SidebarItem[]> = {
-  donor: [
-    { label: 'نظرة عامة', path: '/dashboard/donor', icon: LayoutDashboard },
-    { label: 'تبرعاتي', path: '/dashboard/donor?tab=donations', icon: Gift },
-    { label: 'الملف الشخصي', path: '/dashboard/donor?tab=profile', icon: User },
-  ],
-  beneficiary: [
-    { label: 'نظرة عامة', path: '/dashboard/beneficiary', icon: LayoutDashboard },
-    { label: 'طلباتي', path: '/dashboard/beneficiary?tab=requests', icon: ClipboardList },
-    { label: 'المحفوظات', path: '/dashboard/beneficiary?tab=wishlist', icon: Heart },
-    { label: 'الملف الشخصي', path: '/dashboard/beneficiary?tab=profile', icon: User },
-  ],
-  volunteer: [
-    { label: 'نظرة عامة', path: '/dashboard/volunteer', icon: LayoutDashboard },
-    { label: 'مهامي', path: '/dashboard/volunteer?tab=tasks', icon: Truck },
-    { label: 'الخريطة', path: '/dashboard/volunteer?tab=map', icon: MapPin },
-    { label: 'الملف الشخصي', path: '/dashboard/volunteer?tab=profile', icon: User },
+  user: [
+    { label: 'نظرة عامة', path: '/dashboard', icon: LayoutDashboard },
+    { label: 'تبرعاتي', path: '/dashboard?tab=donations', icon: Gift },
+    { label: 'طلباتي', path: '/dashboard?tab=requests', icon: ClipboardList },
+    { label: 'المهام التطوعية', path: '/dashboard?tab=volunteer', icon: Truck },
+    { label: 'المحفوظات', path: '/dashboard?tab=saved', icon: Heart },
+    { label: 'الملف الشخصي', path: '/dashboard?tab=profile', icon: User },
   ],
   admin: [
     { label: 'الإحصائيات', path: '/dashboard/admin', icon: BarChart3 },
@@ -76,9 +67,7 @@ const sidebarByRole: Record<string, SidebarItem[]> = {
 };
 
 const roleTitles: Record<string, string> = {
-  donor: 'حساب المتبرع',
-  beneficiary: 'حساب المستفيد',
-  volunteer: 'حساب المتطوع',
+  user: 'حساب المستخدم',
   admin: 'لوحة الإدارة',
 };
 
@@ -159,7 +148,7 @@ function Sidebar({ items, onClose }: { items: SidebarItem[]; onClose?: () => voi
           <div className="font-bold text-sm bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             منصة الخير
           </div>
-          <div className="text-xs text-muted-foreground truncate">{roleTitles[user?.role ?? 'donor']}</div>
+          <div className="text-xs text-muted-foreground truncate">{roleTitles[user?.role ?? 'user']}</div>
         </div>
         {onClose && (
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
@@ -170,7 +159,7 @@ function Sidebar({ items, onClose }: { items: SidebarItem[]; onClose?: () => voi
 
       {/* Nav */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {items.map((item) => {
+        {items?.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.path);
           return (
@@ -240,7 +229,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }, [darkMode]);
 
-  const items = sidebarByRole[user?.role ?? 'donor'];
+  const items = sidebarByRole[user?.role ?? 'user'] || sidebarByRole['user'];
 
   const handleLogout = () => {
     logout();
@@ -282,7 +271,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </Sheet>
 
             <div className="hidden lg:block">
-              <h1 className="font-semibold text-lg">{roleTitles[user?.role ?? 'donor']}</h1>
+              <h1 className="font-semibold text-lg">{roleTitles[user?.role ?? 'user']}</h1>
             </div>
             <div className="lg:hidden font-semibold text-base">منصة الخير</div>
           </div>
@@ -320,7 +309,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to={`/dashboard/${user?.role}?tab=profile`} className="flex items-center gap-2">
+                  <Link to={user?.role === 'admin' ? '/dashboard/admin?tab=profile' : '/dashboard?tab=profile'} className="flex items-center gap-2">
                     <Settings className="h-4 w-4" /> الإعدادات
                   </Link>
                 </DropdownMenuItem>

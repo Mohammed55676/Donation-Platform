@@ -5,6 +5,9 @@ import { Donations } from './pages/Donations';
 import { DonationDetails } from './pages/DonationDetails';
 import { AddDonation } from './pages/AddDonation';
 import { Volunteer } from './pages/Volunteer';
+import { About } from './pages/About';
+import { Contact } from './pages/Contact';
+import { Locations } from './pages/Locations';
 import { NotFound } from './pages/NotFound';
 
 // Auth
@@ -13,9 +16,7 @@ import { Login } from './pages/auth/Login';
 import { Signup } from './pages/auth/Signup';
 import { ForgotPassword } from './pages/auth/ForgotPassword';
 
-import { DonorDashboard } from './pages/DonorDashboard';
-import { BeneficiaryDashboard } from './pages/BeneficiaryDashboard';
-import { VolunteerDashboard } from './pages/VolunteerDashboard';
+import { Dashboard } from './pages/Dashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
@@ -35,28 +36,12 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // Role-specific dashboards (protected, no shared layout)
+  // Unified User Dashboard
   {
-    path: '/dashboard/donor',
+    path: '/dashboard',
     element: (
-      <ProtectedRoute allowedRole="donor">
-        <DonorDashboard />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/beneficiary',
-    element: (
-      <ProtectedRoute allowedRole="beneficiary">
-        <BeneficiaryDashboard />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/volunteer',
-    element: (
-      <ProtectedRoute allowedRole="volunteer">
-        <VolunteerDashboard />
+      <ProtectedRoute allowedRole="user">
+        <Dashboard />
       </ProtectedRoute>
     ),
   },
@@ -69,8 +54,7 @@ export const router = createBrowserRouter([
     ),
   },
 
-  // Legacy redirect
-  { path: '/dashboard', element: <Navigate to="/dashboard/donor" replace /> },
+
 
   // Main public layout
   {
@@ -82,6 +66,9 @@ export const router = createBrowserRouter([
       { path: 'donations/:id', Component: DonationDetails },
       { path: 'add-donation', Component: AddDonation },
       { path: 'volunteer', Component: Volunteer },
+      { path: 'about', Component: About },
+      { path: 'contact', Component: Contact },
+      { path: 'locations', Component: Locations },
       { path: 'community', element: <ProtectedRoute><Feed /></ProtectedRoute> },
       { path: 'community/create', element: <ProtectedRoute><CreatePostPage /></ProtectedRoute> },
       { path: 'community/:postId', element: <ProtectedRoute><Details /></ProtectedRoute> },

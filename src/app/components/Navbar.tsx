@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router';
-import { Heart, Home, Gift, Users, Menu, Moon, Sun, LogIn, LogOut, LayoutDashboard, MessageCircle } from 'lucide-react';
+import { Heart, Home, Gift, Users, Menu, Moon, Sun, LogIn, LogOut, LayoutDashboard, MessageCircle, Globe, Phone, MapPin } from 'lucide-react';
 import { Button } from './ui/button';
 import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from './ui/sheet';
@@ -10,12 +10,11 @@ import {
 } from './ui/dropdown-menu';
 import { NotificationDropdown } from './NotificationDropdown';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { toast } from 'sonner';
 
 const roleRoutes: Record<string, string> = {
-  donor: '/dashboard/donor',
-  beneficiary: '/dashboard/beneficiary',
-  volunteer: '/dashboard/volunteer',
+  user: '/dashboard',
   admin: '/dashboard/admin',
 };
 
@@ -23,6 +22,7 @@ export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+  const { language, toggleLanguage, t } = useLanguage();
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -38,16 +38,19 @@ export function Navbar() {
 
   const handleLogout = () => {
     logout();
-    toast.success('تم تسجيل الخروج');
+    toast.success(t('common.logout_success'));
     navigate('/');
     setMobileMenuOpen(false);
   };
 
   const navItems = [
-    { name: 'الرئيسية', path: '/', icon: Home },
-    { name: 'المجتمع', path: '/community', icon: MessageCircle },
-    { name: 'التبرعات', path: '/donations', icon: Gift },
-    { name: 'التطوع', path: '/volunteer', icon: Users },
+    { name: t('nav.home'), path: '/', icon: Home },
+    { name: t('nav.donations'), path: '/donations', icon: Gift },
+    { name: t('nav.community'), path: '/community', icon: MessageCircle },
+    { name: t('nav.volunteer'), path: '/volunteer', icon: Users },
+    { name: 'أماكن التبرع', path: '/locations', icon: MapPin },
+    { name: t('nav.about'), path: '/about', icon: Heart },
+    { name: t('nav.contact'), path: '/contact', icon: Phone },
   ];
 
   return (
@@ -60,7 +63,7 @@ export function Navbar() {
               <Heart className="h-6 w-6 text-white fill-white" />
             </div>
             <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              منصة الخير
+              {t('common.platform_name')}
             </span>
           </Link>
 
@@ -82,6 +85,10 @@ export function Navbar() {
 
           {/* Right actions */}
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={toggleLanguage} title="تغيير اللغة / Change Language">
+              <Globe className="h-5 w-5" />
+            </Button>
+
             <Button variant="ghost" size="icon" onClick={() => setDarkMode(!darkMode)}>
               {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
@@ -107,19 +114,19 @@ export function Navbar() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link to={roleRoutes[user.role]} className="flex items-center gap-2">
-                      <LayoutDashboard className="h-4 w-4" /> لوحة التحكم
+                      <LayoutDashboard className="h-4 w-4" /> {t('nav.dashboard')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-destructive gap-2" onClick={handleLogout}>
-                    <LogOut className="h-4 w-4" /> تسجيل الخروج
+                    <LogOut className="h-4 w-4" /> {t('nav.logout')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <div className="hidden md:flex gap-2">
-                <Button variant="ghost" asChild><Link to="/login"><LogIn className="h-4 w-4 ml-2" />تسجيل الدخول</Link></Button>
-                <Button asChild><Link to="/signup">إنشاء حساب</Link></Button>
+                <Button variant="ghost" asChild><Link to="/login"><LogIn className="h-4 w-4 ml-2" />{t('nav.login')}</Link></Button>
+                <Button asChild><Link to="/signup">{t('nav.signup')}</Link></Button>
               </div>
             )}
 
@@ -129,14 +136,20 @@ export function Navbar() {
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon"><Menu className="h-6 w-6" /></Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-[300px]" dir="rtl">
+                <SheetContent side={language === 'ar' ? 'right' : 'left'} className="w-[300px]" dir={language === 'ar' ? 'rtl' : 'ltr'}>
                   <SheetTitle className="sr-only">القائمة</SheetTitle>
                   <div className="flex flex-col gap-4 py-4">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary">
                         <Heart className="h-5 w-5 text-white fill-white" />
                       </div>
-                      <span className="font-bold text-lg bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">منصة الخير</span>
+                      <span className="font-bold text-lg bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent flex-1">{t('common.platform_name')}</span>
+                      <Button variant="ghost" size="icon" onClick={toggleLanguage} className="flex-shrink-0" title="تغيير اللغة / Change Language">
+                        <Globe className="h-5 w-5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDarkMode(!darkMode)} className="flex-shrink-0">
+                        {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                      </Button>
                     </div>
 
                     {navItems.map((item) => {
@@ -163,22 +176,22 @@ export function Navbar() {
                             className="flex items-center gap-3 px-4 py-3 rounded-md hover:bg-accent transition-colors"
                             onClick={() => setMobileMenuOpen(false)}
                           >
-                            <LayoutDashboard className="h-5 w-5" /> لوحة التحكم
+                            <LayoutDashboard className="h-5 w-5" /> {t('nav.dashboard')}
                           </Link>
                           <button
                             className="flex items-center gap-3 px-4 py-3 rounded-md text-destructive hover:bg-destructive/10 transition-colors w-full"
                             onClick={handleLogout}
                           >
-                            <LogOut className="h-5 w-5" /> تسجيل الخروج
+                            <LogOut className="h-5 w-5" /> {t('nav.logout')}
                           </button>
                         </>
                       ) : (
                         <>
                           <Link to="/login" className="flex items-center gap-3 px-4 py-3 rounded-md hover:bg-accent transition-colors" onClick={() => setMobileMenuOpen(false)}>
-                            <LogIn className="h-5 w-5" /> تسجيل الدخول
+                            <LogIn className="h-5 w-5" /> {t('nav.login')}
                           </Link>
                           <Link to="/signup" className="flex items-center gap-3 px-4 py-3 rounded-md bg-primary text-white hover:bg-primary/90 transition-colors" onClick={() => setMobileMenuOpen(false)}>
-                            ✨ إنشاء حساب
+                            ✨ {t('nav.signup')}
                           </Link>
                         </>
                       )}
