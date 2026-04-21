@@ -5,7 +5,8 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Input } from '../components/ui/input';
-import { MapPin, Search, Filter, Gift, Heart } from 'lucide-react';
+import { Skeleton } from '../components/ui/skeleton';
+import { MapPin, Search, Filter, Gift, Heart, SlidersHorizontal, X } from 'lucide-react';
 import { useDonations, type ExtendedDonation } from '../context/DonationContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router';
@@ -16,7 +17,12 @@ export function Donations() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Filter out pending and rejected from public view
+  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const publicDonations = donations.filter(d => d.status === 'متاح' || d.status === 'محجوز' || d.status === 'تم التسليم');
 
   const [filteredDonations, setFilteredDonations] = useState<ExtendedDonation[]>(publicDonations);
@@ -25,7 +31,6 @@ export function Donations() {
   const [conditionFilter, setConditionFilter] = useState<string>('الكل');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Apply category filter from URL query param on first load
   useEffect(() => {
     const cat = searchParams.get('category');
     if (cat) {
@@ -41,19 +46,9 @@ export function Donations() {
     search: string
   ) => {
     let filtered = publicDonations;
-
-    if (category !== 'الكل') {
-      filtered = filtered.filter(d => d.category === category);
-    }
-
-    if (urgency !== 'الكل') {
-      filtered = filtered.filter(d => d.urgency === urgency);
-    }
-
-    if (condition !== 'الكل') {
-      filtered = filtered.filter(d => d.condition === condition);
-    }
-
+    if (category !== 'الكل') filtered = filtered.filter(d => d.category === category);
+    if (urgency !== 'الكل') filtered = filtered.filter(d => d.urgency === urgency);
+    if (condition !== 'الكل') filtered = filtered.filter(d => d.condition === condition);
     if (search) {
       filtered = filtered.filter(d =>
         d.title.includes(search) ||
@@ -61,98 +56,83 @@ export function Donations() {
         d.location.includes(search)
       );
     }
-
     setFilteredDonations(filtered);
   };
 
-  const handleCategoryChange = (value: string) => {
-    setCategoryFilter(value);
-    applyFilters(value, urgencyFilter, conditionFilter, searchQuery);
-  };
+  const handleCategoryChange = (value: string) => { setCategoryFilter(value); applyFilters(value, urgencyFilter, conditionFilter, searchQuery); };
+  const handleUrgencyChange = (value: string) => { setUrgencyFilter(value); applyFilters(categoryFilter, value, conditionFilter, searchQuery); };
+  const handleConditionChange = (value: string) => { setConditionFilter(value); applyFilters(categoryFilter, urgencyFilter, value, searchQuery); };
+  const handleSearchChange = (value: string) => { setSearchQuery(value); applyFilters(categoryFilter, urgencyFilter, conditionFilter, value); };
 
-  const handleUrgencyChange = (value: string) => {
-    setUrgencyFilter(value);
-    applyFilters(categoryFilter, value, conditionFilter, searchQuery);
-  };
+  const hasActiveFilters = categoryFilter !== 'الكل' || urgencyFilter !== 'الكل' || conditionFilter !== 'الكل' || searchQuery;
 
-  const handleConditionChange = (value: string) => {
-    setConditionFilter(value);
-    applyFilters(categoryFilter, urgencyFilter, value, searchQuery);
-  };
-
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    applyFilters(categoryFilter, urgencyFilter, conditionFilter, value);
+  const resetFilters = () => {
+    setCategoryFilter('الكل');
+    setUrgencyFilter('الكل');
+    setConditionFilter('الكل');
+    setSearchQuery('');
+    setFilteredDonations(publicDonations);
   };
 
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
-      case 'عالية':
-        return 'bg-red-500 hover:bg-red-600';
-      case 'متوسطة':
-        return 'bg-orange-500 hover:bg-orange-600';
-      case 'منخفضة':
-        return 'bg-green-500 hover:bg-green-600';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  const getConditionColor = (condition: string) => {
-    switch (condition) {
-      case 'جديد':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'جيد جداً':
-        return 'bg-green-100 text-green-700 border-green-200';
-      case 'جيد':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'مستعمل':
-        return 'bg-orange-100 text-orange-700 border-orange-200';
-      default:
-        return '';
+      case 'عالية': return 'bg-red-500 text-white border-0';
+      case 'متوسطة': return 'bg-amber-500 text-white border-0';
+      case 'منخفضة': return 'bg-emerald-500 text-white border-0';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
   return (
-    <div className="min-h-screen py-8">
+    <div className="min-h-screen py-10">
       <div className="container mx-auto px-4">
+
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5 mb-10">
           <div>
-            <h1 className="text-3xl md:text-4xl mb-2">جميع التبرعات</h1>
+            <h1 className="text-3xl md:text-4xl font-extrabold mb-1.5 tracking-tight">جميع التبرعات</h1>
             <p className="text-muted-foreground">تصفح التبرعات المتاحة واطلب ما تحتاج</p>
           </div>
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             onClick={() => user ? navigate('/add-donation') : navigate('/login')}
-            className="bg-primary hover:bg-primary/90 text-white w-full sm:w-auto shadow-md hover:shadow-primary/50 transition-all"
+            className="bg-primary hover:bg-primary/90 text-white w-full sm:w-auto h-11 px-7 rounded-xl font-semibold shadow-md shadow-primary/20"
           >
-            <Gift className="ml-2 h-5 w-5" />
+            <Gift className="me-2 h-5 w-5" />
             تبرع الآن
           </Button>
         </div>
 
         {/* Filters */}
         <Card className="mb-8 border border-border/60 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-4">
+              <SlidersHorizontal className="h-4 w-4" />
               تصفية النتائج
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-3 text-xs rounded-lg ms-auto text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+                  onClick={resetFilters}
+                >
+                  <X className="h-3 w-3" />
+                  مسح الفلاتر
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="relative">
-                <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
                   placeholder="ابحث عن تبرع..."
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  className="pr-10"
+                  className="pe-10 rounded-xl h-10"
                 />
               </div>
               <Select value={categoryFilter} onValueChange={handleCategoryChange}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl h-10">
                   <SelectValue placeholder="الفئة" />
                 </SelectTrigger>
                 <SelectContent>
@@ -165,7 +145,7 @@ export function Donations() {
                 </SelectContent>
               </Select>
               <Select value={urgencyFilter} onValueChange={handleUrgencyChange}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl h-10">
                   <SelectValue placeholder="مستوى الأولوية" />
                 </SelectTrigger>
                 <SelectContent>
@@ -176,7 +156,7 @@ export function Donations() {
                 </SelectContent>
               </Select>
               <Select value={conditionFilter} onValueChange={handleConditionChange}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl h-10">
                   <SelectValue placeholder="الحالة" />
                 </SelectTrigger>
                 <SelectContent>
@@ -191,97 +171,120 @@ export function Donations() {
         </Card>
 
         {/* Results count */}
-        <div className="mb-6">
-          <p className="text-muted-foreground">
-            تم العثور على <span className="font-semibold text-foreground">{filteredDonations.length}</span> تبرع
-          </p>
-        </div>
+        {!isLoading && (
+          <div className="mb-5 flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              تم العثور على <span className="font-bold text-foreground">{filteredDonations.length}</span> تبرع
+            </p>
+          </div>
+        )}
 
-        {/* Donations Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredDonations.map((donation) => (
-            <Link key={donation.id} to={`/donations/${donation.id}`}>
-              <Card className="overflow-hidden hover:shadow-xl border border-border/60 hover:border-primary/40 transition-all hover:-translate-y-1 cursor-pointer h-full bg-card/95">
-                <div className="relative h-48">
-                  <img
-                    src={donation.image}
-                    alt={donation.title}
-                    className="w-full h-full object-cover"
-                  />
-                  {/* Remove Condition Badge as requested */}
-                  <div className="absolute top-3 right-3 flex flex-col gap-2">
+        {/* Grid */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Card key={i} className="overflow-hidden border border-border/60">
+                <Skeleton className="h-48 w-full rounded-none" />
+                <div className="p-4 space-y-3">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                    <Skeleton className="h-5 w-12 rounded-full" />
+                  </div>
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <div className="flex items-center gap-2 pt-2">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : filteredDonations.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filteredDonations.map((donation) => (
+              <Link key={donation.id} to={`/donations/${donation.id}`}>
+                <Card className="overflow-hidden hover:shadow-xl hover:shadow-black/6 hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full flex flex-col border border-border/60 group">
+                  <div className="relative h-48 overflow-hidden">
+                    <img
+                      src={donation.image}
+                      alt={donation.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                    {/* Urgency badge on image */}
+                    {donation.urgency === 'عالية' && (
+                      <div className="absolute top-3 start-3">
+                        <Badge className="bg-red-500 text-white border-0 text-xs font-semibold shadow">عاجل</Badge>
+                      </div>
+                    )}
+                    {/* Wishlist button */}
                     <Button
                       size="icon"
-                      variant="ghost"
-                      className={`h-8 w-8 rounded-full bg-white/80 hover:bg-white dark:bg-black/50 dark:hover:bg-black shadow-sm ${
-                        user?.wishlist?.includes(donation.id) ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
-                      }`}
+                      variant="secondary"
+                      className={`absolute top-3 end-3 h-8 w-8 rounded-full bg-white/90 dark:bg-black/60 shadow hover:bg-white transition-all ${user?.wishlist?.includes(donation.id) ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
+                        }`}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (!user) {
-                          navigate('/login');
-                          return;
-                        }
+                        if (!user) { navigate('/login'); return; }
                         toggleWishlist(donation.id);
                       }}
                     >
-                      <Heart className={`h-4 w-4 ${user?.wishlist?.includes(donation.id) ? 'fill-current' : ''}`} />
+                      <Heart className={`h-3.5 w-3.5 ${user?.wishlist?.includes(donation.id) ? 'fill-current' : ''}`} />
                     </Button>
                   </div>
-                </div>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge variant="outline" className="border-primary text-primary">
-                      {donation.category}
-                    </Badge>
-                    <Badge 
-                      variant={donation.status === 'متاح' ? 'default' : 'secondary'}
-                      className={donation.status === 'متاح' ? 'bg-secondary hover:bg-secondary/90 text-white' : ''}
-                    >
-                      {donation.status}
-                    </Badge>
-                  </div>
-                  <CardTitle className="line-clamp-1">{donation.title}</CardTitle>
-                  <CardDescription className="line-clamp-2">{donation.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4 text-primary" />
-                      <span>{donation.location}</span>
+
+                  <CardHeader className="pb-2 pt-4">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <Badge variant="outline" className="text-xs font-semibold border-primary/30 text-primary bg-primary/5">
+                        {donation.category}
+                      </Badge>
+                      <Badge
+                        className={`text-xs font-semibold ${donation.status === 'متاح'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0'
+                            : 'bg-muted text-muted-foreground border-0'
+                          }`}
+                      >
+                        {donation.status}
+                      </Badge>
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <div className="flex items-center gap-2">
+                    <CardTitle className="line-clamp-1 text-base group-hover:text-primary transition-colors">{donation.title}</CardTitle>
+                    <CardDescription className="line-clamp-2 text-sm">{donation.description}</CardDescription>
+                  </CardHeader>
+
+                  <CardContent className="mt-auto pt-0">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                        <span className="truncate">{donation.location}</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 pt-2 border-t border-border/60">
                         <img
                           src={donation.donor.avatar}
                           alt={donation.donor.name}
-                          className="w-8 h-8 rounded-full object-cover"
+                          className="w-7 h-7 rounded-full object-cover ring-2 ring-background"
                         />
-                        <span className="text-sm text-muted-foreground">{donation.donor.name}</span>
+                        <span className="text-sm text-muted-foreground font-medium truncate">{donation.donor.name}</span>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-
-        {filteredDonations.length === 0 && (
-          <div className="text-center py-16">
-            <p className="text-muted-foreground text-lg">لم يتم العثور على تبرعات تطابق معايير البحث</p>
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={() => {
-                setCategoryFilter('الكل');
-                setUrgencyFilter('الكل');
-                setConditionFilter('الكل');
-                setSearchQuery('');
-                setFilteredDonations(publicDonations);
-              }}
-            >
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          /* Empty state */
+          <div className="text-center py-20">
+            <div className="w-20 h-20 rounded-3xl bg-muted flex items-center justify-center mx-auto mb-5">
+              <Gift className="h-10 w-10 text-muted-foreground/30" />
+            </div>
+            <h3 className="text-lg font-bold mb-2">لم يتم العثور على تبرعات</h3>
+            <p className="text-muted-foreground mb-6 text-sm">لا توجد تبرعات تطابق معايير البحث الحالية</p>
+            <Button variant="outline" className="rounded-xl font-semibold" onClick={resetFilters}>
+              <X className="me-2 h-4 w-4" />
               إعادة تعيين الفلاتر
             </Button>
           </div>

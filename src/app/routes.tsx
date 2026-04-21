@@ -36,11 +36,10 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // Unified User Dashboard
   {
     path: '/dashboard',
     element: (
-      <ProtectedRoute allowedRole="user">
+      <ProtectedRoute allowedRole={['user', 'volunteer']}>
         <Dashboard />
       </ProtectedRoute>
     ),

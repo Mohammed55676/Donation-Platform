@@ -3,7 +3,7 @@ import { Heart, X } from 'lucide-react';
 
 export function AuthLayout() {
   return (
-    <div className="min-h-screen flex" dir="rtl">
+    <div className="min-h-screen flex">
       {/* Left brand panel - hidden on mobile */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary/90 to-secondary flex-col items-center justify-center p-12 relative overflow-hidden">
         {/* Decorative circles */}

@@ -189,7 +189,7 @@ export const campaigns: Campaign[] = [
     id: '3',
     title: 'إطعام مسكين',
     description: 'توزيع وجبات طعام للمحتاجين',
-    image: 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=500&q=80',
+    image: 'https://images.unsplash.com/photo-1593113646773-028c64a8f1b8?w=500&q=80',
     target: 800,
     current: 450,
     urgency: 'متوسطة'

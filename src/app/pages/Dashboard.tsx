@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router';
 import { isValidEmail, isLettersOnly, sanitizePhone } from '../utils/validators';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -92,6 +93,7 @@ export function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
   const { user, updateUser } = useAuth();
+  const { t } = useLanguage();
   const { addNotification } = useNotifications();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -111,7 +113,7 @@ export function Dashboard() {
   const myDonations = donations.filter(d => d.donor.name === user?.name);
   const [isEditDonationOpen, setIsEditDonationOpen] = useState(false);
   const [donationToEdit, setDonationToEdit] = useState<any>(null);
-  
+
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
@@ -137,10 +139,10 @@ export function Dashboard() {
 
   // Stats
   const stats = [
-    { label: 'تبرعاتي', value: myDonations.length, icon: Package, color: 'text-primary', bgColor: 'bg-primary/10' },
-    { label: 'طلباتي', value: myRequests.length, icon: Heart, color: 'text-secondary', bgColor: 'bg-secondary/10' },
-    { label: 'المهام التطوعية النشطة', value: inProgressTasks + pendingTasks, icon: Clock, color: 'text-orange-500', bgColor: 'bg-orange-100 dark:bg-orange-900/30' },
-    { label: 'المهام المكتملة', value: completedTasks, icon: CheckCircle, color: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-900/30' },
+    { label: t('dashboard.stat_my_donations'), value: myDonations.length, icon: Package, color: 'text-primary', bgColor: 'bg-primary/10' },
+    { label: t('dashboard.stat_my_requests'), value: myRequests.length, icon: Heart, color: 'text-secondary', bgColor: 'bg-secondary/10' },
+    { label: t('dashboard.stat_active_tasks'), value: inProgressTasks + pendingTasks, icon: Clock, color: 'text-orange-500', bgColor: 'bg-orange-100 dark:bg-orange-900/30' },
+    { label: t('dashboard.stat_completed'), value: completedTasks, icon: CheckCircle, color: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-900/30' },
   ];
 
   const updateTaskStatus = (id: string, newStatus: Task['status']) => {
@@ -211,14 +213,14 @@ export function Dashboard() {
         <div className="rounded-2xl bg-gradient-to-l from-primary to-secondary p-5 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold mb-1">مرحباً، {user?.name?.split(' ')[0]} 👋</h2>
-              <p className="text-white/80 text-sm">مرحباً بك في لوحة تحكم مجتمع الخير</p>
+              <h2 className="text-xl font-bold mb-1">{t('dashboard.welcome')}، {user?.name?.split(' ')[0]} 👋</h2>
+              <p className="text-white/80 text-sm">{t('dashboard.subtitle')}</p>
             </div>
             <div className="text-4xl">🌟</div>
           </div>
           <div className="mt-4">
             <div className="flex justify-between text-sm mb-1">
-              <span className="text-white/80">اكتمال الملف الشخصي</span>
+              <span className="text-white/80">{t('dashboard.profile_complete')}</span>
               <span className="font-bold">{user?.profileComplete ?? 40}%</span>
             </div>
             <Progress value={user?.profileComplete ?? 40} className="h-2 bg-white/30 [&>div]:bg-white" />
@@ -227,12 +229,12 @@ export function Dashboard() {
 
         <Tabs value={activeTab} onValueChange={setTab}>
           <TabsList className="flex flex-wrap gap-1 h-auto rounded-xl p-1 bg-muted">
-            <TabsTrigger value="overview" className="rounded-lg">نظرة عامة</TabsTrigger>
-            <TabsTrigger value="donations" className="rounded-lg">تبرعاتي</TabsTrigger>
-            <TabsTrigger value="requests" className="rounded-lg">طلباتي</TabsTrigger>
-            <TabsTrigger value="volunteer" className="rounded-lg">تطوعي</TabsTrigger>
-            <TabsTrigger value="saved" className="rounded-lg">المحفوظات</TabsTrigger>
-            <TabsTrigger value="profile" className="rounded-lg">الملف الشخصي</TabsTrigger>
+            <TabsTrigger value="overview" className="rounded-lg">{t('dashboard.tab_overview')}</TabsTrigger>
+            <TabsTrigger value="donations" className="rounded-lg">{t('dashboard.tab_donations')}</TabsTrigger>
+            <TabsTrigger value="requests" className="rounded-lg">{t('dashboard.tab_requests')}</TabsTrigger>
+            <TabsTrigger value="volunteer" className="rounded-lg">{t('dashboard.tab_volunteer')}</TabsTrigger>
+            <TabsTrigger value="saved" className="rounded-lg">{t('dashboard.tab_saved')}</TabsTrigger>
+            <TabsTrigger value="profile" className="rounded-lg">{t('dashboard.tab_profile')}</TabsTrigger>
           </TabsList>
 
           {/* 1. OVERVIEW */}
@@ -242,14 +244,14 @@ export function Dashboard() {
             </div>
 
             <Card>
-              <CardHeader><CardTitle>الإجراءات السريعة</CardTitle></CardHeader>
+              <CardHeader><CardTitle>{t('dashboard.quick_actions')}</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
-                    { label: 'إضافة تبرع', icon: Gift, path: '/add-donation', color: 'bg-primary/10 hover:bg-primary/20 text-primary' },
-                    { label: 'تصفح التبرعات', icon: Package, path: '/donations', color: 'bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-400' },
-                    { label: 'المجتمع', icon: Heart, path: '/community', color: 'bg-pink-50 hover:bg-pink-100 text-pink-600 dark:bg-pink-900/20 dark:hover:bg-pink-900/30 dark:text-pink-400' },
-                    { label: 'خريطة المهام', icon: Navigation, path: '?tab=volunteer', color: 'bg-green-50 hover:bg-green-100 text-green-600 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-green-400' },
+                    { label: t('dashboard.add_donation'), icon: Gift, path: '/add-donation', color: 'bg-primary/10 hover:bg-primary/20 text-primary' },
+                    { label: t('dashboard.browse_donations'), icon: Package, path: '/donations', color: 'bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-400' },
+                    { label: t('dashboard.community'), icon: Heart, path: '/community', color: 'bg-pink-50 hover:bg-pink-100 text-pink-600 dark:bg-pink-900/20 dark:hover:bg-pink-900/30 dark:text-pink-400' },
+                    { label: t('dashboard.task_map'), icon: Navigation, path: '?tab=volunteer', color: 'bg-green-50 hover:bg-green-100 text-green-600 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-green-400' },
                   ].map((action) => {
                     const Icon = action.icon;
                     return (
@@ -272,18 +274,18 @@ export function Dashboard() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>تبرعاتي</CardTitle>
-                    <CardDescription>التبرعات التي قمت بإضافتها</CardDescription>
+                    <CardTitle>{t('dashboard.my_donations')}</CardTitle>
+                    <CardDescription>{t('dashboard.my_donations_desc')}</CardDescription>
                   </div>
-                  <Link to="/add-donation"><Button><Package className="ml-2 h-4 w-4" />إضافة تبرع</Button></Link>
+                  <Link to="/add-donation"><Button><Package className="me-2 h-4 w-4" />{t('dashboard.add_donation')}</Button></Link>
                 </div>
               </CardHeader>
               <CardContent>
                 {myDonations.length === 0 ? (
                   <div className="text-center py-12">
                     <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
-                    <p className="text-muted-foreground">لم تقدم أي تبرعات بعد</p>
-                    <Link to="/add-donation"><Button variant="outline" className="mt-4">أضف تبرعاً الآن</Button></Link>
+                    <p className="text-muted-foreground">{t('dashboard.no_donations')}</p>
+                    <Link to="/add-donation"><Button variant="outline" className="mt-4">{t('dashboard.add_donation_now')}</Button></Link>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -320,15 +322,15 @@ export function Dashboard() {
           <TabsContent value="requests" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>طلباتي</CardTitle>
-                <CardDescription>طَلَبات المساعدة التي قدمتها</CardDescription>
+                <CardTitle>{t('dashboard.my_requests')}</CardTitle>
+                <CardDescription>{t('dashboard.my_requests_desc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {myRequests.length === 0 ? (
                   <div className="text-center py-12">
                     <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
-                    <p className="text-muted-foreground">لا توجد طلبات حالياً</p>
-                    <Link to="/donations"><Button variant="outline" className="mt-4">تصفح التبرعات</Button></Link>
+                    <p className="text-muted-foreground">{t('dashboard.no_requests')}</p>
+                    <Link to="/donations"><Button variant="outline" className="mt-4">{t('dashboard.browse_donations_btn')}</Button></Link>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -366,8 +368,8 @@ export function Dashboard() {
           <TabsContent value="volunteer" className="mt-6 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>المهام التطوعية</CardTitle>
-                <CardDescription>شارك في توصيل التبرعات وكسب النقاط</CardDescription>
+                <CardTitle>{t('dashboard.volunteer_tasks')}</CardTitle>
+                <CardDescription>{t('dashboard.volunteer_tasks_desc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -441,19 +443,19 @@ export function Dashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>خريطة المهام</CardTitle>
-                <CardDescription>مواقع الاستلام والتسليم لمهامك النشطة</CardDescription>
+                <CardTitle>{t('dashboard.task_map_title')}</CardTitle>
+                <CardDescription>{t('dashboard.task_map_desc')}</CardDescription>
               </CardHeader>
               <CardContent className="p-0 overflow-hidden rounded-b-lg border-t">
                 <MapView
                   center={[31.9539, 35.9106]}
                   zoom={12}
                   locations={[
-                  { id: '1-p', title: 'استلام — عبدون', lat: 31.9762, lng: 35.8825, type: 'donation' },
-                  { id: '1-d', title: 'تسليم — دابوق', lat: 31.9822, lng: 35.8535, type: 'request' },
-                  { id: '2-p', title: 'استلام — الرابية', lat: 31.9904, lng: 35.8742, type: 'donation' },
-                  { id: '2-d', title: 'تسليم — شارع الجامعة', lat: 31.9736, lng: 35.9037, type: 'request' },
-                ]} />
+                    { id: '1-p', title: 'استلام — عبدون', lat: 31.9762, lng: 35.8825, type: 'donation' },
+                    { id: '1-d', title: 'تسليم — دابوق', lat: 31.9822, lng: 35.8535, type: 'request' },
+                    { id: '2-p', title: 'استلام — الرابية', lat: 31.9904, lng: 35.8742, type: 'donation' },
+                    { id: '2-d', title: 'تسليم — شارع الجامعة', lat: 31.9736, lng: 35.9037, type: 'request' },
+                  ]} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -462,8 +464,8 @@ export function Dashboard() {
           <TabsContent value="saved" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>المحفوظات</CardTitle>
-                <CardDescription>التبرعات التي قمت بحفظها للإطلاع عليها لاحقاً</CardDescription>
+                <CardTitle>{t('dashboard.saved_items')}</CardTitle>
+                <CardDescription>{t('dashboard.saved_desc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {savedDonations.length > 0 ? (
@@ -478,7 +480,7 @@ export function Dashboard() {
                             <div className="flex items-center justify-between">
                               <Badge variant="outline">{donation.category}</Badge>
                               <Link to={`/donations/${donation.id}`}>
-                                <Button variant="outline" size="sm">عرض التفاصيل</Button>
+                                <Button variant="outline" size="sm">{t('dashboard.view_details')}</Button>
                               </Link>
                             </div>
                           </div>
@@ -489,8 +491,8 @@ export function Dashboard() {
                 ) : (
                   <div className="text-center py-12">
                     <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
-                    <p className="text-muted-foreground">لا توجد عناصر محفوظة حالياً</p>
-                    <Link to="/donations"><Button variant="outline" className="mt-4">تصفح التبرعات</Button></Link>
+                    <p className="text-muted-foreground">{t('dashboard.no_saved')}</p>
+                    <Link to="/donations"><Button variant="outline" className="mt-4">{t('dashboard.browse_donations_btn')}</Button></Link>
                   </div>
                 )}
               </CardContent>
@@ -502,9 +504,9 @@ export function Dashboard() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>الملف الشخصي</CardTitle>
+                  <CardTitle>{t('dashboard.profile_title')}</CardTitle>
                   <Button variant="outline" onClick={() => { setEditUserForm({ name: user?.name ?? '', email: user?.email ?? '', phone: user?.phone ?? '', location: user?.location ?? '', avatar: user?.avatar ?? '' }); setIsEditProfileOpen(true); }}>
-                    <Edit className="ml-2 h-4 w-4" />تعديل
+                    <Edit className="me-2 h-4 w-4" />{t('dashboard.edit_profile')}
                   </Button>
                 </div>
               </CardHeader>
@@ -518,7 +520,7 @@ export function Dashboard() {
                     <div>
                       <h3 className="text-xl font-bold">{user?.name}</h3>
                       <p className="text-muted-foreground">{user?.email}</p>
-                      <Badge className="mt-1 bg-primary/10 text-primary">مستخدم موثق</Badge>
+                      <Badge className="mt-1 bg-primary/10 text-primary">{t('dashboard.verified_user')}</Badge>
                     </div>
                     <div className="flex flex-col gap-2">
                       {user?.phone && <div className="flex items-center justify-end gap-2 text-sm">{user.phone}<span className="text-muted-foreground">📱</span></div>}
@@ -528,7 +530,7 @@ export function Dashboard() {
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span className="font-medium">{user?.profileComplete ?? 40}%</span>
-                        <span className="text-muted-foreground">اكتمال الملف الشخصي</span>
+                        <span className="text-muted-foreground">{t('dashboard.profile_complete')}</span>
                       </div>
                       <Progress value={user?.profileComplete ?? 40} className="h-2" />
                     </div>
@@ -542,10 +544,10 @@ export function Dashboard() {
 
       {/* Edit Profile Dialog */}
       <Dialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
-        <DialogContent className="sm:max-w-md p-6" dir="rtl">
+        <DialogContent className="sm:max-w-md p-6">
           <DialogHeader className="text-right mb-4">
-            <DialogTitle className="text-2xl font-bold">تعديل الملف الشخصي</DialogTitle>
-            <DialogDescription>قم بتحديث معلوماتك الشخصية لضمان سهولة التواصل</DialogDescription>
+            <DialogTitle className="text-2xl font-bold">{t('dashboard.edit_profile_title')}</DialogTitle>
+            <DialogDescription>{t('dashboard.edit_profile_desc')}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditProfile} className="space-y-5">
             <div className="flex flex-col items-center justify-center space-y-4 mb-2">
@@ -574,7 +576,7 @@ export function Dashboard() {
               </div>
               <p className="text-xs text-muted-foreground">اضغط على زر التعديل لتغيير الصورة (الحد الأقصى 5MB)</p>
             </div>
-            
+
             <div className="space-y-2">
               <Label className="text-sm font-semibold">الاسم الجميّل</Label>
               <Input value={editUserForm.name} className={`bg-muted/50 ${profileErrors.name ? 'border-destructive' : ''}`} onChange={(e) => { setEditUserForm({ ...editUserForm, name: e.target.value }); setProfileErrors(p => ({ ...p, name: undefined })); }} />
@@ -605,7 +607,7 @@ export function Dashboard() {
 
       {/* Delete Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle><AlertDialogDescription>لا يمكن استعادة التبرع بعد الحذف.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter><AlertDialogCancel>إلغاء</AlertDialogCancel><AlertDialogAction onClick={handleDeleteItem} className="bg-destructive hover:bg-destructive/90">حذف</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
@@ -613,7 +615,7 @@ export function Dashboard() {
 
       {/* Edit Donation Dialog */}
       <Dialog open={isEditDonationOpen} onOpenChange={setIsEditDonationOpen}>
-        <DialogContent className="sm:max-w-md" dir="rtl">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>تعديل التبرع</DialogTitle></DialogHeader>
           {donationToEdit && (
             <form onSubmit={handleEditDonation} className="space-y-4">
@@ -624,7 +626,7 @@ export function Dashboard() {
           )}
         </DialogContent>
       </Dialog>
-      
+
       <RatingDialog open={showRating} onOpenChange={setShowRating} userName="المراكز" />
     </DashboardLayout>
   );

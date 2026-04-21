@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  allowedRole?: UserRole;
+  allowedRole?: UserRole | UserRole[];
 }
 
 export function ProtectedRoute({ children, allowedRole }: ProtectedRouteProps) {
@@ -15,11 +15,16 @@ export function ProtectedRoute({ children, allowedRole }: ProtectedRouteProps) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRole && user?.role !== allowedRole) {
+  const isAllowed = Array.isArray(allowedRole)
+    ? allowedRole.includes(user!.role)
+    : allowedRole ? user?.role === allowedRole : true;
+
+  if (!isAllowed) {
     // Redirect to the appropriate dashboard for their actual role
     const roleRoutes: Record<UserRole, string> = {
       user: '/dashboard',
       admin: '/dashboard/admin',
+      volunteer: '/dashboard',
     };
     return <Navigate to={roleRoutes[user!.role]} replace />;
   }

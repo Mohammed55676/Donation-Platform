@@ -4,7 +4,20 @@ import { Toaster } from './components/ui/sonner';
 import { NotificationProvider } from './context/NotificationContext';
 import { AuthProvider } from './context/AuthContext';
 import { DonationProvider } from './context/DonationContext';
-import { LanguageProvider } from './context/LanguageContext';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
+
+// Reads language from context so the Toaster position matches RTL/LTR
+function ToasterWrapper() {
+  const { language } = useLanguage();
+  return (
+    <Toaster
+      position={language === 'ar' ? 'bottom-right' : 'bottom-left'}
+      closeButton
+      richColors
+      duration={4000}
+    />
+  );
+}
 
 export default function App() {
   return (
@@ -13,7 +26,7 @@ export default function App() {
         <NotificationProvider>
           <DonationProvider>
             <RouterProvider router={router} />
-            <Toaster position="top-center" richColors />
+            <ToasterWrapper />
           </DonationProvider>
         </NotificationProvider>
       </AuthProvider>

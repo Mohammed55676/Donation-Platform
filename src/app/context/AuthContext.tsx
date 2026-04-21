@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../lib/firebase';
 
-export type UserRole = 'user' | 'admin';
+export type UserRole = 'user' | 'admin' | 'volunteer';
 
 export interface AuthUser {
   id: string;
@@ -19,6 +21,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   signup: (
     name: string,
     email: string,
@@ -28,6 +31,13 @@ interface AuthContextValue {
   updateUser: (updates: Partial<AuthUser>) => void;
   toggleWishlist: (donationId: string) => void;
   getAllUsers: () => AuthUser[];
+  addUserFromAdmin: (
+    name: string,
+    email: string,
+    password: string,
+    role: UserRole
+  ) => { success: boolean; error?: string; user?: AuthUser };
+  deleteUser: (id: string) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -50,8 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed: AuthUser = JSON.parse(raw);
-        // Migration: Treat legacy roles as 'user'
-        if (['donor', 'beneficiary', 'volunteer'].includes(parsed.role)) {
+        // Migration: Treat truly legacy roles as 'user' (keep 'volunteer' intact)
+        if (['donor', 'beneficiary'].includes(parsed.role)) {
           parsed.role = 'user';
         }
         return parsed;
@@ -112,6 +122,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   };
 
+  const loginWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const gUser = result.user;
+      const googleUserData: AuthUser = {
+        id: gUser.uid,
+        name: gUser.displayName || 'Google User',
+        email: gUser.email || '',
+        role: 'user',
+        avatar: gUser.photoURL || undefined,
+        joinDate: new Date().toISOString().split('T')[0],
+        profileComplete: calcProfileComplete({
+          name: gUser.displayName || '',
+          email: gUser.email || '',
+          avatar: gUser.photoURL || undefined,
+        }),
+      };
+      setUser(googleUserData);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'فشل تسجيل الدخول بـ Google' };
+    }
+  };
+
   const signup = async (name: string, email: string, password: string) => {
     const accounts = getAccounts();
     const key = email.toLowerCase();
@@ -137,6 +171,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const getAllUsers = (): AuthUser[] => {
     const accounts = getAccounts();
     return Object.values(accounts).map((acc) => acc.user);
+  };
+
+  const addUserFromAdmin = (name: string, email: string, password: string, role: UserRole = 'user') => {
+    const accounts = getAccounts();
+    const key = email.toLowerCase();
+    if (accounts[key]) {
+      return { success: false, error: 'هذا البريد الإلكتروني مسجل بالفعل' };
+    }
+    const newUser: AuthUser = {
+      id: generateId(),
+      name,
+      email,
+      role,
+      joinDate: new Date().toISOString().split('T')[0],
+      profileComplete: calcProfileComplete({ name, email }),
+    };
+    accounts[key] = { password, user: newUser };
+    saveAccounts(accounts);
+    return { success: true, user: newUser };
+  };
+
+  const deleteUser = (id: string) => {
+    const accounts = getAccounts();
+    const key = Object.keys(accounts).find((k) => accounts[k].user.id === id);
+    if (key) {
+      delete accounts[key];
+      saveAccounts(accounts);
+    }
   };
 
   const updateUser = (updates: Partial<AuthUser>) => {
@@ -166,7 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, signup, logout, updateUser, toggleWishlist, getAllUsers }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, loginWithGoogle, signup, logout, updateUser, toggleWishlist, getAllUsers, addUserFromAdmin, deleteUser }}>
       {children}
     </AuthContext.Provider>
   );
