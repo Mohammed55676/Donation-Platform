@@ -44,6 +44,27 @@ async function listUsers(req, res, next) {
   }
 }
 
+// ── POST /api/users ──────────────────────────────────────────────────
+/**
+ * @route   POST /api/users
+ * @access  Admin
+ * @body    { name, email, password, role, ... }
+ */
+async function createUser(req, res, next) {
+  try {
+    const { name, email, password, role } = req.body;
+    const existing = await User.findOne({ email: email.toLowerCase() });
+    if (existing) throw new AppError('Email already registered.', 409);
+
+    const user = await User.create({ name, email, password, role });
+    // Remove password from response
+    user.password = undefined;
+    return sendSuccess(res, user, 'User created successfully.', 201);
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ── GET /api/users/:id ───────────────────────────────────────────────
 async function getUser(req, res, next) {
   try {
@@ -122,4 +143,4 @@ async function deleteUser(req, res, next) {
   }
 }
 
-module.exports = { listUsers, getUser, updateUser, updateUserStatus, deleteUser };
+module.exports = { listUsers, createUser, getUser, updateUser, updateUserStatus, deleteUser };

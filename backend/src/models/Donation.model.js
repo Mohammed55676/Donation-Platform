@@ -61,4 +61,6 @@ donationSchema.index({ title: 'text', description: 'text', location: 'text' });
 // Compound index for common filter queries
 donationSchema.index({ category: 1, status: 1, urgency: 1 });
 
+donationSchema.set('toJSON', { transform(_, ret) { ret.id = ret._id.toString(); delete ret._id; delete ret.__v; return ret; } });
+
 module.exports = mongoose.model('Donation', donationSchema);

@@ -15,8 +15,8 @@ type PostFormProps = {
 export const PostForm: React.FC<PostFormProps> = ({ onSubmit, isSubmitting = false }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("Medical");
-  const [urgency, setUrgency] = useState("Normal");
+  const [category, setCategory] = useState("طبي");
+  const [urgency, setUrgency] = useState("متوسطة");
   const [image, setImage] = useState<File | null>(null);
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -74,11 +74,12 @@ export const PostForm: React.FC<PostFormProps> = ({ onSubmit, isSubmitting = fal
               <SelectValue placeholder="اختر التصنيف" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Medical">طبي</SelectItem>
-              <SelectItem value="Food">غذاء</SelectItem>
-              <SelectItem value="Housing">سكن ومأوى</SelectItem>
-              <SelectItem value="Transport">مواصلات</SelectItem>
-              <SelectItem value="Other">أخرى</SelectItem>
+              <SelectItem value="طبي">طبي</SelectItem>
+              <SelectItem value="غذاء">غذاء</SelectItem>
+              <SelectItem value="طعام">طعام</SelectItem>
+              <SelectItem value="ملابس">ملابس</SelectItem>
+              <SelectItem value="أثاث">أثاث</SelectItem>
+              <SelectItem value="أخرى">أخرى</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -90,8 +91,9 @@ export const PostForm: React.FC<PostFormProps> = ({ onSubmit, isSubmitting = fal
               <SelectValue placeholder="اختر درجة الأهمية" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Normal">عادي</SelectItem>
-              <SelectItem value="🔥 Urgent">عاجل جداً</SelectItem>
+              <SelectItem value="منخفضة">عادي</SelectItem>
+              <SelectItem value="متوسطة">متوسط</SelectItem>
+              <SelectItem value="عالية">🔥 عاجل</SelectItem>
             </SelectContent>
           </Select>
         </div>

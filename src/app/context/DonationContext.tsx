@@ -1,57 +1,92 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { donations as initialDonations, type Donation } from '../data/donations';
+import api from '../utils/api';
 
 export type UnifiedDonationStatus = 'متاح' | 'محجوز' | 'تم التسليم' | 'قيد المراجعة' | 'مرفوض';
 
-export interface ExtendedDonation extends Omit<Donation, 'status'> {
+export interface ExtendedDonation {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  condition: string;
+  location: string;
+  urgency: string;
+  image?: string;
   status: UnifiedDonationStatus;
+  donor: any;
+  claimedBy?: any;
+  createdAt: string;
 }
 
 interface DonationContextValue {
   donations: ExtendedDonation[];
-  addDonation: (donation: ExtendedDonation) => void;
-  updateDonationStatus: (id: string, status: UnifiedDonationStatus) => void;
-  deleteDonation: (id: string) => void;
-  updateDonation: (id: string, updates: Partial<ExtendedDonation>) => void;
+  loading: boolean;
+  fetchDonations: () => Promise<void>;
+  addDonation: (donation: Omit<ExtendedDonation, 'id' | 'status' | 'createdAt' | 'donor'>) => Promise<void>;
+  updateDonationStatus: (id: string, status: UnifiedDonationStatus) => Promise<void>;
+  deleteDonation: (id: string) => Promise<void>;
+  updateDonation: (id: string, updates: Partial<ExtendedDonation>) => Promise<void>;
 }
 
 const DonationContext = createContext<DonationContextValue | null>(null);
-const STORAGE_KEY = 'app_donations';
 
 export function DonationProvider({ children }: { children: ReactNode }) {
-  const [donations, setDonations] = useState<ExtendedDonation[]>(() => {
+  const [donations, setDonations] = useState<ExtendedDonation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchDonations = async () => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-      // Initialize with default
-      return initialDonations as unknown as ExtendedDonation[];
-    } catch {
-      return initialDonations as unknown as ExtendedDonation[];
+      const res = await api.get('/donations');
+      setDonations(res.data.data || []);
+    } catch (error) {
+      console.error('Failed to fetch donations', error);
+    } finally {
+      setLoading(false);
     }
-  });
+  };
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(donations));
-  }, [donations]);
+    fetchDonations();
+  }, []);
 
-  const addDonation = (donation: ExtendedDonation) => {
-    setDonations(prev => [donation, ...prev]);
+  const addDonation = async (donation: Omit<ExtendedDonation, 'id' | 'status' | 'createdAt' | 'donor'>) => {
+    try {
+      const res = await api.post('/donations', donation);
+      setDonations((prev) => [res.data.data, ...prev]);
+    } catch (error) {
+      console.error('Failed to add donation', error);
+    }
   };
 
-  const updateDonationStatus = (id: string, status: UnifiedDonationStatus) => {
-    setDonations(prev => prev.map(d => d.id === id ? { ...d, status } : d));
+  const updateDonationStatus = async (id: string, status: UnifiedDonationStatus) => {
+    try {
+      const res = await api.put(`/donations/${id}/status`, { status });
+      setDonations((prev) => prev.map((d) => (d.id === id ? res.data.data : d)));
+    } catch (error) {
+      console.error('Failed to update donation status', error);
+    }
   };
 
-  const deleteDonation = (id: string) => {
-    setDonations(prev => prev.filter(d => d.id !== id));
+  const deleteDonation = async (id: string) => {
+    try {
+      await api.delete(`/donations/${id}`);
+      setDonations((prev) => prev.filter((d) => d.id !== id));
+    } catch (error) {
+      console.error('Failed to delete donation', error);
+    }
   };
 
-  const updateDonation = (id: string, updates: Partial<ExtendedDonation>) => {
-    setDonations(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
+  const updateDonation = async (id: string, updates: Partial<ExtendedDonation>) => {
+    try {
+      const res = await api.put(`/donations/${id}`, updates);
+      setDonations((prev) => prev.map((d) => (d.id === id ? res.data.data : d)));
+    } catch (error) {
+      console.error('Failed to update donation', error);
+    }
   };
 
   return (
-    <DonationContext.Provider value={{ donations, addDonation, updateDonationStatus, deleteDonation, updateDonation }}>
+    <DonationContext.Provider value={{ donations, loading, fetchDonations, addDonation, updateDonationStatus, deleteDonation, updateDonation }}>
       {children}
     </DonationContext.Provider>
   );

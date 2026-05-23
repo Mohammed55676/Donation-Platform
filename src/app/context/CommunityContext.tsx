@@ -1,14 +1,15 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { toast } from "sonner";
+import api from '../utils/api';
 
-export type PostStatus = "open" | "in_progress" | "completed";
+export type PostStatus = "مفتوح" | "قيد التنفيذ" | "مكتمل" | "مغلق";
 
 export type CommunityUser = {
   id: string;
   name: string;
   email?: string;
-  role: "user" | "volunteer" | "admin";
+  role: string;
   avatarUrl?: string;
 };
 
@@ -33,11 +34,11 @@ export type Post = {
   urgency: string;
   location?: string;
   image?: string;
-  likes: number;
-  likedBy?: string[];
+  likes: any[];
   createdAt: string;
   status: PostStatus;
-  author: CommunityUser;
+  requestedBy: CommunityUser;
+  commentCount: number;
   comments: CommunityComment[];
   volunteers: VolunteerResponse[];
 };
@@ -48,6 +49,7 @@ export type NewPostPayload = {
   category: string;
   urgency: string;
   image?: File | string | null;
+  location?: string;
 };
 
 type CommunityNotification = {
@@ -59,6 +61,7 @@ type CommunityNotification = {
 
 type CommunityState = {
   posts: Post[];
+  loading: boolean;
   filter: {
     category: string | null;
     urgency: string | null;
@@ -67,175 +70,110 @@ type CommunityState = {
   };
   notifications: CommunityNotification[];
   fetchPosts: () => Promise<void>;
-  createPost: (payload: NewPostPayload, currentUser: any) => Promise<void>;
-  likePost: (postId: string, userId: string) => void;
-  addComment: (postId: string, text: string, currentUser: any) => Promise<void>;
-  acceptRequest: (postId: string, currentUser: any) => Promise<void>;
-  completeRequest: (postId: string) => Promise<void>;
+  createPost: (payload: NewPostPayload) => Promise<void>;
+  likePost: (postId: string) => Promise<void>;
   setStatus: (postId: string, status: PostStatus) => Promise<void>;
+  deletePost: (postId: string) => Promise<void>;
+  acceptRequest: (postId: string) => Promise<void>;
+  completeRequest: (postId: string) => Promise<void>;
+  addComment: (postId: string, text: string) => Promise<void>;
 };
-
-// Initial mock data to give the feed some life
-const mockPosts: Post[] = [
-  {
-    id: "p1",
-    title: "مساعدة في شراء أدوية",
-    description: "أحتاج لمساعدة في توفير بعض الأدوية الشهرية لمرض السكري.",
-    category: "Medical",
-    urgency: "🔥 Urgent",
-    likes: 12,
-    likedBy: [],
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    status: "open",
-    author: {
-      id: "u1",
-      name: "أحمد بن سعيد",
-      role: "user",
-    },
-    comments: [],
-    volunteers: [],
-  },
-  {
-    id: "p2",
-    title: "توزيع وجبات إفطار",
-    description: "نخطط لتوزيع 50 وجبة غداً في وسط المدينة. نحتاج متطوعين للمساعدة في التوزيع.",
-    category: "Food",
-    urgency: "Normal",
-    likes: 45,
-    likedBy: [],
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    status: "in_progress",
-    author: {
-      id: "v1",
-      name: "فريق صناع الأمل",
-      role: "volunteer",
-      avatarUrl: "https://ui-avatars.com/api/?name=فريق+الأمل&background=random"
-    },
-    comments: [
-      {
-        id: "c1",
-        text: "أنا جاهز للمساعدة غداً!",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
-        user: { id: "u2", name: "سالم عبيد", role: "user" }
-      }
-    ],
-    volunteers: [
-      { id: "v1", user: { id: "u2", name: "سالم عبيد", role: "user" }, createdAt: new Date().toISOString() }
-    ],
-  }
-];
 
 export const useCommunityStore = create<CommunityState>()(
   devtools((set, get) => ({
-    posts: mockPosts,
+    posts: [],
+    loading: false,
     filter: { category: null, urgency: null, search: "", sort: "newest" },
     notifications: [],
 
     fetchPosts: async () => {
-      // In a real app this would fetch from an API
-      set({ posts: get().posts });
+      set({ loading: true });
+      try {
+        const res = await api.get('/community');
+        set({ posts: res.data.data || [] });
+      } catch (error) {
+        console.error("Failed to fetch community posts", error);
+      } finally {
+        set({ loading: false });
+      }
     },
 
-    createPost: async (payload, currentUser) => {
-      const newPost: Post = {
-        id: crypto.randomUUID(),
-        title: payload.title,
-        description: payload.description,
-        category: payload.category,
-        urgency: payload.urgency,
-        image: typeof payload.image === "string" ? payload.image : undefined,
-        likes: 0,
-        likedBy: [],
-        createdAt: new Date().toISOString(),
-        status: "open",
-        author: {
-          id: currentUser?.id || "current-user",
-          name: currentUser?.name || "Current User",
-          role: currentUser?.role || "user",
-          avatarUrl: currentUser?.avatar
-        },
-        comments: [],
-        volunteers: [],
-      };
-
-      set((state) => ({
-        posts: [newPost, ...state.posts],
-      }));
-      
-      toast.success("تم إنشاء طلبك بنجاح");
+    createPost: async (payload) => {
+      try {
+        const res = await api.post('/community', payload);
+        set((state) => ({ posts: [res.data.data, ...state.posts] }));
+        toast.success("تم إنشاء طلبك بنجاح");
+      } catch (error) {
+        toast.error("حدث خطأ أثناء إنشاء الطلب");
+        console.error("Create post error", error);
+      }
     },
 
-    likePost: (postId, userId) => {
-      set((state) => ({
-        posts: state.posts.map((p) => {
-          if (p.id === postId) {
-            const likedBy = p.likedBy || [];
-            if (likedBy.includes(userId)) return p;
-            return { ...p, likes: p.likes + 1, likedBy: [...likedBy, userId] };
-          }
-          return p;
-        }),
-      }));
-    },
-
-    addComment: async (postId, text, currentUser) => {
-      const comment: CommunityComment = {
-        id: crypto.randomUUID(),
-        text,
-        createdAt: new Date().toISOString(),
-        user: {
-          id: currentUser?.id || "current-user",
-          name: currentUser?.name || "Current User",
-          role: currentUser?.role || "user",
-          avatarUrl: currentUser?.avatar
-        },
-      };
-
-      set((state) => ({
-        posts: state.posts.map((p) =>
-          p.id === postId ? { ...p, comments: [...p.comments, comment] } : p
-        ),
-      }));
-    },
-
-    acceptRequest: async (postId, currentUser) => {
-      const volunteer: VolunteerResponse = {
-        id: crypto.randomUUID(),
-        user: {
-          id: currentUser?.id || "current-user",
-          name: currentUser?.name || "Current User",
-          role: currentUser?.role || "user",
-          avatarUrl: currentUser?.avatar
-        },
-        createdAt: new Date().toISOString()
-      };
-
-      set((state) => ({
-        posts: state.posts.map((p) =>
-          p.id === postId 
-            ? { ...p, status: "in_progress", volunteers: [...p.volunteers, volunteer] } 
-            : p
-        ),
-      }));
-      
-      toast.success("شكراً لمبادرتك بالمساعدة!");
-    },
-
-    completeRequest: async (postId) => {
-      set((state) => ({
-        posts: state.posts.map((p) =>
-          p.id === postId ? { ...p, status: "completed" } : p
-        ),
-      }));
-      toast.success("تم إغلاق الطلب واكتماله!");
+    likePost: async (postId) => {
+      try {
+        const res = await api.post(`/community/${postId}/like`);
+        set((state) => ({
+          posts: state.posts.map((p) => (p.id === postId ? res.data.data : p)),
+        }));
+      } catch (error) {
+        console.error("Like post error", error);
+      }
     },
 
     setStatus: async (postId, status) => {
-      set((state) => ({
-        posts: state.posts.map((p) =>
-          p.id === postId ? { ...p, status } : p
-        ),
-      }));
+      try {
+        const res = await api.put(`/community/${postId}`, { status });
+        set((state) => ({
+          posts: state.posts.map((p) => (p.id === postId ? res.data.data : p)),
+        }));
+        toast.success("تم تحديث حالة الطلب");
+      } catch (error) {
+        toast.error("فشل تحديث الحالة");
+      }
     },
+
+    deletePost: async (postId) => {
+      try {
+        await api.delete(`/community/${postId}`);
+        set((state) => ({
+          posts: state.posts.filter((p) => p.id !== postId),
+        }));
+        toast.success("تم حذف الطلب");
+      } catch (error) {
+        toast.error("فشل حذف الطلب");
+      }
+    },
+
+    acceptRequest: async (postId) => {
+      try {
+        const res = await api.put(`/community/${postId}`, { status: "قيد التنفيذ" });
+        set((state) => ({
+          posts: state.posts.map((p) => (p.id === postId ? res.data.data : p)),
+        }));
+        toast.success("تم قبول الطلب وبدء المساعدة");
+      } catch (error) {
+        toast.error("فشل قبول الطلب");
+      }
+    },
+
+    completeRequest: async (postId) => {
+      try {
+        const res = await api.put(`/community/${postId}`, { status: "مكتمل" });
+        set((state) => ({
+          posts: state.posts.map((p) => (p.id === postId ? res.data.data : p)),
+        }));
+        toast.success("تم إكمال الطلب بنجاح");
+      } catch (error) {
+        toast.error("فشل إكمال الطلب");
+      }
+    },
+
+    addComment: async (postId, text) => {
+      try {
+        toast.info("ميزة التعليقات ستتوفر قريباً");
+      } catch (error) {
+        toast.error("فشل إضافة التعليق");
+      }
+    }
   }))
 );

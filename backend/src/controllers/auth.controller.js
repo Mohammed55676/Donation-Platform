@@ -91,4 +91,39 @@ async function getMe(req, res) {
   return sendSuccess(res, req.user);
 }
 
-module.exports = { register, login, logout, getMe };
+// ── POST /api/auth/google ────────────────────────────────────────────
+/**
+ * @route   POST /api/auth/google
+ * @access  Public
+ * @body    { email, name, avatar }
+ * Simplified Google Login: In production, verify Firebase/Google ID token!
+ */
+async function googleLogin(req, res, next) {
+  try {
+    const { email, name, avatar } = req.body;
+    if (!email) throw new AppError('Email is required.', 400);
+
+    let user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      // Create new user if they don't exist
+      // Use a truly random password they'll never use for login
+      const randomPass = Math.random().toString(36).slice(-10) + Date.now();
+      user = await User.create({
+        name: name || 'Google User',
+        email: email.toLowerCase(),
+        password: randomPass,
+        avatar: avatar || null
+      });
+    }
+
+    if (user.status === 'banned') throw new AppError('Your account has been suspended.', 403);
+
+    const token = signToken(user._id);
+    return sendSuccess(res, { user, token }, 'Google login successful.');
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { register, login, logout, getMe, googleLogin };

@@ -2,12 +2,13 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-interface MapLocation {
+export interface MapLocation {
   id: string;
   title: string;
   lat: number;
   lng: number;
   type: 'donation' | 'request';
+  address?: string;
 }
 
 interface MapViewProps {

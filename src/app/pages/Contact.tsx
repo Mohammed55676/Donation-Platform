@@ -35,7 +35,7 @@ export function Contact() {
               const Icon = info.icon;
               return (
                 <motion.div key={info.title} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}>
-                  <Card className="border-border/50 shadow-sm">
+                  <Card className="border-none card-shadow rounded-3xl hover:shadow-md transition-all">
                     <CardContent className="p-5 flex items-center gap-4">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${info.color}`}>
                         <Icon className="h-6 w-6" />
@@ -53,32 +53,32 @@ export function Contact() {
 
           {/* Form */}
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="lg:col-span-2">
-            <Card className="border-border/50 shadow-md">
+            <Card className="border-none card-shadow rounded-3xl shadow-lg">
               <CardContent className="p-8">
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label>الاسم الكامل</Label>
-                      <Input placeholder="أحمد محمد" required className="bg-muted/30" />
+                      <Input placeholder="أحمد محمد" required className="bg-muted/50 rounded-xl border-none h-12" />
                     </div>
                     <div className="space-y-2">
                       <Label>البريد الإلكتروني</Label>
-                      <Input type="email" placeholder="email@example.com" required className="bg-muted/30" />
+                      <Input type="email" placeholder="email@example.com" required className="bg-muted/50 rounded-xl border-none h-12" />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label>موضوع الرسالة</Label>
-                    <Input placeholder="استفسار عن التبرع" required className="bg-muted/30" />
+                    <Input placeholder="استفسار عن التبرع" required className="bg-muted/50 rounded-xl border-none h-12" />
                   </div>
                   <div className="space-y-2">
                     <Label>الرسالة</Label>
                     <textarea 
-                      className="w-full flex min-h-[120px] rounded-md border border-input bg-muted/30 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+                      className="w-full flex min-h-[120px] rounded-xl border-none bg-muted/50 px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
                       placeholder="اكتب رسالتك هنا..."
                       required
                     ></textarea>
                   </div>
-                  <Button type="submit" className="w-full sm:w-auto h-11 px-8">
+                  <Button type="submit" className="w-full sm:w-auto h-12 px-8 rounded-xl bg-gradient-to-r from-primary to-secondary">
                     <Send className="me-2 h-4 w-4" /> إرسال الرسالة
                   </Button>
                 </form>

@@ -140,7 +140,7 @@ export function Volunteer() {
           {stats.map((stat, index) => {
             const Icon = stat.icon;
             return (
-              <Card key={index} className="border border-border/60 hover:border-primary/30 hover:shadow-md transition-all text-center group">
+              <Card key={index} className="border-none card-shadow rounded-3xl hover:shadow-lg hover:shadow-primary/10 transition-all text-center group">
                 <CardContent className="pt-6 pb-5">
                   <div className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl ${stat.bg} mb-3 group-hover:scale-110 transition-transform duration-300`}>
                     <Icon className={`h-5 w-5 ${stat.color}`} />
@@ -154,7 +154,7 @@ export function Volunteer() {
         </div>
 
         {/* ── Why Volunteer ──────────────────────── */}
-        <Card className="mb-12 border border-border/60 bg-gradient-to-br from-primary/5 to-secondary/5 dark:from-primary/10 dark:to-secondary/10">
+        <Card className="mb-12 border-none card-shadow rounded-3xl bg-gradient-to-br from-primary/5 to-secondary/5 dark:from-primary/10 dark:to-secondary/10">
           <CardContent className="p-8">
             <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">لماذا التطوع معنا؟</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -185,7 +185,7 @@ export function Volunteer() {
         </div>
 
         {opportunities.length === 0 ? (
-          <Card className="p-12 text-center border border-border/60 border-dashed">
+          <Card className="p-12 text-center border-2 border-border/60 border-dashed rounded-3xl bg-card/50">
             <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
               <Users className="h-8 w-8 text-muted-foreground/40" />
             </div>
@@ -202,8 +202,8 @@ export function Volunteer() {
               return (
                 <Card
                   key={opportunity.id}
-                  className={`border transition-all duration-200 hover:shadow-lg ${
-                    isFull ? 'opacity-75 border-border/60' : 'border-border/60 hover:border-primary/30'
+                  className={`border-none card-shadow rounded-3xl transition-all duration-200 hover:shadow-xl hover:shadow-primary/10 ${
+                    isFull ? 'opacity-75' : ''
                   }`}
                 >
                   <CardHeader className="pb-3">

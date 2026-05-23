@@ -69,7 +69,7 @@ export function AuthLayout() {
         </Link>
 
         {/* Mobile header */}
-        <div className="lg:hidden flex items-center justify-between p-6 border-b">
+        <div className="lg:hidden flex items-center justify-between p-6 border-b border-border/40">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
               <Heart className="w-5 h-5 text-white fill-white" />

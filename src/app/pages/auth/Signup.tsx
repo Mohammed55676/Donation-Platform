@@ -84,7 +84,7 @@ export function Signup() {
             <Input
               id="name"
               placeholder={t('auth.name_placeholder')}
-              className={`pe-10 border-2 focus:border-primary ${errors.name ? 'border-destructive' : ''}`}
+              className={`pe-10 h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary ${errors.name ? 'border-destructive focus-visible:ring-destructive' : ''}`}
               value={name}
               onChange={(e) => { setName(e.target.value); setErrors(prev => ({ ...prev, name: undefined })); }}
             />
@@ -100,7 +100,7 @@ export function Signup() {
               id="email"
               type="email"
               placeholder="example@email.com"
-              className={`ps-10 border-2 focus:border-primary ${errors.email ? 'border-destructive' : ''}`}
+              className={`ps-10 h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary ${errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
               value={email}
               onChange={(e) => { setEmail(e.target.value); setErrors(prev => ({ ...prev, email: undefined })); }}
               dir="ltr"
@@ -117,7 +117,7 @@ export function Signup() {
               id="password"
               type={showPassword ? 'text' : 'password'}
               placeholder={t('auth.password_placeholder')}
-              className={`pe-10 ps-10 border-2 focus:border-primary ${errors.password ? 'border-destructive' : ''}`}
+              className={`pe-10 ps-10 h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
               value={password}
               onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: undefined })); }}
               dir="ltr"
@@ -135,7 +135,7 @@ export function Signup() {
 
         <Button
           type="submit"
-          className="w-full bg-gradient-to-l from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary text-white font-semibold py-5 text-base shadow-md shadow-secondary/20 transition-all hover:shadow-lg hover:shadow-secondary/30"
+          className="w-full rounded-xl bg-gradient-to-r from-secondary to-primary text-white font-semibold h-12 shadow-md hover:shadow-secondary/30 transition-all"
           disabled={loading}
         >
           {loading ? (

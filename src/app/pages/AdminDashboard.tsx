@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router';
+import api from '../utils/api';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -83,17 +84,14 @@ export function AdminDashboard() {
   const activeTab = searchParams.get('tab') || 'analytics';
 
   const { donations, updateDonationStatus } = useDonations();
-  const { getAllUsers, addUserFromAdmin, deleteUser: deleteUserFromContext } = useAuth();
+  const { user } = useAuth();
 
   // ── Users state ──────────────────────────────────────────────
-  const buildUserList = () =>
-    getAllUsers().map((u) => ({
-      ...u,
-      status: (u as any).status || 'active',
-      donations: (u as any).donations || 0,
-    }));
+  const [users, setUsers] = useState<any[]>([]);
 
-  const [users, setUsers] = useState<any[]>(buildUserList);
+  useEffect(() => {
+    api.get('/users').then(res => setUsers(Array.isArray(res.data.data) ? res.data.data : [])).catch(console.error);
+  }, []);
   const [confirmAction, setConfirmAction] = useState<{ type: string; id: string; label: string } | null>(null);
   const [assignCase, setAssignCase] = useState<typeof urgentCases[0] | null>(null);
   const [selectedVolunteer, setSelectedVolunteer] = useState('');
@@ -120,10 +118,10 @@ export function AdminDashboard() {
   // ── Helpers ──────────────────────────────────────────────────
   const setTab = (tab: string) => setSearchParams(tab === 'analytics' ? {} : { tab });
 
-  const displayedUsers = users.filter(
+  const displayedUsers = (users || []).filter(
     (u) =>
-      u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-      u.email.toLowerCase().includes(userSearch.toLowerCase())
+      (u.name || '').toLowerCase().includes(userSearch.toLowerCase()) ||
+      (u.email || '').toLowerCase().includes(userSearch.toLowerCase())
   );
 
   // ── Add User ─────────────────────────────────────────────────
@@ -138,54 +136,55 @@ export function AdminDashboard() {
     return e;
   };
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     const errs = validateAddUser();
     if (Object.keys(errs).length > 0) {
       setAddUserErrors(errs);
       return;
     }
-    const result = addUserFromAdmin(
-      addUserForm.name.trim(),
-      addUserForm.email.trim(),
-      addUserForm.password,
-      addUserForm.role as 'user' | 'volunteer'
-    );
-    if (!result.success) {
-      setAddUserErrors({ email: result.error });
-      return;
+    try {
+      const result = await api.post('/users', {
+        name: addUserForm.name.trim(),
+        email: addUserForm.email.trim(),
+        password: addUserForm.password,
+        role: addUserForm.role
+      });
+      setUsers((prev) => [result.data.data, ...prev]);
+      setIsAddUserOpen(false);
+      setAddUserForm({ name: '', email: '', password: '', role: 'user' });
+      setAddUserErrors({});
+      toast.success('تمت إضافة المستخدم بنجاح');
+    } catch (err: any) {
+      setAddUserErrors({ email: err.response?.data?.error || 'حدث خطأ' });
     }
-    const newManagedUser = {
-      ...(result.user!),
-      status: 'active',
-      donations: 0,
-    };
-    setUsers((prev) => [newManagedUser, ...prev]);
-    setIsAddUserOpen(false);
-    setAddUserForm({ name: '', email: '', password: '', role: 'user' });
-    setAddUserErrors({});
-    toast.success('تمت إضافة المستخدم بنجاح');
   };
 
   // ── Ban / Unban / Delete ─────────────────────────────────────
-  const executeAction = () => {
+  const executeAction = async () => {
     if (!confirmAction) return;
     const { type, id } = confirmAction;
 
-    if (type === 'ban' || type === 'unban') {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, status: type === 'ban' ? 'banned' : 'active' } : u))
-      );
-      toast.success(type === 'ban' ? 'تم تعليق الحساب' : 'تم رفع التعليق');
-    } else if (type === 'delete_user') {
-      deleteUserFromContext(id);
-      setUsers((prev) => prev.filter((u) => u.id !== id));
-      toast.success('تم حذف المستخدم');
-    } else if (type === 'approve') {
-      updateDonationStatus(id, 'متاح');
-      toast.success('تم قبول التبرع');
-    } else if (type === 'reject') {
-      updateDonationStatus(id, 'مرفوض');
-      toast.error('تم رفض التبرع');
+    try {
+      if (type === 'ban' || type === 'unban') {
+        const newStatus = type === 'ban' ? 'banned' : 'active';
+        await api.put(`/users/${id}/status`, { status: newStatus });
+        setUsers((prev) =>
+          prev.map((u) => (u.id === id ? { ...u, status: newStatus } : u))
+        );
+        toast.success(type === 'ban' ? 'تم تعليق الحساب' : 'تم رفع التعليق');
+      } else if (type === 'delete_user') {
+        await api.delete(`/users/${id}`);
+        setUsers((prev) => prev.filter((u) => u.id !== id));
+        toast.success('تم حذف المستخدم');
+      } else if (type === 'approve') {
+        await updateDonationStatus(id, 'متاح');
+        toast.success('تم قبول التبرع');
+      } else if (type === 'reject') {
+        await updateDonationStatus(id, 'مرفوض');
+        toast.error('تم رفض التبرع');
+      }
+    } catch (err) {
+      toast.error('حدث خطأ أثناء تنفيذ الإجراء');
     }
     setConfirmAction(null);
   };
@@ -240,13 +239,14 @@ export function AdminDashboard() {
   };
 
   // ── Stats ────────────────────────────────────────────────────
-  const totalUsers = users.length; // reactive: driven by local state
-  const adminDonationsList = donations.filter((d) =>
+  const safeDonations = donations || [];
+  const totalUsers = (users || []).length;
+  const adminDonationsList = safeDonations.filter((d) =>
     ['قيد المراجعة', 'متاح', 'مرفوض'].includes(d.status)
   );
-  const totalDonations = donations.length;
-  const completedDeliveries = donations.filter((d) => d.status === 'تم التسليم').length;
-  const pendingReview = donations.filter((d) => d.status === 'قيد المراجعة').length;
+  const totalDonations = safeDonations.length;
+  const completedDeliveries = safeDonations.filter((d) => d.status === 'تم التسليم').length;
+  const pendingReview = safeDonations.filter((d) => d.status === 'قيد المراجعة').length;
 
   return (
     <DashboardLayout>
@@ -285,7 +285,7 @@ export function AdminDashboard() {
           ].map((s, i) => {
             const Icon = s.icon;
             return (
-              <Card key={i} className="hover:shadow-lg hover:border-primary/30 transition-all border border-border/60 group">
+              <Card key={i} className="transition-all border-none card-shadow rounded-3xl hover:shadow-lg hover:shadow-primary/10 bg-card group">
                 <CardContent className="p-5">
                   <div className={`w-12 h-12 rounded-2xl ${s.bg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
                     <Icon className={`h-5.5 w-5.5 ${s.color}`} />
@@ -315,32 +315,41 @@ export function AdminDashboard() {
 
           {/* ANALYTICS */}
           <TabsContent value="analytics" className="mt-6 space-y-6">
-            <Card>
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader><CardTitle>النمو الشهري</CardTitle><CardDescription>المستخدمون والتبرعات وعمليات التسليم</CardDescription></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} />
-                    <YAxis tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} />
-                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--background))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }} />
-                    <Bar dataKey="users" fill="hsl(var(--primary))" name="المستخدمون" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="donations" fill="hsl(var(--secondary))" name="التبرعات" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="deliveries" fill="#22c55e" name="التسليمات" radius={[4, 4, 0, 0]} />
+                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: "var(--foreground)" }} />
+                    <YAxis tick={{ fontSize: 12, fill: "var(--foreground)" }} />
+                    <Tooltip 
+                      cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+                      contentStyle={{ backgroundColor: "var(--card)", borderColor: "transparent", borderRadius: "1rem", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)", color: "var(--foreground)" }}
+                      itemStyle={{ color: "var(--foreground)", fontWeight: 500 }}
+                      labelStyle={{ color: "var(--muted-foreground)", fontWeight: "bold", marginBottom: "4px" }}
+                    />
+                    <Bar dataKey="users" fill="var(--primary)" name="المستخدمون" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="donations" fill="var(--secondary)" name="التبرعات" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="deliveries" fill="#22c55e" name="التسليمات" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader><CardTitle>اتجاه المستخدمين</CardTitle></CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={monthlyData}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} />
-                    <YAxis tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} />
-                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--background))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }} />
-                    <Line type="monotone" dataKey="users" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} name="مستخدمون" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: "var(--foreground)" }} />
+                    <YAxis tick={{ fontSize: 12, fill: "var(--foreground)" }} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: "var(--card)", borderColor: "transparent", borderRadius: "1rem", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)", color: "var(--foreground)" }}
+                      itemStyle={{ color: "var(--foreground)", fontWeight: 500 }}
+                      labelStyle={{ color: "var(--muted-foreground)", fontWeight: "bold", marginBottom: "4px" }}
+                    />
+                    <Line type="monotone" dataKey="users" stroke="var(--primary)" strokeWidth={3} dot={{ r: 5, strokeWidth: 2, fill: "var(--card)" }} activeDot={{ r: 7 }} name="مستخدمون" />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -349,7 +358,7 @@ export function AdminDashboard() {
 
           {/* USERS */}
           <TabsContent value="users" className="mt-6">
-            <Card>
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader className="flex flex-row items-start justify-between">
                 <div>
                   <CardTitle>إدارة المستخدمين</CardTitle>
@@ -415,7 +424,7 @@ export function AdminDashboard() {
 
           {/* DONATIONS */}
           <TabsContent value="donations" className="mt-6">
-            <Card>
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader><CardTitle>إدارة التبرعات</CardTitle><CardDescription>مراجعة وقبول أو رفض التبرعات</CardDescription></CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -455,7 +464,7 @@ export function AdminDashboard() {
 
           {/* CAMPAIGNS */}
           <TabsContent value="campaigns" className="mt-6">
-            <Card>
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader className="flex flex-row items-start justify-between">
                 <div>
                   <CardTitle>إدارة الحملات</CardTitle>
@@ -509,7 +518,7 @@ export function AdminDashboard() {
 
           {/* VOLUNTEER OPPORTUNITIES */}
           <TabsContent value="volunteer" className="mt-6">
-            <Card>
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader className="flex flex-row items-start justify-between">
                 <div>
                   <CardTitle>إدارة فرص التطوع</CardTitle>
@@ -564,7 +573,7 @@ export function AdminDashboard() {
 
           {/* REQUESTS */}
           <TabsContent value="requests" className="mt-6">
-            <Card>
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader><CardTitle>مراقبة الطلبات</CardTitle><CardDescription>جميع طلبات المستخدمين</CardDescription></CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -604,7 +613,7 @@ export function AdminDashboard() {
                 <p className="text-sm font-medium text-red-700 dark:text-red-400">{urgentCases.length} حالات عاجلة تحتاج تدخلاً فورياً</p>
               </div>
               {urgentCases.map((c) => (
-                <Card key={c.id} className={`border-2 ${c.severity === 'critical' ? 'border-red-300 dark:border-red-800 bg-red-50/30 dark:bg-red-950/20' : 'border-orange-200 dark:border-orange-900 bg-orange-50/30 dark:bg-orange-950/20'}`}>
+                <Card key={c.id} className={`border-none card-shadow rounded-2xl ${c.severity === 'critical' ? 'bg-red-50/50 dark:bg-red-950/20' : 'bg-orange-50/50 dark:bg-orange-950/20'}`}>
                   <CardContent className="p-5">
                     <div className="flex items-start gap-3">
                       <div className="text-2xl">{c.severity === 'critical' ? '🔥' : '⚠️'}</div>

@@ -70,7 +70,7 @@ const taskUrgencyLabels = { high: 'عاجل', medium: 'متوسط', low: 'منخ
 
 function StatCard({ label, value, icon: Icon, color, bgColor, trend }: any) {
   return (
-    <Card className="hover:shadow-lg transition-all border border-border/60 hover:border-primary/40 bg-card/90">
+    <Card className="transition-all border-none card-shadow rounded-3xl hover:shadow-lg hover:shadow-primary/10 bg-card">
       <CardContent className="p-5">
         <div className="flex items-center justify-between mb-3">
           <div className={`p-2.5 rounded-xl ${bgColor}`}>
@@ -243,7 +243,7 @@ export function Dashboard() {
               {stats.map((s, i) => <StatCard key={i} {...s} />)}
             </div>
 
-            <Card>
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader><CardTitle>{t('dashboard.quick_actions')}</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -270,7 +270,7 @@ export function Dashboard() {
 
           {/* 2. MY DONATIONS */}
           <TabsContent value="donations" className="mt-6">
-            <Card>
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -290,7 +290,7 @@ export function Dashboard() {
                 ) : (
                   <div className="space-y-4">
                     {myDonations.map((donation: any) => (
-                      <Card key={donation.id} className="overflow-hidden hover:shadow-md border border-border/60 hover:border-primary/30 transition-all">
+                      <Card key={donation.id} className="overflow-hidden border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 transition-all">
                         <div className="flex flex-col sm:flex-row gap-4 p-4">
                           <img src={donation.image} alt={donation.title} className="w-full sm:w-28 h-28 object-cover rounded-xl flex-shrink-0" />
                           <div className="flex-1 space-y-2">
@@ -320,7 +320,7 @@ export function Dashboard() {
 
           {/* 3. MY REQUESTS */}
           <TabsContent value="requests" className="mt-6">
-            <Card>
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader>
                 <CardTitle>{t('dashboard.my_requests')}</CardTitle>
                 <CardDescription>{t('dashboard.my_requests_desc')}</CardDescription>
@@ -335,7 +335,7 @@ export function Dashboard() {
                 ) : (
                   <div className="space-y-4">
                     {myRequests.map((request) => (
-                      <Card key={request.id} className="overflow-hidden hover:shadow-md border border-border/60 hover:border-primary/30 transition-all">
+                      <Card key={request.id} className="overflow-hidden border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 transition-all">
                         <div className="flex flex-col sm:flex-row gap-4 p-4">
                           <img src={request.donation.image} alt={request.donation.title} className="w-full sm:w-28 h-28 object-cover rounded-xl flex-shrink-0" />
                           <div className="flex-1 space-y-2">
@@ -366,7 +366,7 @@ export function Dashboard() {
 
           {/* 4. VOLUNTEER TASKS */}
           <TabsContent value="volunteer" className="mt-6 space-y-6">
-            <Card>
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader>
                 <CardTitle>{t('dashboard.volunteer_tasks')}</CardTitle>
                 <CardDescription>{t('dashboard.volunteer_tasks_desc')}</CardDescription>
@@ -374,7 +374,7 @@ export function Dashboard() {
               <CardContent>
                 <div className="space-y-4">
                   {tasks.filter((t) => t.status !== 'completed').map((task) => (
-                    <Card key={task.id} className="hover:shadow-md transition-shadow">
+                    <Card key={task.id} className="border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 transition-shadow">
                       <CardContent className="p-5">
                         <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                           <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${task.type === 'pickup' ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-blue-100 dark:bg-blue-900/30'}`}>
@@ -424,7 +424,7 @@ export function Dashboard() {
                     <>
                       <h3 className="font-medium text-muted-foreground pt-4">المهام المكتملة</h3>
                       {tasks.filter((t) => t.status === 'completed').map((task) => (
-                        <Card key={task.id} className="opacity-70">
+                        <Card key={task.id} className="border-none card-shadow rounded-2xl opacity-70">
                           <CardContent className="p-4 flex items-center gap-3">
                             <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
                             <div className="flex-1">
@@ -441,7 +441,7 @@ export function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader>
                 <CardTitle>{t('dashboard.task_map_title')}</CardTitle>
                 <CardDescription>{t('dashboard.task_map_desc')}</CardDescription>
@@ -462,7 +462,7 @@ export function Dashboard() {
 
           {/* 5. SAVED */}
           <TabsContent value="saved" className="mt-6">
-            <Card>
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader>
                 <CardTitle>{t('dashboard.saved_items')}</CardTitle>
                 <CardDescription>{t('dashboard.saved_desc')}</CardDescription>
@@ -471,7 +471,7 @@ export function Dashboard() {
                 {savedDonations.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {savedDonations.map((donation) => (
-                      <Card key={donation.id} className="overflow-hidden hover:shadow-md border border-border/60 hover:border-primary/30 transition-all">
+                      <Card key={donation.id} className="overflow-hidden border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 transition-all">
                         <div className="flex flex-col sm:flex-row gap-4 p-4">
                           <img src={donation.image} alt={donation.title} className="w-full sm:w-24 h-24 object-cover rounded-xl flex-shrink-0" />
                           <div className="flex-1 space-y-2">
@@ -501,7 +501,7 @@ export function Dashboard() {
 
           {/* 6. PROFILE */}
           <TabsContent value="profile" className="mt-6">
-            <Card>
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>{t('dashboard.profile_title')}</CardTitle>
@@ -578,7 +578,7 @@ export function Dashboard() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-semibold">الاسم الجميّل</Label>
+              <Label className="text-sm font-semibold">اسم المسخدم</Label>
               <Input value={editUserForm.name} className={`bg-muted/50 ${profileErrors.name ? 'border-destructive' : ''}`} onChange={(e) => { setEditUserForm({ ...editUserForm, name: e.target.value }); setProfileErrors(p => ({ ...p, name: undefined })); }} />
               {profileErrors.name && <p className="text-xs text-destructive">{profileErrors.name}</p>}
             </div>
@@ -599,7 +599,7 @@ export function Dashboard() {
             </div>
             <DialogFooter className="mt-8 gap-3 sm:justify-end">
               <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setIsEditProfileOpen(false)}>إلغاء</Button>
-              <Button type="submit" className="w-full sm:w-auto">يخفظ التغييرات</Button>
+              <Button type="submit" className="w-full sm:w-auto">حفظ التعديلات</Button>
             </DialogFooter>
           </form>
         </DialogContent>

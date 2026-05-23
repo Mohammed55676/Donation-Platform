@@ -37,11 +37,14 @@ export const Details: React.FC = () => {
       return;
     }
 
-    if (post.status === "open") {
-      await acceptRequest(post.id, user);
-    } else if (post.status === "in_progress") {
+    if (post.status === "مفتوح") {
+      await acceptRequest(post.id);
+    } else if (post.status === "قيد التنفيذ") {
       // Complete requires admin or the author usually, but we keep it simple here.
-      if (user.id === post.author.id || user.role === 'admin') {
+      const isAuthor = user.id === post.requestedBy?.id || user._id === post.requestedBy?.id;
+      const isAdmin = user.role === 'admin';
+
+      if (isAuthor || isAdmin) {
         await completeRequest(post.id);
       } else {
         toast.error("آسف، فقط صاحب الطلب يمكنه إغلاقه.");
@@ -58,7 +61,7 @@ export const Details: React.FC = () => {
     if (!commentText.trim()) return;
 
     setIsSubmittingComment(true);
-    await addComment(post.id, commentText, user);
+    await addComment(post.id, commentText);
     setCommentText("");
     setIsSubmittingComment(false);
   };
@@ -78,18 +81,18 @@ export const Details: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           <PostCard
             post={post}
-            onLike={() => { if (user) likePost(post.id, user.id) }}
+            onLike={() => { if (user) likePost(post.id) }}
             onComment={() => document.getElementById("comment-input")?.focus()}
             onHelp={handleHelp}
           />
 
-          <Card className="border border-border/60 shadow-sm">
+          <Card className="border-none shadow-sm bg-card rounded-2xl">
             <CardContent className="p-6">
-              <h3 className="text-lg font-bold mb-6">التعليقات ({post.comments.length})</h3>
+              <h3 className="text-lg font-bold mb-6">التعليقات ({(post.comments || []).length})</h3>
               
               <div className="space-y-4 mb-8">
-                {post.comments.length > 0 ? (
-                  post.comments.map(c => <Comment key={c.id} comment={c} />)
+                {(post.comments || []).length > 0 ? (
+                  (post.comments || []).map(c => <Comment key={c.id} comment={c} />)
                 ) : (
                   <p className="text-center text-muted-foreground py-6">لا توجد تعليقات بعد. كن أول من يعلق!</p>
                 )}
@@ -117,25 +120,25 @@ export const Details: React.FC = () => {
         </div>
 
         <div className="lg:col-span-1">
-          <Card className="border border-border/60 shadow-sm sticky top-24">
+          <Card className="border-none shadow-sm bg-card rounded-2xl sticky top-24">
             <CardContent className="p-6">
               <h3 className="font-bold text-lg mb-4 text-foreground border-b pb-3">حالة الطلب</h3>
               
               <div className="space-y-4">
                 <div className="flex justify-between items-center text-sm py-2">
                   <span className="text-muted-foreground">الحالة:</span>
-                  <span className={`font-semibold ${post.status === 'open' ? 'text-blue-600' : post.status === 'in_progress' ? 'text-amber-600' : 'text-green-600'}`}>
-                    {post.status === 'open' ? 'متاح للدعم' : post.status === 'in_progress' ? 'قيد التنفيذ' : 'مكتمل ومغلق'}
+                  <span className={`font-semibold ${post.status === 'مفتوح' ? 'text-blue-600' : post.status === 'قيد التنفيذ' ? 'text-amber-600' : 'text-green-600'}`}>
+                    {post.status === 'مفتوح' ? 'متاح للدعم' : post.status === 'قيد التنفيذ' ? 'قيد التنفيذ' : 'مكتمل ومغلق'}
                   </span>
                 </div>
                 
                 <div className="flex justify-between items-center text-sm py-2">
                   <span className="text-muted-foreground">التفاعل:</span>
-                  <span className="font-semibold">{post.likes} إعجاب</span>
+                  <span className="font-semibold">{(post.likes || []).length} إعجاب</span>
                 </div>
 
                 <div className="pt-4 border-t">
-                  <VolunteerList volunteers={post.volunteers} />
+                  <VolunteerList volunteers={post.volunteers || []} />
                 </div>
               </div>
 

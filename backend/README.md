@@ -60,7 +60,14 @@ npm install
 
 ```bash
 cp .env.example .env
-# Edit .env with your own values (MongoDB URI, JWT secret, etc.)
+# Edit .env with your MongoDB Atlas URI, JWT secret, etc.
+```
+
+### 3. Seed Database (Optional but Recommended)
+Populate your database with sample users, donations, campaigns, and volunteer opportunities.
+```bash
+npm run seed
+# Or manually run: node src/seed.js
 ```
 
 ### 3. Run in development

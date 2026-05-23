@@ -8,17 +8,17 @@
   --card-foreground: #0F172A;
   --popover: #FFFFFF;
   --popover-foreground: #0F172A;
-  --primary: #1D7FBE;
+  --primary: #10B981;
   --primary-foreground: #ffffff;
-  --secondary: #16A34A;
+  --secondary: #1D5C8A;
   --secondary-foreground: #ffffff;
   --muted: #F1F5F9;
   --muted-foreground: #64748B;
   --accent: #E8F4FC;
-  --accent-foreground: #1D7FBE;
+  --accent-foreground: #1D5C8A;
   --destructive: #DC2626;
   --destructive-foreground: #ffffff;
-  --border: rgba(15, 23, 42, 0.08);
+  --border: rgba(15, 23, 42, 0.04);
   --input: rgba(15, 23, 42, 0.12);
   --input-background: #F1F5F9;
   --switch-background: #CBD5E1;
@@ -48,20 +48,20 @@
   --card-foreground: #E2E8F0;
   --popover: #1E2A3C;
   --popover-foreground: #E2E8F0;
-  --primary: #3B9FDE;
+  --primary: #10B981;
   --primary-foreground: #ffffff;
-  --secondary: #22C55E;
+  --secondary: #3B9FDE;
   --secondary-foreground: #ffffff;
   --muted: #1E293B;
   --muted-foreground: #94A3B8;
   --accent: #1E3448;
-  --accent-foreground: #3B9FDE;
+  --accent-foreground: #10B981;
   --destructive: #EF4444;
   --destructive-foreground: #ffffff;
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.1);
   --input-background: #1E293B;
-  --ring: #3B9FDE;
+  --ring: #10B981;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --chart-1: #3B9FDE;
@@ -193,7 +193,7 @@
 
 /* Utility: subtle card shadow */
 .card-shadow {
-  box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04);
+  box-shadow: 0 4px 32px rgba(29, 92, 138, 0.04), 0 1px 3px rgba(29, 92, 138, 0.02);
 }
 .dark .card-shadow {
   box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.2);

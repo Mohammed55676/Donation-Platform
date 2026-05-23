@@ -16,7 +16,7 @@ export const CreatePostPage: React.FC = () => {
   const handleSubmit = async (payload: any) => {
     setIsSubmitting(true);
     try {
-      await createPost(payload, user);
+      await createPost(payload);
       navigate("/community");
     } finally {
       setIsSubmitting(false);
@@ -34,8 +34,8 @@ export const CreatePostPage: React.FC = () => {
         العودة للمجتمع
       </Button>
 
-      <Card className="border-border/60 shadow-lg">
-        <CardHeader className="text-center pb-8 border-b">
+      <Card className="border-none shadow-xl bg-card rounded-3xl overflow-hidden">
+        <CardHeader className="text-center pb-8 border-b border-border/40">
           <CardTitle className="text-2xl">إنشاء طلب مساعدة جديد</CardTitle>
           <CardDescription className="text-base mt-2">
             سيتم نشر طلبك في صفحة المجتمع ليتمكن المتطوعون وفاعلو الخير من تقديم المساعدة.

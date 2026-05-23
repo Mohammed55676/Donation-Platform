@@ -48,6 +48,6 @@ campaignSchema.virtual('progressPercent').get(function () {
   return this.target > 0 ? Math.min(100, Math.round((this.current / this.target) * 100)) : 0;
 });
 
-campaignSchema.set('toJSON', { virtuals: true, transform(_, ret) { delete ret.__v; return ret; } });
+campaignSchema.set('toJSON', { virtuals: true, transform(_, ret) { ret.id = ret._id.toString(); delete ret._id; delete ret.__v; return ret; } });
 
 module.exports = mongoose.model('Campaign', campaignSchema);

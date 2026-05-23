@@ -115,7 +115,7 @@ export function DonationDetails() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Image */}
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden border-none shadow-md">
               <div className="relative h-96">
                 <img
                   src={donation.image}
@@ -131,7 +131,7 @@ export function DonationDetails() {
             </Card>
 
             {/* Details */}
-            <Card>
+            <Card className="border-none shadow-sm">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -209,7 +209,7 @@ export function DonationDetails() {
             </Card>
 
             {/* Additional Information */}
-            <Card>
+            <Card className="border-none shadow-sm">
               <CardHeader>
                 <CardTitle>معلومات إضافية</CardTitle>
               </CardHeader>
@@ -234,9 +234,9 @@ export function DonationDetails() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-6 lg:sticky lg:top-24 h-fit">
             {/* Donor Info */}
-            <Card>
+            <Card className="border-none shadow-sm">
               <CardHeader>
                 <CardTitle>معلومات المتبرع</CardTitle>
               </CardHeader>
@@ -267,7 +267,7 @@ export function DonationDetails() {
             </Card>
 
             {/* Actions */}
-            <Card>
+            <Card className="border-none shadow-sm">
               <CardHeader>
                 <CardTitle>إجراءات</CardTitle>
               </CardHeader>
@@ -307,7 +307,7 @@ export function DonationDetails() {
             </Card>
 
             {/* Safety Tips */}
-            <Card className="bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20">
+            <Card className="bg-gradient-to-br from-primary/5 to-secondary/5 border-none shadow-sm">
               <CardHeader>
                 <CardTitle className="text-primary">نصائح الأمان</CardTitle>
               </CardHeader>

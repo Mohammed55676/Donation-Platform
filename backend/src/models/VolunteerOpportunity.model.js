@@ -51,6 +51,6 @@ volunteerOpportunitySchema.virtual('spotsLeft').get(function () {
   return Math.max(0, this.maxVolunteers - this.volunteers);
 });
 
-volunteerOpportunitySchema.set('toJSON', { virtuals: true, transform(_, ret) { delete ret.__v; return ret; } });
+volunteerOpportunitySchema.set('toJSON', { virtuals: true, transform(_, ret) { ret.id = ret._id.toString(); delete ret._id; delete ret.__v; return ret; } });
 
 module.exports = mongoose.model('VolunteerOpportunity', volunteerOpportunitySchema);

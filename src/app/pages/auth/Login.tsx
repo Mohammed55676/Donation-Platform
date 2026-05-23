@@ -93,7 +93,7 @@ export function Login() {
         <Button
           variant="outline"
           type="button"
-          className="w-full gap-3 border-2 hover:border-primary/50 transition-colors py-5"
+          className="w-full gap-3 rounded-xl border border-border/60 hover:bg-muted/50 transition-colors h-12"
           onClick={handleGoogleSignIn}
           disabled={googleLoading}
         >
@@ -130,7 +130,7 @@ export function Login() {
               id="email"
               type="email"
               placeholder="example@email.com"
-              className={`ps-10 border-2 focus:border-primary ${errors.email ? 'border-destructive' : ''}`}
+              className={`ps-10 h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary ${errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
               value={email}
               onChange={(e) => { setEmail(e.target.value); setErrors(prev => ({ ...prev, email: undefined })); }}
               dir="ltr"
@@ -152,7 +152,7 @@ export function Login() {
               id="password"
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
-              className={`pe-10 ps-10 border-2 focus:border-primary ${errors.password ? 'border-destructive' : ''}`}
+              className={`pe-10 ps-10 h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
               value={password}
               onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: undefined })); }}
               dir="ltr"
@@ -170,7 +170,7 @@ export function Login() {
 
         <Button
           type="submit"
-          className="w-full bg-gradient-to-l from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-semibold py-5 text-base shadow-md shadow-primary/20 transition-all hover:shadow-lg hover:shadow-primary/30"
+          className="w-full rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-semibold h-12 shadow-md hover:shadow-primary/30 transition-all"
           disabled={loading}
         >
           {loading ? (

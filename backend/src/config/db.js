@@ -3,6 +3,8 @@
  * Establishes the Mongoose connection to MongoDB.
  * Retries are handled automatically by Mongoose's built-in reconnection logic.
  */
+const path     = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 const mongoose = require('mongoose');
 
 /**
@@ -18,8 +20,9 @@ async function connectDB() {
 
   try {
     await mongoose.connect(uri, {
-      // Mongoose 8+ has these defaults built-in, kept here for clarity
       maxPoolSize: 10,
+      family: 4,              // Force IPv4 — fixes querySrv ECONNREFUSED on some networks
+      serverSelectionTimeoutMS: 10000,
     });
     console.log(`[DB] MongoDB connected: ${mongoose.connection.host}`);
   } catch (err) {

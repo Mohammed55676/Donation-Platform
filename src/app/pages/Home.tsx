@@ -120,7 +120,7 @@ export function Home() {
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.12, duration: 0.5 }}
                 >
-                  <Card className="border border-border/60 hover:border-primary/30 hover:shadow-lg transition-all duration-300 text-center group">
+                  <Card className="hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-center group bg-card border-none">
                     <CardContent className="p-8 flex flex-col items-center">
                       <div className={`w-14 h-14 rounded-2xl ${stat.bg} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300`}>
                         <Icon className={`h-7 w-7 ${stat.color}`} />
@@ -153,7 +153,7 @@ export function Home() {
               return (
                 <Card
                   key={campaign.id}
-                  className="overflow-hidden hover:shadow-xl hover:shadow-black/6 hover:-translate-y-1 transition-all duration-300 flex flex-col border border-border/60 group"
+                  className="overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col group border-none"
                 >
                   {/* Image */}
                   <div className="relative h-48 overflow-hidden">
@@ -183,7 +183,7 @@ export function Home() {
                           <Target className="h-3 w-3" /> {campaign.target}
                         </span>
                       </div>
-                      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                      <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all"
                           style={{ width: `${percentage}%` }}
@@ -251,7 +251,7 @@ export function Home() {
               const displayName = language === 'en' ? category.nameEn : category.name;
               return (
                 <Link key={category.name} to={`/donations?category=${category.name}`}>
-                  <Card className="hover:shadow-lg hover:-translate-y-1 hover:border-primary/30 transition-all duration-300 cursor-pointer border border-border/60 group">
+                  <Card className="hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer border-none group bg-card">
                     <CardContent className="p-5 text-center flex flex-col items-center">
                       <div className={`w-13 h-13 rounded-2xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform duration-300`}>
                         <Icon className="h-6 w-6 text-white" />
@@ -323,7 +323,7 @@ export function Home() {
           <motion.div {...slideUp} transition={{ duration: 0.5, delay: 0.15 }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {urgentDonations.map((donation) => (
               <Link key={donation.id} to={`/donations/${donation.id}`}>
-                <Card className="overflow-hidden hover:shadow-xl hover:shadow-black/6 hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full flex flex-col group border border-border/60">
+                <Card className="overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full flex flex-col group border-none">
                   <div className="relative h-52 overflow-hidden">
                     <img
                       src={donation.image}
@@ -390,7 +390,7 @@ export function Home() {
           </motion.div>
 
           <motion.div {...slideUp} transition={{ duration: 0.5, delay: 0.15 }}>
-            <Card className="border border-border/60 shadow-sm rounded-2xl overflow-hidden">
+            <Card className="shadow-md rounded-2xl overflow-hidden border-none">
               <Accordion type="single" collapsible className="w-full">
                 {[
                   { q: t('home.faq_q1'), a: t('home.faq_a1') },

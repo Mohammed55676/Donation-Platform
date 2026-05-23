@@ -27,7 +27,7 @@ const donationSchema = Joi.object({
   condition:   Joi.string().valid('جديد', 'جيد جداً', 'جيد', 'مستعمل').required(),
   location:    Joi.string().required(),
   urgency:     Joi.string().valid('عالية', 'متوسطة', 'منخفضة').default('متوسطة'),
-  image:       Joi.string().uri().allow('', null),
+  image:       Joi.string().allow('', null),
 });
 
 router.get('/',               listDonations);

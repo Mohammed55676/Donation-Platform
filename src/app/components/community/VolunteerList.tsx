@@ -23,7 +23,9 @@ export const VolunteerList: React.FC<VolunteerListProps> = ({ volunteers }) => {
                 <p className="font-medium text-sm text-foreground">{v.user.name}</p>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-primary font-medium">{v.user.role === 'volunteer' ? 'متطوع مسجل' : 'فاعل خير'}</span>
-                  <span className="text-xs text-muted-foreground">• انضم {formatDistanceToNow(new Date(v.createdAt), { addSuffix: true, locale: arSA })}</span>
+                  <span className="text-xs text-muted-foreground">• انضم {v.createdAt && !isNaN(new Date(v.createdAt).getTime()) 
+                    ? formatDistanceToNow(new Date(v.createdAt), { addSuffix: true, locale: arSA })
+                    : 'منذ وقت غير معروف'}</span>
                 </div>
               </div>
             </div>

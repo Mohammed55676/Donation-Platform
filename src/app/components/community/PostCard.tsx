@@ -19,6 +19,16 @@ type PostCardProps = {
   isLiked?: boolean;
 };
 
+// Helper: safely get user info from either requestedBy (backend) or author (legacy mock)
+function getUser(post: Post) {
+  const u = (post.requestedBy as any) || (post as any).author || {};
+  return {
+    name: u.name || 'مستخدم غير معروف',
+    avatar: u.avatar || u.avatarUrl || undefined,
+    email: u.email || 'contact@example.com',
+  };
+}
+
 export const PostCard: React.FC<PostCardProps> = ({
   post,
   onLike,
@@ -26,7 +36,10 @@ export const PostCard: React.FC<PostCardProps> = ({
   onHelp,
   onClick,
   isLiked = false,
-}) => (
+}) => {
+  const author = getUser(post);
+
+  return (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     whileInView={{ opacity: 1, y: 0 }}
@@ -35,22 +48,24 @@ export const PostCard: React.FC<PostCardProps> = ({
     transition={{ duration: 0.3 }}
   >
     <Card 
-    className={`overflow-hidden transition-all hover:shadow-md border border-border/60 hover:border-primary/30 ${onClick ? 'cursor-pointer' : ''}`}
+    className={`overflow-hidden transition-all duration-300 border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 ${onClick ? 'cursor-pointer' : ''}`}
     onClick={onClick}
   >
     <CardContent className="p-0">
       <div className="p-5">
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-3">
-            <Avatar src={post.author.avatarUrl} name={post.author.name} />
+            <Avatar src={author.avatar} name={author.name} />
             <div>
-              <span className="font-semibold text-foreground">{post.author.name}</span>
-              <div className="text-xs text-muted-foreground mt-0.5">
-                {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: arSA })}
+              <span className="font-semibold text-foreground">{author.name}</span>
+            <div className="text-xs text-muted-foreground mt-0.5">
+                {post.createdAt && !isNaN(new Date(post.createdAt).getTime()) 
+                  ? formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: arSA })
+                  : 'منذ وقت غير معروف'}
               </div>
             </div>
           </div>
-          <Badge label={post.status === 'open' ? 'متاح' : post.status === 'in_progress' ? 'قيد التنفيذ' : 'مكتمل'} type="category" className={post.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : ''} />
+          <Badge label={post.status === 'مفتوح' || post.status === 'open' ? 'متاح' : post.status === 'قيد التنفيذ' || post.status === 'in_progress' ? 'قيد التنفيذ' : 'مكتمل'} type="category" className={post.status === 'مكتمل' || post.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : ''} />
         </div>
 
         <h3 className="text-lg font-bold mb-2">{post.title}</h3>
@@ -65,8 +80,8 @@ export const PostCard: React.FC<PostCardProps> = ({
         )}
 
         <div className="flex flex-wrap gap-2 mb-4">
-          <Badge label={post.category === "Medical" ? "طبي" : post.category === "Food" ? "غذاء" : "سكن"} type="category" />
-          <Badge label={post.urgency === "Normal" ? "عادي" : "🔥 عاجل"} type="urgency" />
+          <Badge label={post.category} type="category" />
+          <Badge label={post.urgency === 'عالية' ? '🔥 عاجل' : post.urgency === 'Normal' ? 'عادي' : post.urgency} type="urgency" />
         </div>
       </div>
 
@@ -74,11 +89,13 @@ export const PostCard: React.FC<PostCardProps> = ({
         <div className="flex gap-4">
           <div className="flex items-center gap-1">
             <IconButton icon="heart" onClick={(e) => { e?.stopPropagation(); onLike(); }} ariaLabel="إعجاب" active={isLiked} />
-            <span className="text-xs font-medium text-muted-foreground">{post.likes}</span>
+            <span className="text-xs font-medium text-muted-foreground">
+              {Array.isArray(post.likes) ? post.likes.length : (post.likes as any) || 0}
+            </span>
           </div>
           <div className="flex items-center gap-1">
             <IconButton icon="comment" onClick={(e) => { e?.stopPropagation(); onComment(); }} ariaLabel="تعليق" />
-            <span className="text-xs font-medium text-muted-foreground">{post.comments?.length || 0}</span>
+            <span className="text-xs font-medium text-muted-foreground">{(post as any).comments?.length || post.commentCount || 0}</span>
           </div>
         </div>
 
@@ -86,7 +103,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={(e) => { e.stopPropagation(); window.location.href = 'mailto:' + (post.author.email || 'contact@example.com'); }}
+            onClick={(e) => { e.stopPropagation(); window.location.href = 'mailto:' + author.email; }}
             className="gap-2"
           >
             <Phone className="w-4 h-4" />
@@ -94,14 +111,14 @@ export const PostCard: React.FC<PostCardProps> = ({
           </Button>
 
           <Button 
-            variant={post.status === "open" ? "default" : "secondary"} 
+            variant={post.status === "مفتوح" || post.status === "open" ? "default" : "secondary"} 
             size="sm" 
             onClick={(e) => { e.stopPropagation(); onHelp(); }}
-            disabled={post.status === "completed"}
+            disabled={post.status === "مكتمل" || post.status === "completed"}
             className="gap-2"
           >
             <Hand className="w-4 h-4" />
-            {post.status === "open" ? "تقديم مساعدة" : post.status === "in_progress" ? "قيد التنفيذ" : "مكتمل"}
+            {post.status === "مفتوح" || post.status === "open" ? "تقديم مساعدة" : post.status === "قيد التنفيذ" || post.status === "in_progress" ? "قيد التنفيذ" : "مكتمل"}
           </Button>
         </div>
       </div>
@@ -109,3 +126,4 @@ export const PostCard: React.FC<PostCardProps> = ({
   </Card>
   </motion.div>
 );
+}

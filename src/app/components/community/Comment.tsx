@@ -16,7 +16,9 @@ export const Comment: React.FC<CommentProps> = ({ comment }) => {
         <div className="flex justify-between items-start mb-1">
           <span className="font-semibold text-sm">{comment.user.name}</span>
           <span className="text-xs text-muted-foreground">
-            {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: arSA })}
+            {comment.createdAt && !isNaN(new Date(comment.createdAt).getTime()) 
+              ? formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: arSA })
+              : 'منذ وقت غير معروف'}
           </span>
         </div>
         <p className="text-sm text-foreground/90 leading-relaxed">{comment.text}</p>

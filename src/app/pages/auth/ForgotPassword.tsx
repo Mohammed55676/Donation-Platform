@@ -62,12 +62,12 @@ export function ForgotPassword() {
             <div className="space-y-2">
               <Label htmlFor="email">البريد الإلكتروني</Label>
               <div className="relative">
-                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="example@email.com"
-                  className="pr-10 border-2 focus:border-primary"
+                  className="ps-10 h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   dir="ltr"
@@ -77,7 +77,7 @@ export function ForgotPassword() {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-l from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-semibold py-5 text-base shadow-md shadow-primary/20"
+              className="w-full rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-semibold h-12 shadow-md hover:shadow-primary/30 transition-all"
               disabled={loading}
             >
               {loading ? 'جاري الإرسال...' : 'إرسال رابط إعادة التعيين'}

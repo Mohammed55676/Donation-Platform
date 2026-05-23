@@ -52,4 +52,6 @@ const communityRequestSchema = new mongoose.Schema(
 communityRequestSchema.index({ title: 'text', description: 'text' });
 communityRequestSchema.index({ status: 1, urgency: 1, category: 1 });
 
+communityRequestSchema.set('toJSON', { transform(_, ret) { ret.id = ret._id.toString(); delete ret._id; delete ret.__v; return ret; } });
+
 module.exports = mongoose.model('CommunityRequest', communityRequestSchema);

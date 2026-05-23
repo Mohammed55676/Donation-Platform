@@ -1,41 +1,65 @@
 import { useState, useEffect } from 'react';
-import { volunteerOpportunities as seedData, type VolunteerOpportunity } from '../data/donations';
+import api from '../utils/api';
 
-const STORAGE_KEY = 'app_volunteer_opportunities';
+export interface VolunteerOpportunity {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  date: string;
+  maxVolunteers: number;
+  volunteers: number;
+  isActive: boolean;
+  createdBy: string;
+  applicants: string[];
+  spotsLeft?: number;
+}
 
-/**
- * useVolunteerOpportunities — manages the list of volunteer opportunities.
- * Persisted to localStorage so data survives page refresh.
- * Used by both Volunteer.tsx (read) and AdminDashboard.tsx (CRUD).
- */
 export function useVolunteerOpportunities() {
-  const [opportunities, setOpportunities] = useState<VolunteerOpportunity[]>(() => {
+  const [opportunities, setOpportunities] = useState<VolunteerOpportunity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchOpportunities = async () => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // fall back to seed data
+      const res = await api.get('/volunteer');
+      setOpportunities(res.data.data || []);
+    } catch (err) {
+      console.error('Failed to fetch volunteer opportunities', err);
+    } finally {
+      setLoading(false);
     }
-    return seedData;
-  });
+  };
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(opportunities));
-  }, [opportunities]);
+    fetchOpportunities();
+  }, []);
 
-  const addOpportunity = (opp: VolunteerOpportunity) => {
-    setOpportunities((prev) => [opp, ...prev]);
+  const addOpportunity = async (opp: Omit<VolunteerOpportunity, 'id' | 'volunteers' | 'spotsLeft' | 'applicants'>) => {
+    try {
+      const res = await api.post('/volunteer', opp);
+      setOpportunities((prev) => [res.data.data, ...prev]);
+    } catch (err) {
+      console.error('Failed to add opportunity', err);
+    }
   };
 
-  const updateOpportunity = (id: string, updates: Partial<VolunteerOpportunity>) => {
-    setOpportunities((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, ...updates } : o))
-    );
+  const updateOpportunity = async (id: string, updates: Partial<VolunteerOpportunity>) => {
+    try {
+      const res = await api.put(`/volunteer/${id}`, updates);
+      setOpportunities((prev) => prev.map((o) => (o.id === id ? res.data.data : o)));
+    } catch (err) {
+      console.error('Failed to update opportunity', err);
+    }
   };
 
-  const deleteOpportunity = (id: string) => {
-    setOpportunities((prev) => prev.filter((o) => o.id !== id));
+  const deleteOpportunity = async (id: string) => {
+    try {
+      await api.delete(`/volunteer/${id}`);
+      setOpportunities((prev) => prev.filter((o) => o.id !== id));
+    } catch (err) {
+      console.error('Failed to delete opportunity', err);
+    }
   };
 
-  return { opportunities, addOpportunity, updateOpportunity, deleteOpportunity };
+  return { opportunities, loading, addOpportunity, updateOpportunity, deleteOpportunity, fetchOpportunities };
 }

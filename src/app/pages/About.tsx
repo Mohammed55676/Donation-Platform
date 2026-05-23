@@ -51,7 +51,7 @@ export function About() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 + 0.2 }}
               >
-                <Card className="h-full border-border/50 shadow-sm hover:shadow-md transition-shadow">
+                <Card className="h-full border-none card-shadow rounded-3xl hover:shadow-lg transition-all hover:shadow-primary/10">
                   <CardContent className="p-6 flex flex-col items-center text-center">
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 ${v.color}`}>
                       <Icon className="h-7 w-7" />

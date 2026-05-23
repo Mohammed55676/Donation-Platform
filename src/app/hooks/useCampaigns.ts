@@ -1,44 +1,63 @@
 import { useState, useEffect } from 'react';
-import { campaigns as initialCampaigns, type Campaign } from '../data/donations';
+import api from '../utils/api';
 
-const STORAGE_KEY = 'app_campaigns';
+export interface Campaign {
+  id: string;
+  title: string;
+  description: string;
+  image?: string;
+  target: number;
+  current: number;
+  urgency: 'عالية' | 'متوسطة';
+  isActive: boolean;
+  progressPercent?: number;
+}
 
-/**
- * useCampaigns — manages the list of donation campaigns.
- * Campaigns are saved to localStorage so they persist on page refresh.
- */
 export function useCampaigns() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>(() => {
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchCampaigns = async () => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // If localStorage is broken, fall back to the default data
+      const res = await api.get('/campaigns');
+      setCampaigns(res.data.data || []);
+    } catch (err) {
+      console.error('Failed to fetch campaigns', err);
+    } finally {
+      setLoading(false);
     }
-    return initialCampaigns;
-  });
+  };
 
-  // Save to localStorage whenever campaigns change
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
-  }, [campaigns]);
+    fetchCampaigns();
+  }, []);
 
-  // Add a new campaign
-  const addCampaign = (campaign: Campaign) => {
-    setCampaigns((prev) => [campaign, ...prev]);
+  const addCampaign = async (campaign: Omit<Campaign, 'id' | 'progressPercent'>) => {
+    try {
+      const res = await api.post('/campaigns', campaign);
+      setCampaigns((prev) => [res.data.data, ...prev]);
+    } catch (err) {
+      console.error('Failed to add campaign', err);
+    }
   };
 
-  // Update an existing campaign by id
-  const updateCampaign = (id: string, updates: Partial<Campaign>) => {
-    setCampaigns((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
-    );
+  const updateCampaign = async (id: string, updates: Partial<Campaign>) => {
+    try {
+      const res = await api.put(`/campaigns/${id}`, updates);
+      setCampaigns((prev) => prev.map((c) => (c.id === id ? res.data.data : c)));
+    } catch (err) {
+      console.error('Failed to update campaign', err);
+    }
   };
 
-  // Remove a campaign by id
-  const deleteCampaign = (id: string) => {
-    setCampaigns((prev) => prev.filter((c) => c.id !== id));
+  const deleteCampaign = async (id: string) => {
+    try {
+      await api.delete(`/campaigns/${id}`);
+      setCampaigns((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      console.error('Failed to delete campaign', err);
+    }
   };
 
-  return { campaigns, addCampaign, updateCampaign, deleteCampaign };
+  return { campaigns, loading, addCampaign, updateCampaign, deleteCampaign, fetchCampaigns };
 }

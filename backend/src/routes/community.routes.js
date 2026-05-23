@@ -25,7 +25,7 @@ const requestSchema = Joi.object({
   category:    Joi.string().valid('ملابس', 'طعام', 'أثاث', 'كتب', 'طبي', 'غذاء', 'أخرى').required(),
   urgency:     Joi.string().valid('عالية', 'متوسطة', 'منخفضة').default('متوسطة'),
   location:    Joi.string().allow(''),
-  image:       Joi.string().uri().allow('', null),
+  image:       Joi.string().allow('', null),
 });
 
 router.get('/',           protect, listRequests);

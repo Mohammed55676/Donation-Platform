@@ -2,7 +2,7 @@ export interface Donation {
   id: string;
   title: string;
   description: string;
-  category: 'ملابس' | 'طعام' | 'أثاث' | 'كتب' | 'أخرى';
+  category: 'ملابس' | 'طعام' | 'أثاث' | 'كتب' | 'مستلزمات طبية' | 'أخرى';
   condition: 'جديد' | 'جيد جداً' | 'جيد' | 'مستعمل';
   location: string;
   urgency: 'عالية' | 'متوسطة' | 'منخفضة';

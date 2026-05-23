@@ -103,8 +103,12 @@ export function Donations() {
           </Button>
         </div>
 
-        {/* Filters */}
-        <Card className="mb-8 border border-border/60 shadow-sm">
+        {/* Main Content Layout */}
+        <div className="flex flex-col lg:flex-row gap-8">
+          
+          {/* Sidebar Filters (25%) */}
+          <div className="lg:w-1/4 flex flex-col gap-5">
+            <Card className="border-none shadow-sm sticky top-24">
           <CardContent className="p-5">
             <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-4">
               <SlidersHorizontal className="h-4 w-4" />
@@ -121,7 +125,7 @@ export function Donations() {
                 </Button>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="flex flex-col gap-4">
               <div className="relative">
                 <Search className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
@@ -141,6 +145,7 @@ export function Donations() {
                   <SelectItem value="طعام">طعام</SelectItem>
                   <SelectItem value="أثاث">أثاث</SelectItem>
                   <SelectItem value="كتب">كتب</SelectItem>
+                  <SelectItem value="مستلزمات طبية">مستلزمات طبية</SelectItem>
                   <SelectItem value="أخرى">أخرى</SelectItem>
                 </SelectContent>
               </Select>
@@ -166,25 +171,28 @@ export function Donations() {
                   <SelectItem value="مستعمل">مستعمل</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Results count */}
-        {!isLoading && (
-          <div className="mb-5 flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              تم العثور على <span className="font-bold text-foreground">{filteredDonations.length}</span> تبرع
-            </p>
+              </div>
+            </CardContent>
+          </Card>
           </div>
-        )}
+
+          {/* Grid Area (75%) */}
+          <div className="lg:w-3/4 flex flex-col">
+            {/* Results count */}
+            {!isLoading && (
+              <div className="mb-5 flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  تم العثور على <span className="font-bold text-foreground">{filteredDonations.length}</span> تبرع
+                </p>
+              </div>
+            )}
 
         {/* Grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Card key={i} className="overflow-hidden border border-border/60">
+              <Card key={i} className="overflow-hidden border-none bg-card">
                 <Skeleton className="h-48 w-full rounded-none" />
                 <div className="p-4 space-y-3">
                   <div className="flex justify-between">
@@ -206,7 +214,7 @@ export function Donations() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {filteredDonations.map((donation) => (
               <Link key={donation.id} to={`/donations/${donation.id}`}>
-                <Card className="overflow-hidden hover:shadow-xl hover:shadow-black/6 hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full flex flex-col border border-border/60 group">
+                <Card className="overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full flex flex-col border-none group bg-card">
                   <div className="relative h-48 overflow-hidden">
                     <img
                       src={donation.image}
@@ -214,8 +222,8 @@ export function Donations() {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                    {/* Urgency badge on image */}
-                    {donation.urgency === 'عالية' && (
+                    {/* Urgency badge on image (Only for medical items) */}
+                    {donation.category === 'مستلزمات طبية' && (
                       <div className="absolute top-3 start-3">
                         <Badge className="bg-red-500 text-white border-0 text-xs font-semibold shadow">عاجل</Badge>
                       </div>
@@ -263,7 +271,7 @@ export function Donations() {
                       </div>
                       <div className="flex items-center gap-2.5 pt-2 border-t border-border/60">
                         <img
-                          src={donation.donor.avatar}
+                          src={donation.donor.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(donation.donor.name)}&background=random&color=fff`}
                           alt={donation.donor.name}
                           className="w-7 h-7 rounded-full object-cover ring-2 ring-background"
                         />
@@ -289,6 +297,8 @@ export function Donations() {
             </Button>
           </div>
         )}
+          </div>
+        </div>
       </div>
     </div>
   );

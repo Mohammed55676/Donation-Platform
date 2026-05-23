@@ -10,7 +10,7 @@ const express = require('express');
 const Joi     = require('joi');
 const router  = express.Router();
 
-const { register, login, logout, getMe } = require('../controllers/auth.controller');
+const { register, login, logout, getMe, googleLogin } = require('../controllers/auth.controller');
 const { protect }  = require('../middleware/auth.middleware');
 const { validate } = require('../middleware/validate.middleware');
 
@@ -28,6 +28,7 @@ const loginSchema = Joi.object({
 
 router.post('/register', validate(registerSchema), register);
 router.post('/login',    validate(loginSchema),    login);
+router.post('/google',   googleLogin);
 router.post('/logout',   protect,                  logout);
 router.get('/me',        protect,                  getMe);
 
