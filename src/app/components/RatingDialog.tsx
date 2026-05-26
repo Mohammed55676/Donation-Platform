@@ -1,7 +1,14 @@
+/**
+ * RatingDialog.tsx
+ *
+ * Mutual rating dialog for completed donations.
+ * Submits to POST /api/ratings.
+ */
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
+import { Badge } from './ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -10,36 +17,62 @@ import {
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
-import { Star } from 'lucide-react';
+import { Star, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import api from '../utils/api';
+
+const RATING_TAGS = ['ملتزم', 'محترم', 'تواصل واضح', 'تم التسليم بنجاح'];
 
 interface RatingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userName: string;
+  donationId: string;
+  rateeId: string;
+  onRated?: () => void;
 }
 
-export function RatingDialog({ open, onOpenChange, userName }: RatingDialogProps) {
+export function RatingDialog({ open, onOpenChange, userName, donationId, rateeId, onRated }: RatingDialogProps) {
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [review, setReview] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating === 0) {
       toast.error('الرجاء اختيار تقييم');
       return;
     }
-    
+
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      await api.post('/ratings', {
+        donation_id: donationId,
+        ratee_id: rateeId,
+        stars: rating,
+        comment: review.trim() || null,
+        tags: selectedTags,
+      });
       toast.success('تم إرسال التقييم بنجاح!');
-      setIsSubmitting(false);
       onOpenChange(false);
       setRating(0);
       setReview('');
-    }, 1000);
+      setSelectedTags([]);
+      onRated?.();
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'حدث خطأ أثناء إرسال التقييم.';
+      toast.error(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -48,7 +81,7 @@ export function RatingDialog({ open, onOpenChange, userName }: RatingDialogProps
         <DialogHeader>
           <DialogTitle>تقييم {userName}</DialogTitle>
           <DialogDescription>
-            شارك تجربتك مع المتبرع
+            شارك تجربتك بعد إتمام التبرع
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -81,6 +114,28 @@ export function RatingDialog({ open, onOpenChange, userName }: RatingDialogProps
                 </p>
               )}
             </div>
+
+            {/* Tags */}
+            <div className="grid gap-2">
+              <Label>وسوم (اختياري)</Label>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {RATING_TAGS.map(tag => (
+                  <Badge
+                    key={tag}
+                    variant={selectedTags.includes(tag) ? 'default' : 'outline'}
+                    className={`cursor-pointer transition-all text-sm px-3 py-1.5 ${
+                      selectedTags.includes(tag)
+                        ? 'bg-primary hover:bg-primary/90 text-white'
+                        : 'hover:bg-muted'
+                    }`}
+                    onClick={() => toggleTag(tag)}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
             <div className="grid gap-2">
               <Label htmlFor="review">التعليق (اختياري)</Label>
               <Textarea
@@ -89,6 +144,7 @@ export function RatingDialog({ open, onOpenChange, userName }: RatingDialogProps
                 value={review}
                 onChange={(e) => setReview(e.target.value)}
                 className="min-h-[100px]"
+                maxLength={500}
               />
             </div>
           </div>
@@ -101,8 +157,8 @@ export function RatingDialog({ open, onOpenChange, userName }: RatingDialogProps
             >
               إلغاء
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-yellow-500 hover:bg-yellow-600">
-              {isSubmitting ? 'جاري الإرسال...' : 'إرسال التقييم'}
+            <Button type="submit" disabled={isSubmitting} className="bg-yellow-500 hover:bg-yellow-600 gap-2">
+              {isSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" /> جاري الإرسال...</> : 'إرسال التقييم'}
             </Button>
           </DialogFooter>
         </form>

@@ -1,20 +1,23 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../../context/AuthContext';
+import type { UserType } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Eye, EyeOff, Mail, Lock, User, Heart, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Heart, Loader2, HandCoins, Gift, Phone } from 'lucide-react';
 import { toast } from 'sonner';
-import { isValidEmail, isLettersOnly } from '../../utils/validators';
+import { isValidEmail, isLettersOnly, isValidPassword } from '../../utils/validators';
 
-type Errors = { name?: string; email?: string; password?: string };
+type Errors = { name?: string; email?: string; password?: string; phone?: string };
 
 export function Signup() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [userType, setUserType] = useState<UserType>('donor');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
@@ -36,10 +39,15 @@ export function Signup() {
     } else if (!isValidEmail(email)) {
       e.email = t('auth.email_invalid');
     }
+    if (!phone.trim()) {
+      e.phone = 'رقم الهاتف مطلوب';
+    } else if (!/^[0-9+]{9,15}$/.test(phone.trim())) {
+      e.phone = 'رقم الهاتف غير صالح';
+    }
     if (!password) {
       e.password = t('auth.password_required');
-    } else if (password.length < 6) {
-      e.password = t('auth.password_too_short');
+    } else if (!isValidPassword(password)) {
+      e.password = 'كلمة المرور يجب أن تتكون من 8 خانات وتحتوي على حرف كبير ورقم ورمز خاص';
     }
     return e;
   };
@@ -52,11 +60,13 @@ export function Signup() {
       return;
     }
     setLoading(true);
-    const result = await signup(name, email, password);
+    const result = await signup(name, email, password, userType, phone);
     setLoading(false);
     if (result.success) {
       toast.success(t('auth.signup_success'));
-      navigate('/dashboard', { replace: true });
+      const user = result.user;
+      const redirect = user?.role === 'admin' ? '/dashboard/admin' : '/dashboard';
+      navigate(redirect, { replace: true });
     } else {
       toast.error(result.error || t('auth.error_generic'));
     }
@@ -77,6 +87,39 @@ export function Signup() {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* User type selection */}
+        <div className="space-y-2">
+          <Label>نوع الحساب</Label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setUserType('donor')}
+              className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                userType === 'donor'
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border/60 hover:border-primary/40 text-muted-foreground'
+              }`}
+            >
+              <Gift className="h-6 w-6" />
+              <span className="text-sm font-semibold">متبرع</span>
+              <span className="text-xs opacity-70">أتبرع بالأشياء</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setUserType('beneficiary')}
+              className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                userType === 'beneficiary'
+                  ? 'border-secondary bg-secondary/10 text-secondary'
+                  : 'border-border/60 hover:border-secondary/40 text-muted-foreground'
+              }`}
+            >
+              <HandCoins className="h-6 w-6" />
+              <span className="text-sm font-semibold">مستفيد</span>
+              <span className="text-xs opacity-70">أطلب التبرعات</span>
+            </button>
+          </div>
+        </div>
+
         <div className="space-y-1">
           <Label htmlFor="name">{t('auth.name')}</Label>
           <div className="relative">
@@ -107,6 +150,23 @@ export function Signup() {
             />
           </div>
           {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="phone">رقم الهاتف</Label>
+          <div className="relative">
+            <Phone className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="+9627xxxxxxxx"
+              className={`pe-10 h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary ${errors.phone ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+              value={phone}
+              onChange={(e) => { setPhone(e.target.value); setErrors(prev => ({ ...prev, phone: undefined })); }}
+              dir="ltr"
+            />
+          </div>
+          {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
         </div>
 
         <div className="space-y-1">

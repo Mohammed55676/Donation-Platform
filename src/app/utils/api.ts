@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import axios from 'axios';
 
 // Create an Axios instance
@@ -27,10 +28,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // If token is invalid or expired, log the user out
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.dispatchEvent(new Event('auth_changed')); // notify AuthContext
+      // Don't clear token for /auth/me requests — that's handled by AuthContext.initAuth.
+      // Clearing here causes a race condition with Google login where an old token's 401
+      // wipes the new valid token before it can be used.
+      const url = error.config?.url || '';
+      if (!url.endsWith('/auth/me')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.dispatchEvent(new Event('auth_changed')); // notify AuthContext
+      }
     }
     return Promise.reject(error);
   }

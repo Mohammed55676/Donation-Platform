@@ -37,7 +37,7 @@ const donationSchema = new mongoose.Schema(
     image: { type: String, default: null },
     status: {
       type: String,
-      enum: ['قيد المراجعة', 'متاح', 'محجوز', 'تم التسليم', 'مرفوض'],
+      enum: ['قيد المراجعة', 'متاح', 'محجوز', 'تم التسليم', 'مرفوض', 'ملغي'],
       default: 'قيد المراجعة',
     },
     donor: {

@@ -31,6 +31,7 @@ async function listRequests(req, res, next) {
     const [requests, total] = await Promise.all([
       CommunityRequest.find(filter)
         .populate('requestedBy', 'name avatar')
+        .populate('comments.user', 'name avatar')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -47,7 +48,8 @@ async function listRequests(req, res, next) {
 async function getRequest(req, res, next) {
   try {
     const request = await CommunityRequest.findById(req.params.id)
-      .populate('requestedBy', 'name avatar');
+      .populate('requestedBy', 'name avatar')
+      .populate('comments.user', 'name avatar');
     if (!request) throw new AppError('Request not found.', 404);
     return sendSuccess(res, request);
   } catch (err) {
@@ -59,7 +61,10 @@ async function getRequest(req, res, next) {
 async function createRequest(req, res, next) {
   try {
     const request = await CommunityRequest.create({ ...req.body, requestedBy: req.user._id });
-    return sendSuccess(res, request, 'Community request created.', 201);
+    const populatedRequest = await CommunityRequest.findById(request._id)
+      .populate('requestedBy', 'name avatar')
+      .populate('comments.user', 'name avatar');
+    return sendSuccess(res, populatedRequest, 'Community request created.', 201);
   } catch (err) {
     next(err);
   }
@@ -75,10 +80,20 @@ async function updateRequest(req, res, next) {
     const isAdmin = req.user.role === 'admin';
     if (!isOwner && !isAdmin) throw new AppError('Forbidden.', 403);
 
-    Object.assign(request, req.body);
+    // Only allow specific fields to be updated (prevent overwriting requestedBy, likes, etc.)
+    const allowed = ['title', 'description', 'category', 'urgency', 'location', 'image', 'status'];
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) {
+        request[key] = req.body[key];
+      }
+    }
     await request.save();
 
-    return sendSuccess(res, request, 'Request updated.');
+    const updatedRequest = await CommunityRequest.findById(request._id)
+      .populate('requestedBy', 'name avatar')
+      .populate('comments.user', 'name avatar');
+
+    return sendSuccess(res, updatedRequest, 'Request updated.');
   } catch (err) {
     next(err);
   }
@@ -117,10 +132,43 @@ async function toggleLike(req, res, next) {
     }
 
     await request.save();
-    return sendSuccess(res, { likes: request.likes.length, liked: !liked }, liked ? 'Like removed.' : 'Liked.');
+    
+    // Return the full populated request to avoid crashing the frontend store
+    const updatedRequest = await CommunityRequest.findById(request._id)
+      .populate('requestedBy', 'name avatar')
+      .populate('comments.user', 'name avatar');
+    
+    return sendSuccess(res, updatedRequest, liked ? 'Like removed.' : 'Liked.');
   } catch (err) {
     next(err);
   }
 }
 
-module.exports = { listRequests, getRequest, createRequest, updateRequest, deleteRequest, toggleLike };
+// ── POST /api/community/:id/comment ──────────────────────────────────
+async function addComment(req, res, next) {
+  try {
+    const { text } = req.body;
+    if (!text) throw new AppError('Comment text is required.', 400);
+
+    const request = await CommunityRequest.findById(req.params.id);
+    if (!request) throw new AppError('Request not found.', 404);
+
+    request.comments.push({
+      user: req.user._id,
+      text: text
+    });
+    
+    request.commentCount = request.comments.length;
+    await request.save();
+
+    const updatedRequest = await CommunityRequest.findById(request._id)
+      .populate('requestedBy', 'name avatar')
+      .populate('comments.user', 'name avatar');
+
+    return sendSuccess(res, updatedRequest, 'Comment added.');
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listRequests, getRequest, createRequest, updateRequest, deleteRequest, toggleLike, addComment };

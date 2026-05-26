@@ -1,9 +1,10 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import api from '../utils/api';
 
 export type UserRole = 'user' | 'admin' | 'volunteer';
+export type UserType = 'donor' | 'beneficiary';
 
 export interface AuthUser {
   id: string;
@@ -11,6 +12,7 @@ export interface AuthUser {
   name: string;
   email: string;
   role: UserRole;
+  user_type?: UserType;
   avatar?: string;
   phone?: string;
   location?: string;
@@ -23,13 +25,15 @@ interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
   signup: (
     name: string,
     email: string,
-    password: string
-  ) => Promise<{ success: boolean; error?: string }>;
+    password: string,
+    user_type?: UserType,
+    phone?: string
+  ) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
   logout: () => void;
   updateUser: (updates: Partial<AuthUser>) => void;
   toggleWishlist: (donationId: string) => void;
@@ -40,10 +44,14 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const loginInProgress = useRef(false);
 
   // Initialize auth from token
   useEffect(() => {
     const initAuth = async () => {
+      // Skip re-init while a login flow (e.g. Google) is actively running
+      if (loginInProgress.current) return;
+
       const token = localStorage.getItem('token');
       if (token) {
         try {
@@ -54,6 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem('token');
           setUser(null);
         }
+      } else {
+        setUser(null);
       }
       setIsLoading(false);
     };
@@ -71,21 +81,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { token, user: userData } = res.data.data;
       localStorage.setItem('token', token);
       setUser(userData);
-      return { success: true };
+      return { success: true, user: userData };
     } catch (err: any) {
       return { success: false, error: err.response?.data?.error || 'فشل تسجيل الدخول' };
     }
   };
 
   const loginWithGoogle = async () => {
+    loginInProgress.current = true;
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const gUser = result.user;
       
       const email = gUser.email || '';
       const name = gUser.displayName || 'Google User';
-      // Create a deterministic dummy password for Google users
-      const dummyPassword = `google_${gUser.uid}_sso_pass_!`;
 
       // Send google user data to our backend google login endpoint
       try {
@@ -98,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { token, user: userData } = res.data.data;
         localStorage.setItem('token', token);
         setUser(userData);
-        return { success: true };
+        return { success: true, user: userData };
       } catch (backendErr: any) {
         console.error('Backend Google login error:', backendErr);
         return { success: false, error: backendErr.response?.data?.error || 'حدث خطأ أثناء مزامنة الدخول مع الخادم' };
@@ -106,14 +115,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       console.error('Firebase Google login error:', err);
       return { success: false, error: err.message || 'فشل تسجيل الدخول بجوجل' };
+    } finally {
+      loginInProgress.current = false;
     }
   };
 
-  const signup = async (name: string, email: string, password: string) => {
+  const signup = async (name: string, email: string, password: string, user_type?: UserType, phone?: string) => {
     try {
-      await api.post('/auth/register', { name, email, password });
-      // After registration, auto-login
-      return await login(email, password);
+      const res = await api.post('/auth/register', { name, email, password, user_type: user_type || 'donor', phone });
+      const { token, user: userData } = res.data.data;
+      localStorage.setItem('token', token);
+      setUser(userData);
+      return { success: true, user: userData };
     } catch (err: any) {
       return { success: false, error: err.response?.data?.error || 'حدث خطأ أثناء إنشاء الحساب' };
     }
@@ -139,8 +152,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const toggleWishlist = (donationId: string) => {
-    // Optimistic UI for wishlist can be added here, but typically handled via API
+  const toggleWishlist = async (donationId: string) => {
+    if (!user) return;
+    
+    // Optimistic update
+    const currentWishlist = user.wishlist || [];
+    const isWished = currentWishlist.includes(donationId);
+    
+    const newWishlist = isWished 
+      ? currentWishlist.filter(id => id !== donationId)
+      : [...currentWishlist, donationId];
+      
+    setUser({ ...user, wishlist: newWishlist });
+    
+    try {
+      await api.post(`/users/${user.id}/wishlist`, { donationId });
+    } catch (err) {
+      console.error('Failed to toggle wishlist', err);
+      // Revert optimistic update
+      setUser({ ...user, wishlist: currentWishlist });
+    }
   };
 
   return (

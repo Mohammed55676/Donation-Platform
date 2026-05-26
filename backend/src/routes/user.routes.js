@@ -11,7 +11,7 @@ const express = require('express');
 const router  = express.Router();
 
 const {
-  listUsers, createUser, getUser, updateUser, updateUserStatus, deleteUser,
+  listUsers, createUser, getUser, updateUser, updateUserStatus, deleteUser, toggleWishlist
 } = require('../controllers/user.controller');
 const { protect }      = require('../middleware/auth.middleware');
 const { requireRole }  = require('../middleware/role.middleware');
@@ -22,5 +22,6 @@ router.get('/:id',               protect, getUser);
 router.put('/:id',               protect, updateUser);
 router.put('/:id/status',        protect, requireRole('admin'), updateUserStatus);
 router.delete('/:id',            protect, requireRole('admin'), deleteUser);
+router.post('/:id/wishlist',     protect, toggleWishlist);
 
 module.exports = router;

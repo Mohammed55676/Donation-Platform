@@ -3,13 +3,14 @@ import { devtools } from "zustand/middleware";
 import { toast } from "sonner";
 import api from '../utils/api';
 
-export type PostStatus = "مفتوح" | "قيد التنفيذ" | "مكتمل" | "مغلق";
+export type PostStatus = "متاح" | "تم الاتفاق" | "تم التسليم" | "ملغي";
 
 export type CommunityUser = {
   id: string;
   name: string;
   email?: string;
   role: string;
+  avatar?: string;
   avatarUrl?: string;
 };
 
@@ -52,26 +53,20 @@ export type NewPostPayload = {
   location?: string;
 };
 
-type CommunityNotification = {
-  id: string;
-  title: string;
-  message: string;
-  type?: "info" | "success" | "warning" | "error";
-};
-
 type CommunityState = {
   posts: Post[];
   loading: boolean;
+  error: string | null;
   filter: {
     category: string | null;
     urgency: string | null;
     search: string;
     sort: "newest" | "urgent" | "supported";
   };
-  notifications: CommunityNotification[];
   fetchPosts: () => Promise<void>;
   createPost: (payload: NewPostPayload) => Promise<void>;
-  likePost: (postId: string) => Promise<void>;
+  updatePost: (postId: string, updates: Partial<Post>) => Promise<void>;
+  likePost: (postId: string, currentUserId: string) => Promise<void>;
   setStatus: (postId: string, status: PostStatus) => Promise<void>;
   deletePost: (postId: string) => Promise<void>;
   acceptRequest: (postId: string) => Promise<void>;
@@ -83,16 +78,17 @@ export const useCommunityStore = create<CommunityState>()(
   devtools((set, get) => ({
     posts: [],
     loading: false,
+    error: null,
     filter: { category: null, urgency: null, search: "", sort: "newest" },
-    notifications: [],
 
     fetchPosts: async () => {
-      set({ loading: true });
+      set({ loading: true, error: null });
       try {
         const res = await api.get('/community');
         set({ posts: res.data.data || [] });
       } catch (error) {
         console.error("Failed to fetch community posts", error);
+        set({ error: "تعذّر تحميل الطلبات. يرجى المحاولة مجدداً." });
       } finally {
         set({ loading: false });
       }
@@ -102,21 +98,72 @@ export const useCommunityStore = create<CommunityState>()(
       try {
         const res = await api.post('/community', payload);
         set((state) => ({ posts: [res.data.data, ...state.posts] }));
-        toast.success("تم إنشاء طلبك بنجاح");
+        toast.success("تم نشر طلبك في المجتمع بنجاح ✅");
       } catch (error) {
         toast.error("حدث خطأ أثناء إنشاء الطلب");
         console.error("Create post error", error);
+        throw error; // re-throw so the form can show the error
       }
     },
 
-    likePost: async (postId) => {
+    updatePost: async (postId, updates) => {
+      const prev = get().posts;
+      // Optimistic update
+      set((state) => ({
+        posts: state.posts.map((p) =>
+          p.id === postId ? { ...p, ...updates } : p
+        ),
+      }));
       try {
-        const res = await api.post(`/community/${postId}/like`);
+        const res = await api.put(`/community/${postId}`, updates);
         set((state) => ({
           posts: state.posts.map((p) => (p.id === postId ? res.data.data : p)),
         }));
+        toast.success("تم تحديث الطلب بنجاح");
       } catch (error) {
-        console.error("Like post error", error);
+        // Rollback
+        set({ posts: prev });
+        toast.error("فشل تحديث الطلب");
+        throw error;
+      }
+    },
+
+    likePost: async (postId, currentUserId) => {
+      // ── Optimistic update ──────────────────────────────────────────
+      const prevPosts = get().posts;
+      set((state) => ({
+        posts: state.posts.map((p) => {
+          if (p.id !== postId) return p;
+          const alreadyLiked = p.likes.some(
+            (id: any) =>
+              id === currentUserId ||
+              id?.toString?.() === currentUserId
+          );
+          return {
+            ...p,
+            likes: alreadyLiked
+              ? p.likes.filter(
+                  (id: any) =>
+                    id !== currentUserId &&
+                    id?.toString?.() !== currentUserId
+                )
+              : [...p.likes, currentUserId],
+          };
+        }),
+      }));
+
+      try {
+        const res = await api.post(`/community/${postId}/like`);
+        // Reconcile with server truth
+        set((state) => ({
+          posts: state.posts.map((p) =>
+            p.id === postId ? res.data.data : p
+          ),
+        }));
+      } catch (error) {
+        // Rollback
+        set({ posts: prevPosts });
+        toast.error("فشل تحديث الإعجاب");
       }
     },
 
@@ -146,7 +193,7 @@ export const useCommunityStore = create<CommunityState>()(
 
     acceptRequest: async (postId) => {
       try {
-        const res = await api.put(`/community/${postId}`, { status: "قيد التنفيذ" });
+        const res = await api.put(`/community/${postId}`, { status: "تم الاتفاق" });
         set((state) => ({
           posts: state.posts.map((p) => (p.id === postId ? res.data.data : p)),
         }));
@@ -158,7 +205,7 @@ export const useCommunityStore = create<CommunityState>()(
 
     completeRequest: async (postId) => {
       try {
-        const res = await api.put(`/community/${postId}`, { status: "مكتمل" });
+        const res = await api.put(`/community/${postId}`, { status: "تم التسليم" });
         set((state) => ({
           posts: state.posts.map((p) => (p.id === postId ? res.data.data : p)),
         }));
@@ -170,10 +217,14 @@ export const useCommunityStore = create<CommunityState>()(
 
     addComment: async (postId, text) => {
       try {
-        toast.info("ميزة التعليقات ستتوفر قريباً");
+        const res = await api.post(`/community/${postId}/comment`, { text });
+        set((state) => ({
+          posts: state.posts.map((p) => (p.id === postId ? res.data.data : p)),
+        }));
+        toast.success("تم إضافة التعليق");
       } catch (error) {
         toast.error("فشل إضافة التعليق");
       }
-    }
+    },
   }))
 );

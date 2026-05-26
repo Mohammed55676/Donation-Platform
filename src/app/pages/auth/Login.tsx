@@ -54,9 +54,8 @@ export function Login() {
     setLoading(false);
     if (result.success) {
       toast.success(t('auth.welcome'));
-      const raw = localStorage.getItem('auth_user');
-      const user = raw ? JSON.parse(raw) : null;
-      const redirect = from || (user ? roleRedirectMap[user.role] : '/');
+      const user = result.user;
+      const redirect = from || (user && roleRedirectMap[user.role] ? roleRedirectMap[user.role] : '/');
       navigate(redirect, { replace: true });
     } else {
       toast.error(result.error || t('auth.error_generic'));
@@ -69,7 +68,9 @@ export function Login() {
     setGoogleLoading(false);
     if (result.success) {
       toast.success(t('auth.welcome'));
-      navigate(from || '/dashboard', { replace: true });
+      const user = result.user;
+      const redirect = from || (user && roleRedirectMap[user.role] ? roleRedirectMap[user.role] : '/dashboard');
+      navigate(redirect, { replace: true });
     } else {
       toast.error(result.error || t('auth.error_generic'));
     }

@@ -19,8 +19,12 @@ export const Badge: React.FC<BadgeProps> = ({
     "bg-secondary text-secondary-foreground";
 
   let style = base;
-  if (type === "category") style += ` ${categoryBg}`;
-  else style += label.includes("Urgent") || label.includes("عاجل") ? ` ${urgencyRed}` : ` ${urgencyNormal}`;
+  if (type === "category") {
+    style += ` ${categoryBg}`;
+  } else {
+    const isUrgent = label && (label.includes("Urgent") || label.includes("عاجل") || label === "عالية");
+    style += isUrgent ? ` ${urgencyRed}` : ` ${urgencyNormal}`;
+  }
 
   return <span className={`${style} ${className}`}>{label}</span>;
 };

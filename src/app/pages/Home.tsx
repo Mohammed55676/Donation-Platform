@@ -3,9 +3,11 @@ import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useDonations } from '../context/DonationContext';
+import { Testimonials } from '../components/Testimonials';
 import {
   Shirt, UtensilsCrossed, Armchair, BookOpen, Package,
-  Gift, Users, Heart, ArrowLeft, TrendingUp, HelpCircle, Lightbulb, MessageCircle, Target, ChevronLeft
+  Gift, Users, Heart, ArrowLeft, TrendingUp, HelpCircle, Lightbulb, MessageCircle, Target, ChevronLeft, Star
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -21,6 +23,7 @@ import {
 export function Home() {
   const { user, toggleWishlist } = useAuth();
   const { t, language } = useLanguage();
+  const { donations: apiDonations } = useDonations();
   const navigate = useNavigate();
 
   const handleDonateClick = () => {
@@ -39,13 +42,10 @@ export function Home() {
     { name: 'أخرى', nameEn: 'Other', icon: Package, color: 'from-pink-500 to-pink-600', count: donations.filter(d => d.category === 'أخرى').length },
   ];
 
-  const stats = [
-    { label: t('home.stats_donations'), value: '2,340', icon: Gift, color: 'text-primary', bg: 'bg-primary/10 dark:bg-primary/20' },
-    { label: t('home.stats_volunteers'), value: '156', icon: Users, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
-    { label: t('home.stats_posts'), value: '4,521', icon: MessageCircle, color: 'text-pink-600 dark:text-pink-400', bg: 'bg-pink-100 dark:bg-pink-900/30' },
-  ];
 
-  const urgentDonations = donations.filter(d => d.urgency === 'عالية').slice(0, 3);
+
+  // Most recent 3 donations from API
+  const recentDonations = apiDonations.slice(0, 3);
 
   const slideUp = {
     initial: { opacity: 0, y: 32 },
@@ -64,77 +64,82 @@ export function Home() {
         <div className="absolute bottom-0 start-0 w-[400px] h-[400px] bg-secondary/6 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
 
         <div className="container mx-auto px-4 relative z-10">
-          <motion.div {...slideUp} className="max-w-3xl mx-auto text-center">
-            {/* Pill badge */}
-            <div className="inline-flex items-center gap-2 bg-primary/10 dark:bg-primary/15 text-primary rounded-full px-4 py-1.5 text-sm font-semibold mb-8 border border-primary/15">
-              <Heart className="h-3.5 w-3.5 fill-current" />
-              منصة الخير — نربط القلوب بالعطاء
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            
+            {/* Text content */}
+            <motion.div 
+              {...slideUp} 
+              className="lg:col-span-7 text-center lg:text-start flex flex-col items-center lg:items-start"
+            >
+              {/* Pill badge */}
+              <div className="inline-flex items-center gap-2 bg-primary/10 dark:bg-primary/15 text-primary rounded-full px-4 py-1.5 text-sm font-semibold mb-8 border border-primary/15">
+                <Heart className="h-3.5 w-3.5 fill-current" />
+                منصة الخير — نربط القلوب بالعطاء
+              </div>
 
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 bg-gradient-to-br from-primary via-primary/80 to-secondary bg-clip-text text-transparent leading-[1.1] tracking-tight">
-              {t('home.hero_title')}
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed">
-              {t('home.hero_subtitle')}
-            </p>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6 bg-gradient-to-br from-primary via-primary/80 to-secondary bg-clip-text text-transparent leading-[1.15] tracking-tight">
+                {t('home.hero_title')}
+              </h1>
+              <p className="text-lg text-muted-foreground mb-10 max-w-xl leading-relaxed">
+                {t('home.hero_subtitle')}
+              </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
-                size="lg"
-                onClick={handleDonateClick}
-                className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/25 hover:shadow-primary/35 transition-all text-base px-8 h-12 rounded-xl font-semibold"
-              >
-                <Gift className="me-2 h-5 w-5" />
-                {t('home.hero_donate_btn')}
-              </Button>
-              <Link to="/community" className="w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start w-full sm:w-auto">
                 <Button
                   size="lg"
-                  variant="outline"
-                  className="border-border text-foreground hover:bg-muted w-full sm:w-auto text-base px-8 h-12 rounded-xl font-semibold"
+                  onClick={handleDonateClick}
+                  className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/25 hover:shadow-primary/35 transition-all text-base px-8 h-12 rounded-xl font-semibold"
                 >
-                  <MessageCircle className="me-2 h-5 w-5" />
-                  {t('home.hero_request_btn')}
+                  <Gift className="me-2 h-5 w-5" />
+                  {t('home.hero_donate_btn')}
                 </Button>
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+                <Link to="/community" className="w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-border text-foreground hover:bg-muted w-full sm:w-auto text-base px-8 h-12 rounded-xl font-semibold"
+                  >
+                    <MessageCircle className="me-2 h-5 w-5" />
+                    {t('home.hero_request_btn')}
+                  </Button>
+                </Link>
+              </div>
+            </motion.div>
 
-      {/* ── Stats Section ────────────────────────────────── */}
-      <section className="py-20 md:py-28 bg-white dark:bg-[#1A2332]/40">
-        <div className="container mx-auto px-4">
-          <motion.div {...slideUp} className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold mb-3">{t('home.stats_title')}</h2>
-            <p className="text-muted-foreground max-w-xl mx-auto">{t('home.stats_subtitle')}</p>
-          </motion.div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            {stats.map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.12, duration: 0.5 }}
-                >
-                  <Card className="hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-center group bg-card border-none">
-                    <CardContent className="p-8 flex flex-col items-center">
-                      <div className={`w-14 h-14 rounded-2xl ${stat.bg} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300`}>
-                        <Icon className={`h-7 w-7 ${stat.color}`} />
-                      </div>
-                      <p className="text-4xl font-extrabold mb-1 font-display">{stat.value}</p>
-                      <p className="text-sm text-muted-foreground font-medium">{stat.label}</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
+            {/* Generated Premium Image */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="lg:col-span-5 flex justify-center w-full"
+            >
+              <div className="relative w-full max-w-md lg:max-w-none">
+                {/* Decorative glow behind image */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-secondary/20 rounded-3xl blur-3xl -z-10" />
+                <img
+                  src="/hero_donation.png"
+                  alt="Donation Platform"
+                  className="w-full h-auto object-cover rounded-3xl shadow-2xl shadow-primary/25 hover:scale-[1.02] transition-transform duration-500 border border-white/10"
+                />
+                
+                {/* Small floating info card */}
+                <div className="absolute -bottom-4 start-4 bg-background/95 backdrop-blur-md p-3 sm:p-4 rounded-2xl shadow-lg border border-border/40 flex items-center gap-2 sm:gap-3 max-w-[calc(100%-2rem)]">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center shrink-0">
+                    <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600 dark:text-emerald-400 fill-current animate-pulse" />
+                  </div>
+                  <div className="text-start">
+                    <p className="text-[9px] sm:text-[10px] text-muted-foreground font-semibold">مساعدة الآخرين</p>
+                    <p className="text-xs sm:text-sm font-bold text-foreground truncate">+2,340 تبرع ناجح</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
           </div>
         </div>
       </section>
+
 
       {/* ── Active Campaigns ─────────────────────────────── */}
       <section className="py-20 md:py-28 bg-muted/40 dark:bg-[#0F1623]">
@@ -215,7 +220,7 @@ export function Home() {
             <h2 className="text-3xl md:text-4xl font-bold mb-3">{t('home.how_title')}</h2>
             <p className="text-muted-foreground">{t('home.how_subtitle')}</p>
           </motion.div>
-          <motion.div {...slideUp} transition={{ duration: 0.5, delay: 0.15 }} className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          <motion.div {...slideUp} transition={{ duration: 0.5, delay: 0.15 }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {[
               { step: '01', title: t('home.how_step1_title'), desc: t('home.how_step1_desc'), color: 'from-primary to-primary/80' },
               { step: '02', title: t('home.how_step2_title'), desc: t('home.how_step2_desc'), color: 'from-secondary to-secondary/80' },
@@ -300,28 +305,28 @@ export function Home() {
         </div>
       </section>
 
-      {/* ── Urgent Needs ─────────────────────────────────── */}
+      {/* ── Recent Donations ─────────────────────────────────── */}
       <section className="py-20 md:py-28 bg-white dark:bg-[#1A2332]/40">
         <div className="container mx-auto px-4 max-w-7xl">
           <motion.div {...slideUp} className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
             <div>
-              <div className="flex items-center gap-2 text-red-500 text-sm font-semibold mb-2">
+              <div className="flex items-center gap-2 text-primary text-sm font-semibold mb-2">
                 <Lightbulb className="h-4 w-4" />
-                الأكثر إلحاحاً
+                أحدث التبرعات
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-2">{t('home.urgent_title')}</h2>
-              <p className="text-muted-foreground">{t('home.urgent_subtitle')}</p>
+              <h2 className="text-3xl md:text-4xl font-bold mb-2">تبرعات أضيفت حديثاً</h2>
+              <p className="text-muted-foreground">تصفح أحدث التبرعات التي تم إضافتها من قبل المجتمع</p>
             </div>
-            <Link to="/donations?urgency=عالية" className="shrink-0">
+            <Link to="/donations" className="shrink-0">
               <Button variant="outline" className="rounded-xl border-border hover:border-primary/40 gap-1.5 font-semibold">
-                {t('home.urgent_view_all')}
+                عرض الكل
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             </Link>
           </motion.div>
 
           <motion.div {...slideUp} transition={{ duration: 0.5, delay: 0.15 }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {urgentDonations.map((donation) => (
+            {recentDonations.map((donation) => (
               <Link key={donation.id} to={`/donations/${donation.id}`}>
                 <Card className="overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full flex flex-col group border-none">
                   <div className="relative h-52 overflow-hidden">
@@ -332,8 +337,8 @@ export function Home() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                     <div className="absolute top-3 end-3 flex flex-col gap-2">
-                      <Badge className="bg-red-500 text-white border-0 shadow font-semibold text-xs">
-                        {t('home.urgent_badge')}
+                      <Badge className="bg-primary/90 text-white border-0 shadow font-semibold text-xs">
+                        جديد
                       </Badge>
                     </div>
                     <Button
@@ -364,10 +369,10 @@ export function Home() {
                           alt={donation.donor.name}
                           className="w-8 h-8 rounded-full object-cover ring-2 ring-background"
                         />
-                        <span className="text-sm font-medium">{donation.donor.name}</span>
+                        <span className="text-sm font-medium">{donation.donor?.name || 'فاعل خير'}</span>
                       </div>
                       <Badge variant="secondary" className="text-xs border border-border/50">
-                        {donation.location}
+                        {donation.location || 'غير محدد'}
                       </Badge>
                     </div>
                   </CardContent>
@@ -377,6 +382,7 @@ export function Home() {
           </motion.div>
         </div>
       </section>
+
 
       {/* ── FAQ ──────────────────────────────────────────── */}
       <section className="py-20 md:py-28 bg-muted/40 dark:bg-[#0F1623] border-y border-border/50">

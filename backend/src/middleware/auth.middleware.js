@@ -3,7 +3,7 @@
  * Verifies JWT access token from the Authorization header.
  * Attaches the decoded user payload to req.user.
  */
-const jwt  = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 const User = require('../models/User.model');
 const { sendError } = require('../utils/apiResponse');
 

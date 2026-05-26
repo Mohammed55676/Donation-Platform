@@ -25,7 +25,6 @@ export function Donations() {
 
   const publicDonations = donations.filter(d => d.status === 'متاح' || d.status === 'محجوز' || d.status === 'تم التسليم');
 
-  const [filteredDonations, setFilteredDonations] = useState<ExtendedDonation[]>(publicDonations);
   const [categoryFilter, setCategoryFilter] = useState<string>('الكل');
   const [urgencyFilter, setUrgencyFilter] = useState<string>('الكل');
   const [conditionFilter, setConditionFilter] = useState<string>('الكل');
@@ -35,34 +34,25 @@ export function Donations() {
     const cat = searchParams.get('category');
     if (cat) {
       setCategoryFilter(cat);
-      setFilteredDonations(publicDonations.filter(d => d.category === cat));
     }
-  }, [searchParams, donations]);
+  }, [searchParams]);
 
-  const applyFilters = (
-    category: string,
-    urgency: string,
-    condition: string,
-    search: string
-  ) => {
-    let filtered = publicDonations;
-    if (category !== 'الكل') filtered = filtered.filter(d => d.category === category);
-    if (urgency !== 'الكل') filtered = filtered.filter(d => d.urgency === urgency);
-    if (condition !== 'الكل') filtered = filtered.filter(d => d.condition === condition);
-    if (search) {
-      filtered = filtered.filter(d =>
-        d.title.includes(search) ||
-        d.description.includes(search) ||
-        d.location.includes(search)
-      );
-    }
-    setFilteredDonations(filtered);
-  };
+  let filteredDonations = publicDonations;
+  if (categoryFilter !== 'الكل') filteredDonations = filteredDonations.filter(d => d.category === categoryFilter);
+  if (urgencyFilter !== 'الكل') filteredDonations = filteredDonations.filter(d => d.urgency === urgencyFilter);
+  if (conditionFilter !== 'الكل') filteredDonations = filteredDonations.filter(d => d.condition === conditionFilter);
+  if (searchQuery) {
+    filteredDonations = filteredDonations.filter(d =>
+      d.title.includes(searchQuery) ||
+      d.description.includes(searchQuery) ||
+      d.location.includes(searchQuery)
+    );
+  }
 
-  const handleCategoryChange = (value: string) => { setCategoryFilter(value); applyFilters(value, urgencyFilter, conditionFilter, searchQuery); };
-  const handleUrgencyChange = (value: string) => { setUrgencyFilter(value); applyFilters(categoryFilter, value, conditionFilter, searchQuery); };
-  const handleConditionChange = (value: string) => { setConditionFilter(value); applyFilters(categoryFilter, urgencyFilter, value, searchQuery); };
-  const handleSearchChange = (value: string) => { setSearchQuery(value); applyFilters(categoryFilter, urgencyFilter, conditionFilter, value); };
+  const handleCategoryChange = (value: string) => { setCategoryFilter(value); };
+  const handleUrgencyChange = (value: string) => { setUrgencyFilter(value); };
+  const handleConditionChange = (value: string) => { setConditionFilter(value); };
+  const handleSearchChange = (value: string) => { setSearchQuery(value); };
 
   const hasActiveFilters = categoryFilter !== 'الكل' || urgencyFilter !== 'الكل' || conditionFilter !== 'الكل' || searchQuery;
 
@@ -71,7 +61,6 @@ export function Donations() {
     setUrgencyFilter('الكل');
     setConditionFilter('الكل');
     setSearchQuery('');
-    setFilteredDonations(publicDonations);
   };
 
   const getUrgencyColor = (urgency: string) => {

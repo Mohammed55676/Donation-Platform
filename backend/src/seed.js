@@ -28,28 +28,28 @@ async function seedDatabase() {
     const admin = await User.create({
       name: 'مدير النظام',
       email: 'admin@example.com',
-      password: 'password123',
+      password: 'Password123!',
       role: 'admin',
-      location: 'الرياض',
-      phone: '0500000000',
+      location: 'عمان',
+      phone: '0790000000',
     });
 
     const user1 = await User.create({
       name: 'أحمد محمود',
       email: 'ahmad@example.com',
-      password: 'password123',
+      password: 'Password123!',
       role: 'user',
-      location: 'جدة',
-      phone: '0511111111',
+      location: 'إربد',
+      phone: '0781111111',
     });
 
     const user2 = await User.create({
       name: 'سارة خالد',
       email: 'sara@example.com',
-      password: 'password123',
+      password: 'Password123!',
       role: 'user',
-      location: 'الدمام',
-      phone: '0522222222',
+      location: 'الزرقاء',
+      phone: '0772222222',
     });
 
     console.log('🌱 Seeding donations...');
@@ -58,7 +58,7 @@ async function seedDatabase() {
       description: 'ثلاث معاطف شتوية لم تستخدم كثيراً، مناسبة للأعمار 10-14 سنة.',
       category: 'ملابس',
       condition: 'جيد جداً',
-      location: 'الرياض',
+      location: 'عمان',
       urgency: 'متوسطة',
       status: 'متاح',
       donor: user1._id,
@@ -70,7 +70,7 @@ async function seedDatabase() {
       description: 'طقم جلوس وطاولة طعام لـ 6 أشخاص، التبرع بسبب النقل.',
       category: 'أثاث',
       condition: 'جيد',
-      location: 'جدة',
+      location: 'إربد',
       urgency: 'منخفضة',
       status: 'قيد المراجعة',
       donor: user2._id,
@@ -82,7 +82,7 @@ async function seedDatabase() {
       description: '50 وجبة غداء مغلفة وجاهزة للتوزيع الخيري.',
       category: 'طعام',
       condition: 'جديد',
-      location: 'الرياض',
+      location: 'عمان',
       urgency: 'عالية',
       status: 'متاح',
       donor: user1._id,
@@ -118,8 +118,8 @@ async function seedDatabase() {
       description: 'والدي يحتاج إلى جهاز تنفس منزلي بشكل عاجل، نرجو المساعدة لمن يتوفر لديه.',
       category: 'طبي',
       urgency: 'عالية',
-      status: 'مفتوح',
-      location: 'الدمام',
+      status: 'متاح',
+      location: 'الزرقاء',
       requestedBy: user2._id,
       likes: [user1._id],
     });
@@ -129,8 +129,8 @@ async function seedDatabase() {
       description: 'نقوم بتجهيز أبنائنا الأيتام للعام الدراسي الجديد ونحتاج لدعمكم.',
       category: 'أخرى',
       urgency: 'متوسطة',
-      status: 'قيد التنفيذ',
-      location: 'جدة',
+      status: 'تم الاتفاق',
+      location: 'إربد',
       requestedBy: user1._id,
       likes: [],
     });
@@ -139,7 +139,7 @@ async function seedDatabase() {
     await VolunteerOpportunity.create({
       title: 'توزيع وجبات الإفطار',
       description: 'شارك معنا في توزيع الوجبات على المحتاجين عند إشارات المرور والمساجد.',
-      location: 'الرياض',
+      location: 'عمان',
       date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Next week
       maxVolunteers: 20,
       volunteers: 5,
@@ -151,7 +151,7 @@ async function seedDatabase() {
     await VolunteerOpportunity.create({
       title: 'تنظيم المستودع الخيري',
       description: 'نحتاج لمساعدتكم في فرز وترتيب الملابس المتبرع بها في المستودع الرئيسي.',
-      location: 'جدة',
+      location: 'إربد',
       date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // In 3 days
       maxVolunteers: 10,
       volunteers: 10, // Full
@@ -163,8 +163,8 @@ async function seedDatabase() {
     console.log('✅ Database seeded successfully!');
     console.log('---');
     console.log('You can now log in with:');
-    console.log('Admin: admin@example.com / password123');
-    console.log('User: ahmad@example.com / password123');
+    console.log('Admin: admin@example.com / Password123!');
+    console.log('User: ahmad@example.com / Password123!');
     console.log('---');
 
   } catch (error) {

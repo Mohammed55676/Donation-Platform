@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { isValidEmail, isLettersOnly, sanitizePhone } from '../utils/validators';
 import { DashboardLayout } from '../components/DashboardLayout';
@@ -19,54 +19,33 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '../components/ui/alert-dialog';
-import { Package, CheckCircle, Clock, Edit, Trash2, Eye, Gift, Heart, TrendingUp, HelpCircle, Star, Navigation, Truck, MapPin, Play, XCircle } from 'lucide-react';
+import { Package, CheckCircle, Clock, Edit, Trash2, Eye, Gift, Heart, TrendingUp, HelpCircle, Star, Navigation, Truck, MapPin, Play, XCircle, Upload, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNotifications } from '../context/NotificationContext';
 import { useDonations } from '../context/DonationContext';
-import { MapView } from '../components/MapView';
 import { RatingDialog } from '../components/RatingDialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Textarea } from '../components/ui/textarea';
+import api from '../utils/api';
 
-interface Task {
-  id: string;
-  type: 'pickup' | 'delivery';
-  title: string;
-  donor: string;
-  recipient: string;
-  pickupAddress: string;
-  deliveryAddress: string;
-  status: 'pending' | 'in_progress' | 'completed';
-  urgency: 'high' | 'medium' | 'low';
-  distance: string;
-  items: string;
-}
-
-const mockTasks: Task[] = [
-  {
-    id: '1', type: 'pickup', title: 'استلام ملابس شتوية',
-    donor: 'أحمد محمد', recipient: 'عائلة الأحمدي',
-    pickupAddress: 'عمّان - عبدون', deliveryAddress: 'عمّان - دابوق',
-    status: 'pending', urgency: 'high', distance: '3.2 كم', items: 'ملابس شتوية (15 قطعة)',
-  },
-  {
-    id: '2', type: 'delivery', title: 'توصيل أدوات مدرسية',
-    donor: 'نورة أحمد', recipient: 'مدرسة الأمل',
-    pickupAddress: 'عمّان - الرابية', deliveryAddress: 'عمّان - شارع الجامعة',
-    status: 'in_progress', urgency: 'medium', distance: '5.8 كم', items: 'حقائب وأدوات مدرسية',
-  },
-];
-
-const taskStatusLabels = { pending: 'قيد الانتظار', in_progress: 'جارٍ التنفيذ', completed: 'مكتمل' };
-const taskStatusColors = {
-  pending: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  in_progress: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+// Arabic labels for donation request statuses
+const REQUEST_STATUS_LABELS: Record<string, string> = {
+  pending_review: 'قيد المراجعة',
+  accepted:       'مقبول',
+  rejected:       'مرفوض',
+  cancelled:      'ملغي',
+  received:       'تم الاستلام',
 };
-const taskUrgencyColors = {
-  high: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
-  medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  low: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+
+const REQUEST_STATUS_COLORS: Record<string, string> = {
+  pending_review: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30',
+  accepted:       'bg-blue-100 text-blue-700 dark:bg-blue-900/30',
+  rejected:       'bg-red-100 text-red-600 dark:bg-red-900/30',
+  cancelled:      'bg-gray-100 text-gray-600 dark:bg-gray-800',
+  received:       'bg-green-100 text-green-700 dark:bg-green-900/30',
 };
-const taskUrgencyLabels = { high: 'عاجل', medium: 'متوسط', low: 'منخفض' };
+
+// Removed mockTasks and their static colors/labels
 
 function StatCard({ label, value, icon: Icon, color, bgColor, trend }: any) {
   return (
@@ -117,8 +96,21 @@ export function Dashboard() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
-  // Requests mapping
-  const myRequests = donations
+  // Real donation requests — fetched from API for beneficiary users
+  const [myBeneficiaryRequests, setMyBeneficiaryRequests] = useState<any[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.user_type !== 'beneficiary') return;
+    setRequestsLoading(true);
+    api.get('/donation-requests/my')
+      .then(res => setMyBeneficiaryRequests(res.data.data || []))
+      .catch(() => setMyBeneficiaryRequests([]))
+      .finally(() => setRequestsLoading(false));
+  }, [user]);
+
+  // For donor users: show donations they reserved/received (backwards compat)
+  const myDonorRequests = donations
     .filter(d => ['محجوز', 'تم التسليم'].includes(d.status) && d.donor.name !== user?.name)
     .map(d => ({
       id: d.id,
@@ -126,13 +118,29 @@ export function Dashboard() {
       status: d.status === 'تم التسليم' ? 'تم التسليم' : 'قيد المراجعة',
       requestDate: d.createdAt
     }));
+
+  // Unify: beneficiaries use real API data, others use legacy filter
+  const isBeneficiary = user?.user_type === 'beneficiary';
+  const requestsCount = isBeneficiary ? myBeneficiaryRequests.length : myDonorRequests.length;
+
   const [showRating, setShowRating] = useState(false);
+  const [ratingTarget, setRatingTarget] = useState<{ donationId: string; rateeId: string; rateeName: string } | null>(null);
 
   // Volunteer Tasks State
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
-  const completedTasks = tasks.filter((t) => t.status === 'completed').length;
-  const inProgressTasks = tasks.filter((t) => t.status === 'in_progress').length;
-  const pendingTasks = tasks.filter((t) => t.status === 'pending').length;
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+
+  useEffect(() => {
+    setTasksLoading(true);
+    api.get('/volunteer/my')
+      .then(res => setTasks(res.data.data || []))
+      .catch(() => setTasks([]))
+      .finally(() => setTasksLoading(false));
+  }, []);
+
+  const completedTasks = 0; // Opportunities don't track completion by default
+  const inProgressTasks = tasks.length;
+  const pendingTasks = 0;
 
   // Saved items
   const savedDonations = donations.filter(d => user?.wishlist?.includes(d.id));
@@ -140,16 +148,12 @@ export function Dashboard() {
   // Stats
   const stats = [
     { label: t('dashboard.stat_my_donations'), value: myDonations.length, icon: Package, color: 'text-primary', bgColor: 'bg-primary/10' },
-    { label: t('dashboard.stat_my_requests'), value: myRequests.length, icon: Heart, color: 'text-secondary', bgColor: 'bg-secondary/10' },
+    { label: t('dashboard.stat_my_requests'), value: requestsCount, icon: Heart, color: 'text-secondary', bgColor: 'bg-secondary/10' },
     { label: t('dashboard.stat_active_tasks'), value: inProgressTasks + pendingTasks, icon: Clock, color: 'text-orange-500', bgColor: 'bg-orange-100 dark:bg-orange-900/30' },
     { label: t('dashboard.stat_completed'), value: completedTasks, icon: CheckCircle, color: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-900/30' },
   ];
 
-  const updateTaskStatus = (id: string, newStatus: Task['status']) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t)));
-    const labels = { in_progress: 'بدأت المهمة!', completed: 'أحسنت! أتممت المهمة بنجاح 🎉' };
-    toast.success(labels[newStatus as keyof typeof labels] ?? 'تم التحديث');
-  };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -197,6 +201,23 @@ export function Dashboard() {
     toast.success('تم حذف التبرع!');
     setIsDeleteDialogOpen(false);
     setItemToDelete(null);
+  };
+
+  const donationImageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDonationImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setDonationToEdit((prev: any) => ({ ...prev, image: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleEditDonation = (e: React.FormEvent) => {
@@ -304,9 +325,9 @@ export function Dashboard() {
                               <span className="text-xs text-muted-foreground mt-1">📅 {new Date(donation.createdAt).toLocaleDateString('ar-SA')}</span>
                             </div>
                             <div className="flex gap-2 pt-1">
-                              <Link to={`/donations/${donation.id}`}><Button variant="outline" size="sm"><Eye className="ml-2 h-4 w-4" />عرض</Button></Link>
-                              <Button variant="outline" size="sm" onClick={() => { setDonationToEdit(donation); setIsEditDonationOpen(true); }}><Edit className="ml-2 h-4 w-4" />تعديل</Button>
-                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setItemToDelete(donation.id); setIsDeleteDialogOpen(true); }}><Trash2 className="ml-2 h-4 w-4" />حذف</Button>
+                              <Link to={`/donations/${donation.id}`}><Button variant="outline" size="sm"><Eye className="ms- h-4 w-4" />عرض</Button></Link>
+                              <Button variant="outline" size="sm" onClick={() => { setDonationToEdit(donation); setIsEditDonationOpen(true); }}><Edit className="ms- h-4 w-4" />تعديل</Button>
+                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setItemToDelete(donation.id); setIsDeleteDialogOpen(true); }}><Trash2 className="ms- h-4 w-4" />حذف</Button>
                             </div>
                           </div>
                         </div>
@@ -326,136 +347,154 @@ export function Dashboard() {
                 <CardDescription>{t('dashboard.my_requests_desc')}</CardDescription>
               </CardHeader>
               <CardContent>
-                {myRequests.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
-                    <p className="text-muted-foreground">{t('dashboard.no_requests')}</p>
-                    <Link to="/donations"><Button variant="outline" className="mt-4">{t('dashboard.browse_donations_btn')}</Button></Link>
-                  </div>
+                {/* ── Beneficiary view: real API requests ── */}
+                {isBeneficiary ? (
+                  requestsLoading ? (
+                    <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
+                  ) : myBeneficiaryRequests.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+                      <p className="text-muted-foreground">{t('dashboard.no_requests')}</p>
+                      <Link to="/donations"><Button variant="outline" className="mt-4">{t('dashboard.browse_donations_btn')}</Button></Link>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {myBeneficiaryRequests.map((request: any) => {
+                        const don = request.donation_id;
+                        const statusLabel = REQUEST_STATUS_LABELS[request.status] || request.status;
+                        const statusColor = REQUEST_STATUS_COLORS[request.status] || '';
+                        return (
+                          <Card key={request.id} className="overflow-hidden border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 transition-all">
+                            <div className="flex flex-col sm:flex-row gap-4 p-4">
+                              {don?.image && <img src={don.image} alt={don.title} className="w-full sm:w-28 h-28 object-cover rounded-xl flex-shrink-0" />}
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-start justify-between gap-2">
+                                  <h3 className="font-semibold">{don?.title || 'تبرع'}</h3>
+                                  <Badge className={statusColor}>{statusLabel}</Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground line-clamp-2">{don?.description}</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {don?.category && <Badge variant="outline">{don.category}</Badge>}
+                                  <Badge variant="outline">📅 {new Date(request.createdAt).toLocaleDateString('ar-SA')}</Badge>
+                                </div>
+                                {request.admin_notes && (
+                                  <p className="text-xs text-muted-foreground bg-muted rounded p-2">
+                                    ملاحظة الإدارة: {request.admin_notes}
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-2 pt-1">
+                                  {don?.id && <Link to={`/donations/${don.id}`}><Button variant="outline" size="sm"><Eye className="ms- h-4 w-4" />عرض</Button></Link>}
+                                  {request.status === 'received' && (
+                                     <Button variant="outline" size="sm" onClick={() => {
+                                       const donId = don?.id || don?._id;
+                                       const donorId = don?.donor;
+                                       if (donId && donorId) {
+                                         setRatingTarget({ donationId: donId, rateeId: donorId, rateeName: 'المتبرع' });
+                                         setShowRating(true);
+                                       }
+                                     }}><Star className="ms- h-4 w-4" />تقييم</Button>
+                                   )}
+                                </div>
+                              </div>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )
                 ) : (
-                  <div className="space-y-4">
-                    {myRequests.map((request) => (
-                      <Card key={request.id} className="overflow-hidden border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 transition-all">
-                        <div className="flex flex-col sm:flex-row gap-4 p-4">
-                          <img src={request.donation.image} alt={request.donation.title} className="w-full sm:w-28 h-28 object-cover rounded-xl flex-shrink-0" />
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <h3 className="font-semibold">{request.donation.title}</h3>
-                              <Badge className={getStatusColor(request.status)}>{request.status}</Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground line-clamp-2">{request.donation.description}</p>
-                            <div className="flex flex-wrap gap-2">
-                              <Badge variant="outline">{request.donation.category}</Badge>
-                              <Badge variant="outline">📅 {new Date(request.requestDate).toLocaleDateString('ar-SA')}</Badge>
-                            </div>
-                            <div className="flex items-center gap-2 pt-1">
-                              <Link to={`/donations/${request.donation.id}`}><Button variant="outline" size="sm"><Eye className="ml-2 h-4 w-4" />عرض</Button></Link>
-                              {request.status === 'تم التسليم' && (
-                                <Button variant="outline" size="sm" onClick={() => setShowRating(true)}><Star className="ml-2 h-4 w-4" />تقييم</Button>
-                              )}
+                  /* ── Donor/legacy view ── */
+                  myDonorRequests.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+                      <p className="text-muted-foreground">{t('dashboard.no_requests')}</p>
+                      <Link to="/donations"><Button variant="outline" className="mt-4">{t('dashboard.browse_donations_btn')}</Button></Link>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {myDonorRequests.map((request) => (
+                        <Card key={request.id} className="overflow-hidden border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 transition-all">
+                          <div className="flex flex-col sm:flex-row gap-4 p-4">
+                            <img src={request.donation.image} alt={request.donation.title} className="w-full sm:w-28 h-28 object-cover rounded-xl flex-shrink-0" />
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <h3 className="font-semibold">{request.donation.title}</h3>
+                                <Badge className={getStatusColor(request.status)}>{request.status}</Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-2">{request.donation.description}</p>
+                              <div className="flex flex-wrap gap-2">
+                                <Badge variant="outline">{request.donation.category}</Badge>
+                                <Badge variant="outline">📅 {new Date(request.requestDate).toLocaleDateString('ar-SA')}</Badge>
+                              </div>
+                              <div className="flex items-center gap-2 pt-1">
+                                <Link to={`/donations/${request.donation.id}`}><Button variant="outline" size="sm"><Eye className="ms- h-4 w-4" />عرض</Button></Link>
+                                {request.status === 'تم التسليم' && (
+                                  <Button variant="outline" size="sm" onClick={() => {
+                                    setRatingTarget({ donationId: request.donation.id, rateeId: '', rateeName: 'المستفيد' });
+                                    setShowRating(true);
+                                  }}><Star className="ms- h-4 w-4" />تقييم</Button>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )
                 )}
               </CardContent>
             </Card>
           </TabsContent>
+
 
           {/* 4. VOLUNTEER TASKS */}
           <TabsContent value="volunteer" className="mt-6 space-y-6">
             <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader>
                 <CardTitle>{t('dashboard.volunteer_tasks')}</CardTitle>
-                <CardDescription>{t('dashboard.volunteer_tasks_desc')}</CardDescription>
+                <CardDescription>فرص التطوع التي سجلت بها</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {tasks.filter((t) => t.status !== 'completed').map((task) => (
-                    <Card key={task.id} className="border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 transition-shadow">
-                      <CardContent className="p-5">
-                        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${task.type === 'pickup' ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-blue-100 dark:bg-blue-900/30'}`}>
-                            {task.type === 'pickup' ? <Package className="h-5 w-5 text-orange-500" /> : <Truck className="h-5 w-5 text-blue-500" />}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <h3 className="font-semibold">{task.title}</h3>
-                              <Badge className={taskStatusColors[task.status]}>{taskStatusLabels[task.status]}</Badge>
-                              <Badge className={taskUrgencyColors[task.urgency]}>{taskUrgencyLabels[task.urgency]}</Badge>
+                {tasksLoading ? (
+                  <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
+                ) : tasks.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+                    <p className="text-muted-foreground">لم تقم بالتسجيل في أي فرص تطوعية بعد</p>
+                    <Link to="/volunteer"><Button variant="outline" className="mt-4">استعرض الفرص المتاحة</Button></Link>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {tasks.map((task) => (
+                      <Card key={task.id} className="border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 transition-shadow">
+                        <CardContent className="p-5">
+                          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-100 dark:bg-blue-900/30">
+                              <Package className="h-5 w-5 text-blue-500" />
                             </div>
-                            <p className="text-sm text-muted-foreground mb-3">{task.items}</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-3">
-                              <div className="flex items-center gap-1.5 text-muted-foreground">
-                                <MapPin className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
-                                <span>استلام: {task.pickupAddress}</span>
-                              </div>
-                              <div className="flex items-center gap-1.5 text-muted-foreground">
-                                <MapPin className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
-                                <span>تسليم: {task.deliveryAddress}</span>
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                <Navigation className="h-4 w-4" />
-                                <span>{task.distance}</span>
-                              </div>
-                              <div className="flex gap-2">
-                                {task.status === 'pending' && (
-                                  <Button size="sm" className="bg-primary text-white gap-1" onClick={() => updateTaskStatus(task.id, 'in_progress')}>
-                                    <Play className="h-3.5 w-3.5" /> ابدأ المهمة
-                                  </Button>
-                                )}
-                                {task.status === 'in_progress' && (
-                                  <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white gap-1" onClick={() => updateTaskStatus(task.id, 'completed')}>
-                                    <CheckCircle className="h-3.5 w-3.5" /> إتمام المهمة
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                  {tasks.filter((t) => t.status === 'completed').length > 0 && (
-                    <>
-                      <h3 className="font-medium text-muted-foreground pt-4">المهام المكتملة</h3>
-                      {tasks.filter((t) => t.status === 'completed').map((task) => (
-                        <Card key={task.id} className="border-none card-shadow rounded-2xl opacity-70">
-                          <CardContent className="p-4 flex items-center gap-3">
-                            <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
                             <div className="flex-1">
-                              <p className="font-medium text-sm">{task.title}</p>
-                              <p className="text-xs text-muted-foreground">{task.items}</p>
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <h3 className="font-semibold">{task.title}</h3>
+                                <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">مسجل</Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-3">{task.description}</p>
+                              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                                <span>{task.location}</span>
+                              </div>
+                              {task.date && (
+                                <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
+                                  <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                                  <span>{new Date(task.date).toLocaleDateString('ar-SA')}</span>
+                                </div>
+                              )}
                             </div>
-                            <Badge className={taskStatusColors.completed}>{taskStatusLabels.completed}</Badge>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
-              <CardHeader>
-                <CardTitle>{t('dashboard.task_map_title')}</CardTitle>
-                <CardDescription>{t('dashboard.task_map_desc')}</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0 overflow-hidden rounded-b-lg border-t">
-                <MapView
-                  center={[31.9539, 35.9106]}
-                  zoom={12}
-                  locations={[
-                    { id: '1-p', title: 'استلام — عبدون', lat: 31.9762, lng: 35.8825, type: 'donation' },
-                    { id: '1-d', title: 'تسليم — دابوق', lat: 31.9822, lng: 35.8535, type: 'request' },
-                    { id: '2-p', title: 'استلام — الرابية', lat: 31.9904, lng: 35.8742, type: 'donation' },
-                    { id: '2-d', title: 'تسليم — شارع الجامعة', lat: 31.9736, lng: 35.9037, type: 'request' },
-                  ]} />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -525,7 +564,34 @@ export function Dashboard() {
                     <div className="flex flex-col gap-2">
                       {user?.phone && <div className="flex items-center justify-end gap-2 text-sm">{user.phone}<span className="text-muted-foreground">📱</span></div>}
                       {user?.location && <div className="flex items-center justify-end gap-2 text-sm">{user.location}<span className="text-muted-foreground">📍</span></div>}
-                      <div className="flex items-center justify-end gap-2 text-sm">انضم في {user?.joinDate ? new Date(user.joinDate).toLocaleDateString('ar-SA') : '-'}<span className="text-muted-foreground">📅</span></div>
+                      <div className="flex items-center justify-end gap-2 text-sm">انضم في {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('ar-SA') : '-'}<span className="text-muted-foreground">📅</span></div>
+                      {/* Rating & completed donations */}
+                      {(user?.average_rating > 0 || user?.completed_donations_count > 0) && (
+                        <div className="flex items-center justify-end gap-4 text-sm mt-1">
+                          {user.average_rating > 0 && (
+                            <span className="flex items-center gap-1">⭐ {user.average_rating.toFixed(1)} ({user.rating_count} تقييم)</span>
+                          )}
+                          {user.completed_donations_count > 0 && (
+                            <span className="flex items-center gap-1">✅ {user.completed_donations_count} تبرع مكتمل</span>
+                          )}
+                        </div>
+                      )}
+                      {/* Verification status for beneficiaries */}
+                      {user?.user_type === 'beneficiary' && (
+                        <div className="mt-2">
+                          {user.verification_status === 'trusted' ? (
+                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30">✅ موثق كمستفيد</Badge>
+                          ) : user.verification_status === 'pending_review' ? (
+                            <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30">⏳ قيد المراجعة</Badge>
+                          ) : user.verification_status === 'rejected' ? (
+                            <Badge className="bg-red-100 text-red-600 dark:bg-red-900/30">❌ مرفوض — <button className="underline" onClick={() => window.location.href = '/verify-beneficiary'}>إعادة التقديم</button></Badge>
+                          ) : user.verification_status === 'blocked' ? (
+                            <Badge className="bg-red-200 text-red-800 dark:bg-red-900/50">🚫 موقوف</Badge>
+                          ) : (
+                            <Badge variant="outline" className="cursor-pointer" onClick={() => window.location.href = '/verify-beneficiary'}>غير موثق — أكمل التحقق</Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
@@ -615,19 +681,126 @@ export function Dashboard() {
 
       {/* Edit Donation Dialog */}
       <Dialog open={isEditDonationOpen} onOpenChange={setIsEditDonationOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>تعديل التبرع</DialogTitle></DialogHeader>
+        <DialogContent className="sm:max-w-lg p-6">
+          <DialogHeader className="text-right mb-4">
+            <DialogTitle className="text-2xl font-bold">تعديل التبرع</DialogTitle>
+            <DialogDescription>قم بتحديث تفاصيل التبرع الخاص بك أدناه.</DialogDescription>
+          </DialogHeader>
           {donationToEdit && (
-            <form onSubmit={handleEditDonation} className="space-y-4">
-              <div className="space-y-2"><Label>العنوان</Label><Input value={donationToEdit.title} onChange={(e) => setDonationToEdit({ ...donationToEdit, title: e.target.value })} /></div>
-              <div className="space-y-2"><Label>الوصف</Label><Input value={donationToEdit.description} onChange={(e) => setDonationToEdit({ ...donationToEdit, description: e.target.value })} /></div>
-              <DialogFooter><Button type="submit">حفظ</Button></DialogFooter>
+            <form onSubmit={handleEditDonation} className="space-y-5">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">العنوان</Label>
+                <Input 
+                  value={donationToEdit.title} 
+                  onChange={(e) => setDonationToEdit({ ...donationToEdit, title: e.target.value })} 
+                  className="h-11 bg-muted/50 rounded-xl focus-visible:ring-primary"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">الوصف</Label>
+                <Textarea 
+                  value={donationToEdit.description} 
+                  onChange={(e) => setDonationToEdit({ ...donationToEdit, description: e.target.value })} 
+                  rows={3}
+                  className="bg-muted/50 rounded-xl resize-none focus-visible:ring-primary"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">الفئة</Label>
+                  <Select value={donationToEdit.category} onValueChange={(v) => setDonationToEdit({ ...donationToEdit, category: v })}>
+                    <SelectTrigger className="h-11 bg-muted/50 rounded-xl focus:ring-primary">
+                      <SelectValue placeholder="اختر الفئة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ملابس">ملابس</SelectItem>
+                      <SelectItem value="طعام">طعام</SelectItem>
+                      <SelectItem value="أثاث">أثاث</SelectItem>
+                      <SelectItem value="كتب">كتب</SelectItem>
+                      <SelectItem value="مستلزمات طبية">مستلزمات طبية</SelectItem>
+                      <SelectItem value="أخرى">أخرى</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">الموقع</Label>
+                  <div className="relative">
+                    <MapPin className="absolute end-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                    <Input
+                      value={donationToEdit.location}
+                      onChange={(e) => setDonationToEdit({ ...donationToEdit, location: e.target.value })}
+                      className="h-11 pe-12 bg-muted/50 rounded-xl focus-visible:ring-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">صورة التبرع</Label>
+                <div className="flex flex-col gap-3">
+                  {donationToEdit.image ? (
+                    <div className="relative w-full h-44 rounded-xl overflow-hidden group border border-border/40 bg-muted/20">
+                      <img src={donationToEdit.image} alt={donationToEdit.title} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="font-semibold flex items-center gap-2 rounded-lg shadow"
+                          onClick={() => donationImageInputRef.current?.click()}
+                        >
+                          <ImageIcon className="h-4 w-4" />
+                          تغيير الصورة
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full h-28 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-muted/50 transition-colors"
+                      onClick={() => donationImageInputRef.current?.click()}
+                    >
+                      <Upload className="h-6 w-6 text-primary" />
+                      <span className="text-xs text-muted-foreground">اضغط لرفع صورة التبرع</span>
+                    </Button>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    ref={donationImageInputRef}
+                    onChange={handleDonationImageChange}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="mt-8 gap-3 sm:justify-end">
+                <Button type="button" variant="outline" className="w-full sm:w-auto rounded-xl" onClick={() => setIsEditDonationOpen(false)}>إلغاء</Button>
+                <Button type="submit" className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-primary to-secondary text-white shadow-md">حفظ التغييرات</Button>
+              </DialogFooter>
             </form>
           )}
         </DialogContent>
       </Dialog>
 
-      <RatingDialog open={showRating} onOpenChange={setShowRating} userName="المراكز" />
+      <RatingDialog
+        open={showRating}
+        onOpenChange={setShowRating}
+        userName={ratingTarget?.rateeName || ''}
+        donationId={ratingTarget?.donationId || ''}
+        rateeId={ratingTarget?.rateeId || ''}
+        onRated={() => {
+          setRatingTarget(null);
+          // Re-fetch requests to update UI
+          if (user?.user_type === 'beneficiary') {
+            api.get('/donation-requests/my').then(res => setMyBeneficiaryRequests(res.data.data || []));
+          }
+        }}
+      />
     </DashboardLayout>
   );
 }

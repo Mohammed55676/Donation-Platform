@@ -61,23 +61,29 @@ export function Footer() {
           <div>
             <h3 className="font-semibold text-white mb-5 text-sm uppercase tracking-wider">تواصل معنا</h3>
             <ul className="space-y-3.5">
-              <li className="flex items-center gap-3 text-sm text-slate-400">
-                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                  <Phone className="h-3.5 w-3.5 text-primary" />
-                </div>
-                +962 79 123 4567
+              <li>
+                <a href="https://wa.me/962791234567" target="_blank" rel="noreferrer" className="flex items-center gap-3 text-sm text-slate-400 hover:text-white transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                    <Phone className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  +962 79 123 4567
+                </a>
               </li>
-              <li className="flex items-center gap-3 text-sm text-slate-400">
-                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                  <Mail className="h-3.5 w-3.5 text-primary" />
-                </div>
-                info@alkhair.jo
+              <li>
+                <a href="mailto:info@alkhair.jo" className="flex items-center gap-3 text-sm text-slate-400 hover:text-white transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                    <Mail className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  info@alkhair.jo
+                </a>
               </li>
-              <li className="flex items-center gap-3 text-sm text-slate-400">
-                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="h-3.5 w-3.5 text-primary" />
-                </div>
-                عمّان، المملكة الأردنية الهاشمية
+              <li>
+                <a href="https://maps.google.com/?q=Amman,Jordan" target="_blank" rel="noreferrer" className="flex items-center gap-3 text-sm text-slate-400 hover:text-white transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  عمّان، المملكة الأردنية الهاشمية
+                </a>
               </li>
             </ul>
           </div>

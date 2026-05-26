@@ -13,6 +13,7 @@ const { sendError } = require('../utils/apiResponse');
  * @param {import('joi').Schema} schema - A Joi schema to validate req.body against
  * @param {'body'|'query'|'params'} [target='body']
  */
+
 function validate(schema, target = 'body') {
   return (req, res, next) => {
     const { error, value } = schema.validate(req[target], {

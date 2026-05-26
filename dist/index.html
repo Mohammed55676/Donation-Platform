@@ -4,8 +4,23 @@
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Design Donation Platform UI</title>
-      <script type="module" crossorigin src="/assets/index-DUK4Z8je.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-BzZOJoCB.css">
+      <script>
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      </script>
+      <script type="module" crossorigin src="/assets/index-BHmsms1e.js"></script>
+      <link rel="modulepreload" crossorigin href="/assets/vendor-DZxhhGWi.js">
+      <link rel="modulepreload" crossorigin href="/assets/vendor-radix-CYW3_Dtc.js">
+      <link rel="modulepreload" crossorigin href="/assets/vendor-lucide-B5Lb-yA9.js">
+      <link rel="modulepreload" crossorigin href="/assets/vendor-motion-DCXdQsmi.js">
+      <link rel="modulepreload" crossorigin href="/assets/vendor-firebase-y0gYppzN.js">
+      <link rel="modulepreload" crossorigin href="/assets/vendor-leaflet-tbFaImrb.js">
+      <link rel="modulepreload" crossorigin href="/assets/vendor-recharts-I1PwFQe8.js">
+      <link rel="stylesheet" crossorigin href="/assets/vendor-leaflet-CIGW-MKW.css">
+      <link rel="stylesheet" crossorigin href="/assets/index-CokHd-Dy.css">
     </head>
 
     <body>

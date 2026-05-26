@@ -7,18 +7,21 @@ import { VolunteerList } from "../../components/community/VolunteerList";
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
-import { ArrowRight, Send } from "lucide-react";
+import { ArrowRight, Send, MessageSquare } from "lucide-react";
 import { Card, CardContent } from "../../components/ui/card";
+import { BeneficiaryProfileModal } from "../../components/community/BeneficiaryProfileModal";
 import { toast } from "sonner";
 
 export const Details: React.FC = () => {
   const { postId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { posts, likePost, acceptRequest, completeRequest, addComment } = useCommunityStore();
+  const { posts, likePost, acceptRequest, completeRequest, addComment, updatePost, deletePost } = useCommunityStore();
 
   const [commentText, setCommentText] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [openMessage, setOpenMessage] = useState(false);
 
   const post = posts.find((p) => p.id === postId);
 
@@ -37,9 +40,9 @@ export const Details: React.FC = () => {
       return;
     }
 
-    if (post.status === "مفتوح") {
+    if (post.status === "متاح") {
       await acceptRequest(post.id);
-    } else if (post.status === "قيد التنفيذ") {
+    } else if (post.status === "تم الاتفاق") {
       // Complete requires admin or the author usually, but we keep it simple here.
       const isAuthor = user.id === post.requestedBy?.id || user._id === post.requestedBy?.id;
       const isAdmin = user.role === 'admin';
@@ -81,9 +84,19 @@ export const Details: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           <PostCard
             post={post}
-            onLike={() => { if (user) likePost(post.id) }}
+            currentUserId={user?.id || user?._id}
+            allPosts={posts}
+            onLike={() => { if (user) likePost(post.id, user.id || user._id || "") }}
             onComment={() => document.getElementById("comment-input")?.focus()}
             onHelp={handleHelp}
+            onEdit={async (updates) => { await updatePost(post.id, updates); }}
+            onDelete={async () => {
+              if (window.confirm("هل أنت متأكد من حذف هذا الطلب؟")) {
+                await deletePost(post.id);
+                navigate("/community");
+              }
+            }}
+            isLiked={user ? post.likes?.some((id: any) => id === user.id || id === user._id || id?.toString?.() === user.id || id?.toString?.() === user._id) : false}
           />
 
           <Card className="border-none shadow-sm bg-card rounded-2xl">
@@ -127,8 +140,8 @@ export const Details: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center text-sm py-2">
                   <span className="text-muted-foreground">الحالة:</span>
-                  <span className={`font-semibold ${post.status === 'مفتوح' ? 'text-blue-600' : post.status === 'قيد التنفيذ' ? 'text-amber-600' : 'text-green-600'}`}>
-                    {post.status === 'مفتوح' ? 'متاح للدعم' : post.status === 'قيد التنفيذ' ? 'قيد التنفيذ' : 'مكتمل ومغلق'}
+                  <span className={`font-semibold ${post.status === 'متاح' ? 'text-blue-600' : post.status === 'تم الاتفاق' ? 'text-amber-600' : post.status === 'تم التسليم' ? 'text-green-600' : 'text-red-600'}`}>
+                    {post.status}
                   </span>
                 </div>
                 
@@ -140,12 +153,47 @@ export const Details: React.FC = () => {
                 <div className="pt-4 border-t">
                   <VolunteerList volunteers={post.volunteers || []} />
                 </div>
+
+                {user && (post.requestedBy as any)?.id !== user.id && (post.requestedBy as any)?._id !== user._id && (
+                  <div className="pt-4 border-t">
+                    <button
+                      onClick={() => {
+                        setOpenMessage(true);
+                        setShowProfile(true);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      تواصل مع صاحب الطلب
+                    </button>
+                  </div>
+                )}
               </div>
 
             </CardContent>
           </Card>
         </div>
       </div>
+      <BeneficiaryProfileModal
+        open={showProfile}
+        onClose={() => {
+          setShowProfile(false);
+          setOpenMessage(false);
+        }}
+        user={{
+          id: (post.requestedBy as any)?.id || (post.requestedBy as any)?._id,
+          name: (post.requestedBy as any)?.name || "مستخدم غير معروف",
+          avatar: (post.requestedBy as any)?.avatar || (post.requestedBy as any)?.avatarUrl || undefined,
+          role: (post.requestedBy as any)?.role || "user",
+        }}
+        posts={posts.filter((p) => {
+          const ownerId = (post.requestedBy as any)?.id || (post.requestedBy as any)?._id;
+          const pOwnerId = (p.requestedBy as any)?.id || (p.requestedBy as any)?._id;
+          return ownerId === pOwnerId;
+        })}
+        initialShowMsgInput={openMessage}
+        contextPostId={post.id}
+      />
     </div>
   );
 };

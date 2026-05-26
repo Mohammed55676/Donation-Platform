@@ -120,7 +120,18 @@ async function applyForOpportunity(req, res, next) {
   }
 }
 
+// ── GET /api/volunteer/my ────────────────────────────────────────────
+async function getMyApplications(req, res, next) {
+  try {
+    const userId = req.user._id;
+    const opportunities = await VolunteerOpportunity.find({ applicants: userId }).select('-applicants');
+    return sendSuccess(res, opportunities, 'My applications retrieved.', 200);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   listOpportunities, getOpportunity, createOpportunity,
-  updateOpportunity, deleteOpportunity, applyForOpportunity,
+  updateOpportunity, deleteOpportunity, applyForOpportunity, getMyApplications
 };

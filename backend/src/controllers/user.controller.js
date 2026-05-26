@@ -143,4 +143,30 @@ async function deleteUser(req, res, next) {
   }
 }
 
-module.exports = { listUsers, createUser, getUser, updateUser, updateUserStatus, deleteUser };
+// ── POST /api/users/:id/wishlist ─────────────────────────────────────
+async function toggleWishlist(req, res, next) {
+  try {
+    const isSelf = req.user._id.toString() === req.params.id;
+    if (!isSelf) throw new AppError('Forbidden.', 403);
+
+    const user = await User.findById(req.params.id);
+    if (!user) throw new AppError('User not found.', 404);
+
+    const donationId = req.body.donationId;
+    if (!donationId) throw new AppError('Donation ID is required.', 400);
+
+    const index = user.wishlist.indexOf(donationId);
+    if (index === -1) {
+      user.wishlist.push(donationId);
+    } else {
+      user.wishlist.splice(index, 1);
+    }
+    
+    await user.save({ validateBeforeSave: false });
+    return sendSuccess(res, user, 'Wishlist updated.');
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listUsers, createUser, getUser, updateUser, updateUserStatus, deleteUser, toggleWishlist };

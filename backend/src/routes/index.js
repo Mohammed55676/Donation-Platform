@@ -5,12 +5,17 @@
 const express   = require('express');
 const router    = express.Router();
 
-router.use('/auth',      require('./auth.routes'));
-router.use('/users',     require('./user.routes'));
-router.use('/donations', require('./donation.routes'));
-router.use('/campaigns', require('./campaign.routes'));
-router.use('/volunteer', require('./volunteer.routes'));
-router.use('/community', require('./community.routes'));
+router.use('/auth',              require('./auth.routes'));
+router.use('/users',             require('./user.routes'));
+router.use('/donations',         require('./donation.routes'));
+router.use('/campaigns',         require('./campaign.routes'));
+router.use('/volunteer',         require('./volunteer.routes'));
+router.use('/community',         require('./community.routes'));
+router.use('/conversations',     require('./conversation.routes'));
+router.use('/beneficiary',       require('./beneficiary.routes'));
+router.use('/donation-requests', require('./donationRequest.routes'));
+router.use('/contact',           require('./contact.routes'));
+router.use('/ratings',           require('./rating.routes'));
 
 // Health-check endpoint
 router.get('/health', (req, res) => {

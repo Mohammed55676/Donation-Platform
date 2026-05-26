@@ -14,7 +14,7 @@ const router  = express.Router();
 
 const {
   listRequests, getRequest, createRequest,
-  updateRequest, deleteRequest, toggleLike,
+  updateRequest, deleteRequest, toggleLike, addComment,
 } = require('../controllers/community.controller');
 const { protect }  = require('../middleware/auth.middleware');
 const { validate } = require('../middleware/validate.middleware');
@@ -33,6 +33,7 @@ router.get('/:id',        protect, getRequest);
 router.post('/',          protect, validate(requestSchema), createRequest);
 router.put('/:id',        protect, updateRequest);
 router.delete('/:id',     protect, deleteRequest);
-router.post('/:id/like',  protect, toggleLike);
+router.post('/:id/like',    protect, toggleLike);
+router.post('/:id/comment', protect, addComment);
 
 module.exports = router;

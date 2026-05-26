@@ -101,7 +101,6 @@ export function AddDonation() {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       addDonation({
-        id: `d-${Date.now()}`,
         title: formData.title,
         description: formData.description,
         category: formData.category as any,
@@ -109,12 +108,6 @@ export function AddDonation() {
         location: formData.location,
         urgency: 'متوسطة' as any,
         image: imagePreview || 'https://via.placeholder.com/500',
-        donor: {
-          name: user.name,
-          avatar: user.avatar || '',
-        },
-        createdAt: new Date().toISOString().split('T')[0],
-        status: 'قيد المراجعة'
       });
 
       addNotification({
@@ -372,7 +365,7 @@ export function AddDonation() {
                 className="font-semibold rounded-xl bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-primary/40 px-8" 
               >
                 {isSubmitting ? 'جاري الإرسال...' : (
-                  <><CheckCircle className="ml-2 h-5 w-5" /> نشر التبرع</>
+                  <><CheckCircle className="ms- h-5 w-5" /> نشر التبرع</>
                 )}
               </Button>
             )}

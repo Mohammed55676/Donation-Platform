@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { NotificationDropdown } from './NotificationDropdown';
+import { MessageBadge } from './MessageBadge';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { toast } from 'sonner';
@@ -23,7 +24,7 @@ export function Navbar() {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   const { language, toggleLanguage, t } = useLanguage();
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -119,7 +120,8 @@ export function Navbar() {
               {darkMode ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
             </Button>
 
-            <NotificationDropdown />
+            {isAuthenticated && <MessageBadge />}
+            {isAuthenticated && <NotificationDropdown />}
 
             {isAuthenticated && user ? (
               <DropdownMenu>

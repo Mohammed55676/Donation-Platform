@@ -22,12 +22,13 @@ import { toast } from 'sonner';
 import { useNotifications } from '../context/NotificationContext';
 import { isValidEmail, isLettersOnly, sanitizePhone } from '../utils/validators';
 import { useVolunteerOpportunities } from '../hooks/useVolunteerOpportunities';
+import api from '../utils/api';
 
 type VolunteerErrors = { name?: string; email?: string; phone?: string; nationality?: string; program?: string };
 type ContactErrors = { name?: string; email?: string; message?: string };
 
 export function Volunteer() {
-  const { opportunities } = useVolunteerOpportunities();
+  const { opportunities, fetchOpportunities, setOpportunities } = useVolunteerOpportunities();
   const [selectedOpportunity, setSelectedOpportunity] = useState<string | null>(null);
   const { addNotification } = useNotifications();
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', nationality: 'أردني', program: '', message: '' });
@@ -36,6 +37,7 @@ export function Volunteer() {
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
   const [contactErrors, setContactErrors] = useState<ContactErrors>({});
   const [isContactSending, setIsContactSending] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
 
   const validate = (): VolunteerErrors => {
     const e: VolunteerErrors = {};
@@ -62,7 +64,7 @@ export function Volunteer() {
     return e;
   };
 
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) {
@@ -70,10 +72,37 @@ export function Volunteer() {
       return;
     }
 
-    toast.success('تم تسجيلك بنجاح!');
-    setFormData({ name: '', email: '', phone: '', nationality: 'أردني', program: '', message: '' });
-    setErrors({});
-    setSelectedOpportunity(null);
+    if (!selectedOpportunity) return;
+
+    setIsApplying(true);
+    try {
+      // Optimistic update
+      setOpportunities(prev => prev.map(opp => 
+        opp.id === selectedOpportunity 
+          ? { ...opp, volunteers: opp.volunteers + 1 }
+          : opp
+      ));
+
+      await api.post(`/volunteer/${selectedOpportunity}/apply`);
+      
+      toast.success('تم تسجيلك بنجاح!');
+      addNotification({ 
+        type: 'success', 
+        title: 'تم تسجيلك بنجاح', 
+        message: 'لقد تم تسجيلك في فرصة التطوع بنجاح.' 
+      });
+
+      setFormData({ name: '', email: '', phone: '', nationality: 'أردني', program: '', message: '' });
+      setErrors({});
+      setSelectedOpportunity(null);
+      fetchOpportunities();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'حدث خطأ أثناء التسجيل. يرجى التأكد من تسجيل الدخول.');
+      // Revert on error (optional, fetchOpportunities will fix it)
+      fetchOpportunities();
+    } finally {
+      setIsApplying(false);
+    }
   };
 
   const validateContact = (): ContactErrors => {
@@ -383,9 +412,8 @@ export function Volunteer() {
                               className="rounded-xl"
                             />
                           </div>
-                          <Button type="submit" className="w-full h-11 rounded-xl font-semibold bg-secondary hover:bg-secondary/90">
-                            <CheckCircle className="me-2 h-4 w-4" />
-                            تأكيد التسجيل
+                          <Button type="submit" disabled={isApplying} className="w-full h-11 rounded-xl font-semibold bg-secondary hover:bg-secondary/90">
+                            {isApplying ? 'جاري التسجيل...' : <><CheckCircle className="me-2 h-4 w-4" />تأكيد التسجيل</>}
                           </Button>
                         </form>
                       </DialogContent>

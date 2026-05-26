@@ -3,8 +3,9 @@ import { Link } from 'react-router';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Mail, Heart, ArrowRight, CheckCircle } from 'lucide-react';
+import { Mail, Heart, ArrowRight, CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import api from '../../utils/api';
 
 export function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -18,11 +19,15 @@ export function ForgotPassword() {
       return;
     }
     setLoading(true);
-    // Simulate API call
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
-    setSubmitted(true);
-    toast.success('تم إرسال رابط إعادة التعيين!');
+    try {
+      await api.post('/auth/forgot-password', { email });
+      setSubmitted(true);
+      toast.success('تم إرسال رابط إعادة التعيين!');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.response?.data?.error || 'حدث خطأ أثناء الإرسال');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -80,7 +85,7 @@ export function ForgotPassword() {
               className="w-full rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-semibold h-12 shadow-md hover:shadow-primary/30 transition-all"
               disabled={loading}
             >
-              {loading ? 'جاري الإرسال...' : 'إرسال رابط إعادة التعيين'}
+              {loading ? <><Loader2 className="animate-spin h-4 w-4 inline me-2" /> جاري الإرسال...</> : 'إرسال رابط إعادة التعيين'}
             </Button>
           </form>
 

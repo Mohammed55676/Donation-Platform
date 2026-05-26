@@ -14,7 +14,7 @@ const router  = express.Router();
 
 const {
   listOpportunities, getOpportunity, createOpportunity,
-  updateOpportunity, deleteOpportunity, applyForOpportunity,
+  updateOpportunity, deleteOpportunity, applyForOpportunity, getMyApplications
 } = require('../controllers/volunteer.controller');
 const { protect }     = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/role.middleware');
@@ -30,6 +30,7 @@ const opportunitySchema = Joi.object({
 });
 
 router.get('/',              listOpportunities);
+router.get('/my',            protect, getMyApplications);
 router.get('/:id',           getOpportunity);
 router.post('/',             protect, requireRole('admin'), validate(opportunitySchema), createOpportunity);
 router.put('/:id',           protect, requireRole('admin'), updateOpportunity);

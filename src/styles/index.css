@@ -12,4 +12,11 @@
     -webkit-text-fill-color: var(--foreground) !important;
     transition: background-color 5000s ease-in-out 0s;
   }
+
+  /* Ensure all interactive elements show a pointer cursor */
+  button:not(:disabled),
+  a,
+  [role="button"] {
+    cursor: pointer;
+  }
 }

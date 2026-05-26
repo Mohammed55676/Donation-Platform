@@ -1,30 +1,38 @@
 /**
  * src/server.js
- * Express application entry point.
+ * Express + Socket.IO application entry point.
  *
  * Responsibilities:
  *  1. Load environment variables
  *  2. Connect to MongoDB
  *  3. Configure middleware stack (security, logging, parsing)
  *  4. Mount API routes
- *  5. Centralized error handling
- *  6. Start HTTP server
+ *  5. Attach Socket.IO for private real-time messaging
+ *  6. Centralized error handling
+ *  7. Start HTTP server
  */
 require('dotenv').config();
 
-const express     = require('express');
-const cors        = require('cors');
-const helmet      = require('helmet');
-const morgan      = require('morgan');
-const rateLimit   = require('express-rate-limit');
+const http = require('http');
+const express = require('express');
+const path = require('path');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
+const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 
-const connectDB           = require('./config/db');
-const apiRouter           = require('./routes/index');
-const { errorHandler }    = require('./middleware/error.middleware');
-const { sendError }       = require('./utils/apiResponse');
+const connectDB = require('./config/db');
+const apiRouter = require('./routes/index');
+const { errorHandler } = require('./middleware/error.middleware');
+const { sendError } = require('./utils/apiResponse');
+const User = require('./models/User.model');
+const Message = require('./models/Message.model');
 
 // ── App init ─────────────────────────────────────────────────────────
-const app  = express();
+const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
 // ── Connect to MongoDB ───────────────────────────────────────────────
@@ -34,8 +42,19 @@ connectDB();
 app.use(helmet());
 
 // ── CORS ─────────────────────────────────────────────────────────────
+const corsOrigin = process.env.NODE_ENV === 'production'
+  ? process.env.CLIENT_ORIGIN
+  : (origin, callback) => {
+    // Allow any localhost port in development
+    if (!origin || /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  };
+
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  origin: corsOrigin,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -51,6 +70,9 @@ if (process.env.NODE_ENV !== 'production') {
 // ── Body parsing ─────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// ── Serve static files ───────────────────────────────────────────────
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // ── Global rate limiter ──────────────────────────────────────────────
 const globalLimiter = rateLimit({
@@ -68,7 +90,7 @@ const authLimiter = rateLimit({
   max: 20,
   message: { success: false, error: 'Too many auth attempts. Please wait 15 minutes.' },
 });
-app.use('/api/auth/login',    authLimiter);
+app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
 // ── API routes ───────────────────────────────────────────────────────
@@ -82,11 +104,84 @@ app.use((req, res) => {
 // ── Centralized error handler (MUST be last) ─────────────────────────
 app.use(errorHandler);
 
+// ── Socket.IO ────────────────────────────────────────────────────────
+const io = new Server(server, {
+  cors: {
+    origin: (origin, callback) => {
+      if (!origin || /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+
+// Authenticate socket using JWT from handshake
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error('Authentication required'));
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) return next(new Error('User not found'));
+
+    socket.user = user; // attach user to socket
+    next();
+  } catch (err) {
+    next(new Error('Invalid token'));
+  }
+});
+
+io.on('connection', (socket) => {
+  const userId = socket.user._id.toString();
+  console.log(`[Socket] User connected: ${socket.user.name} (${userId})`);
+
+  // Join the user to their personal room (userId)
+  socket.join(userId);
+
+  // ── sendMessage event ──────────────────────────────────────────────
+  socket.on('sendMessage', async ({ receiverId, text }) => {
+    try {
+      if (!receiverId || !text || !text.trim()) return;
+
+      // Save to DB — sender is always taken from the authenticated socket.user
+      const msg = await Message.create({
+        sender: socket.user._id,
+        receiver: receiverId,
+        text: text.trim(),
+      });
+
+      const populated = await Message.findById(msg._id)
+        .populate('sender', 'id name avatar')
+        .populate('receiver', 'id name avatar');
+
+      const payload = populated.toJSON();
+
+      // Emit to receiver's room
+      io.to(receiverId).emit('receiveMessage', payload);
+
+      // Emit back to sender's room (so all sender tabs also update)
+      io.to(userId).emit('receiveMessage', payload);
+    } catch (err) {
+      console.error('[Socket] sendMessage error:', err.message);
+      socket.emit('messageError', { error: 'Failed to send message' });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log(`[Socket] User disconnected: ${socket.user.name}`);
+  });
+});
+
 // ── Start server ─────────────────────────────────────────────────────
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`[Server] Running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
   console.log(`[Server] API base: http://localhost:${PORT}/api`);
-  console.log(`[Server] Health:   http://localhost:${PORT}/api/health`);
+  console.log(`[Server] Socket.IO enabled`);
 });
 
 module.exports = app; // for testing

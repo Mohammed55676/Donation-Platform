@@ -6,7 +6,9 @@
  * POST /api/auth/logout     — Logout hint (client clears token)
  * GET  /api/auth/me         — Get current authenticated user
  */
-const jwt  = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const User = require('../models/User.model');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
 const { AppError } = require('../middleware/error.middleware');
@@ -22,17 +24,17 @@ function signToken(id) {
 /**
  * @route   POST /api/auth/register
  * @access  Public
- * @body    { name, email, password }
+ * @body    { name, email, password, user_type? }
  */
 async function register(req, res, next) {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, user_type, phone } = req.body;
 
     // Check duplicate email
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) throw new AppError('Email already registered.', 409);
 
-    const user  = await User.create({ name, email, password });
+    const user = await User.create({ name, email, password, user_type: user_type || 'donor', phone });
     const token = signToken(user._id);
 
     return sendSuccess(res, { user, token }, 'Registration successful.', 201);
@@ -113,7 +115,8 @@ async function googleLogin(req, res, next) {
         name: name || 'Google User',
         email: email.toLowerCase(),
         password: randomPass,
-        avatar: avatar || null
+        avatar: avatar || null,
+        provider: 'google'
       });
     }
 
@@ -126,4 +129,122 @@ async function googleLogin(req, res, next) {
   }
 }
 
-module.exports = { register, login, logout, getMe, googleLogin };
+// ── POST /api/auth/forgot-password ───────────────────────────────────
+async function forgotPassword(req, res, next) {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'البريد الإلكتروني غير مسجل في النظام',
+      });
+    }
+
+    if (user.provider === 'google') {
+      return res.status(400).json({
+        success: false,
+        message: 'هذا الحساب مرتبط بجوجل ولا يمكن تغيير كلمة المرور الخاصة به. يرجى تسجيل الدخول باستخدام جوجل.',
+      });
+    }
+
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+
+    await user.save({ validateBeforeSave: false });
+
+    const resetUrl = `${process.env.CLIENT_ORIGIN}/reset-password/${resetToken}`;
+
+    // Modern simple email template
+    const htmlMessage = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; text-align: center; border: 1px solid #e2e8f0; border-radius: 10px;">
+        <h2 style="color: #0f172a;">Password Reset</h2>
+        <p style="color: #475569; font-size: 16px;">We received a request to reset your password. Click the button below to set a new password. This link is valid for 1 hour.</p>
+        <a href="${resetUrl}" style="display: inline-block; margin: 20px 0; padding: 12px 24px; background-color: #10B981; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+        <p style="color: #94a3b8; font-size: 14px;">If you didn't request a password reset, you can safely ignore this email.</p>
+      </div>
+    `;
+
+    try {
+      let transporter;
+
+      if (process.env.SMTP_EMAIL && process.env.SMTP_PASSWORD) {
+        transporter = nodemailer.createTransport({
+          service: 'Gmail',
+          auth: {
+            user: process.env.SMTP_EMAIL,
+            pass: process.env.SMTP_PASSWORD,
+          }
+        });
+      } else {
+        // Fallback to Ethereal Email for development/testing
+        console.log('No SMTP credentials found in .env, using Ethereal Email for testing...');
+        const testAccount = await nodemailer.createTestAccount();
+        transporter = nodemailer.createTransport({
+          host: "smtp.ethereal.email",
+          port: 587,
+          secure: false,
+          auth: {
+            user: testAccount.user,
+            pass: testAccount.pass,
+          },
+        });
+      }
+
+      const info = await transporter.sendMail({
+        from: `Donation Platform <${process.env.SMTP_EMAIL || 'noreply@example.com'}>`,
+        to: user.email,
+        subject: 'Reset Your Password - Donation Platform',
+        html: htmlMessage,
+      });
+
+      if (!process.env.SMTP_EMAIL) {
+        const previewUrl = nodemailer.getTestMessageUrl(info);
+        console.log("Email Preview URL: %s", previewUrl);
+        // During testing without real SMTP, we can just return the URL so the user can click it in the network tab or console
+        return sendSuccess(res, { previewUrl }, 'تم إرسال الرابط! تفقد نافذة الأوامر (Console) لرؤية الرابط التجريبي.');
+      }
+
+      return sendSuccess(res, null, 'Password reset link sent to email.');
+    } catch (err) {
+      console.error('Email sending error:', err);
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+      return next(new AppError('There was an error sending the email. Check server configuration.', 500));
+    }
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ── POST /api/auth/reset-password/:token ─────────────────────────────
+async function resetPassword(req, res, next) {
+  try {
+    const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return next(new AppError('Token is invalid or has expired', 400));
+    }
+
+    user.password = req.body.password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    const token = signToken(user._id);
+    user.password = undefined; // Don't send back password
+
+    return sendSuccess(res, { user, token }, 'Password reset successfully.');
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { register, login, logout, getMe, googleLogin, forgotPassword, resetPassword };

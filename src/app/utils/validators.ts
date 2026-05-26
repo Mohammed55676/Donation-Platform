@@ -29,3 +29,14 @@ export function isLettersOnly(value: string): boolean {
   // Matches Arabic Unicode range + Latin letters + spaces
   return /^[\u0600-\u06FFa-zA-Z\s]+$/.test(value.trim());
 }
+
+/**
+ * Returns true if the password satisfies:
+ * - At least 8 characters
+ * - Contains at least one uppercase letter
+ * - Contains at least one number
+ * - Contains at least one special character
+ */
+export function isValidPassword(value: string): boolean {
+  return /(?=.*[A-Z])/.test(value) && /(?=.*\d)/.test(value) && /(?=.*[!@#$%^&*(),.?":{}|<>_])/.test(value) && value.length >= 8;
+}

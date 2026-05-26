@@ -30,8 +30,8 @@ const communityRequestSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['مفتوح', 'قيد التنفيذ', 'مكتمل', 'مغلق'],
-      default: 'مفتوح',
+      enum: ['متاح', 'تم الاتفاق', 'تم التسليم', 'ملغي'],
+      default: 'متاح',
     },
     location: { type: String, trim: true },
     image: { type: String, default: null },
@@ -42,7 +42,15 @@ const communityRequestSchema = new mongoose.Schema(
     },
     // Users who liked / offered help
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    // Comment count (comments stored separately if needed)
+    // Comments
+    comments: [
+      {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        text: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+      }
+    ],
+    // Comment count (virtual or stored)
     commentCount: { type: Number, default: 0 },
   },
   { timestamps: true }

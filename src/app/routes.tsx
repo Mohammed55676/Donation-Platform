@@ -15,6 +15,7 @@ import { AuthLayout } from './pages/auth/AuthLayout';
 import { Login } from './pages/auth/Login';
 import { Signup } from './pages/auth/Signup';
 import { ForgotPassword } from './pages/auth/ForgotPassword';
+import { ResetPassword } from './pages/auth/ResetPassword';
 
 import { Dashboard } from './pages/Dashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -25,6 +26,13 @@ import { Feed } from './pages/community/Feed';
 import { CreatePostPage } from './pages/community/Create';
 import { Details } from './pages/community/Details';
 
+// Chat
+import { Messages } from './pages/messages/Messages';
+import { ConversationChat } from './pages/messages/ConversationChat';
+
+// Beneficiary Verification
+import { BeneficiaryVerification } from './pages/BeneficiaryVerification';
+
 export const router = createBrowserRouter([
   // Auth pages (no navbar/footer)
   {
@@ -33,6 +41,7 @@ export const router = createBrowserRouter([
       { path: '/login', Component: Login },
       { path: '/signup', Component: Signup },
       { path: '/forgot-password', Component: ForgotPassword },
+      { path: '/reset-password/:token', Component: ResetPassword },
     ],
   },
 
@@ -53,8 +62,6 @@ export const router = createBrowserRouter([
     ),
   },
 
-
-
   // Main public layout
   {
     path: '/',
@@ -71,6 +78,9 @@ export const router = createBrowserRouter([
       { path: 'community', element: <ProtectedRoute><Feed /></ProtectedRoute> },
       { path: 'community/create', element: <ProtectedRoute><CreatePostPage /></ProtectedRoute> },
       { path: 'community/:postId', element: <ProtectedRoute><Details /></ProtectedRoute> },
+      { path: 'messages', element: <ProtectedRoute><Messages /></ProtectedRoute> },
+      { path: 'messages/:conversationId', element: <ProtectedRoute><ConversationChat /></ProtectedRoute> },
+      { path: 'verify-beneficiary', element: <ProtectedRoute><BeneficiaryVerification /></ProtectedRoute> },
       { path: '*', Component: NotFound },
     ],
   },
