@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { isValidEmail, isLettersOnly, sanitizePhone } from '../utils/validators';
 import { DashboardLayout } from '../components/DashboardLayout';
@@ -143,7 +143,10 @@ export function Dashboard() {
   const pendingTasks = 0;
 
   // Saved items
-  const savedDonations = donations.filter(d => user?.wishlist?.includes(d.id));
+  const savedDonations = useMemo(
+    () => donations.filter(d => user?.wishlist?.includes(d.id)),
+    [donations, user?.wishlist]
+  );
 
   // Stats
   const stats = [
@@ -561,7 +564,9 @@ export function Dashboard() {
                     <div>
                       <h3 className="text-xl font-bold">{user?.name}</h3>
                       <p className="text-muted-foreground">{user?.email}</p>
-                      <Badge className="mt-1 bg-primary/10 text-primary">{t('dashboard.verified_user')}</Badge>
+                      <Badge className="mt-1 bg-primary/10 text-primary">
+                        {user?.user_type === 'beneficiary' ? 'مستفيد' : 'متبرع'}
+                      </Badge>
                     </div>
                     <div className="flex flex-col gap-2">
                       {user?.phone && <div className="flex items-center justify-end gap-2 text-sm">{user.phone}<span className="text-muted-foreground">📱</span></div>}

@@ -8,6 +8,33 @@ import { Card, CardContent } from '../components/ui/card';
 import { toast } from 'sonner';
 import api from '../utils/api';
 
+const infos = [
+  {
+    id: 'phone',
+    icon: Phone,
+    title: 'رقم الهاتف',
+    value: '+962 77 653 2286',
+    color: 'text-blue-500 bg-blue-100 dark:bg-blue-900/30',
+    action: () => window.open('https://wa.me/962776532286', '_blank'),
+  },
+  {
+    id: 'email',
+    icon: Mail,
+    title: 'البريد الإلكتروني',
+    value: 'contact@donation.org',
+    color: 'text-primary bg-primary/10',
+    action: () => { window.location.href = 'mailto:contact@donation.org'; },
+  },
+  {
+    id: 'location',
+    icon: MapPin,
+    title: 'العنوان الرئيس',
+    value: 'مجمع الملك حسين للأعمال، عمّان',
+    color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-900/30',
+    action: () => window.open('https://maps.google.com/?q=King+Hussein+Business+Park,+Amman', '_blank'),
+  },
+];
+
 export function Contact() {
   const formRef = useRef<HTMLFormElement>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,33 +59,6 @@ export function Contact() {
       setIsLoading(false);
     }
   };
-
-  const infos = [
-    { 
-      id: 'phone',
-      icon: Phone, 
-      title: 'رقم الهاتف', 
-      value: '+962 77 653 2286', 
-      color: 'text-blue-500 bg-blue-100 dark:bg-blue-900/30',
-      action: () => window.open('https://wa.me/962776532286', '_blank')
-    },
-    { 
-      id: 'email',
-      icon: Mail, 
-      title: 'البريد الإلكتروني', 
-      value: 'contact@donation.org', 
-      color: 'text-primary bg-primary/10',
-      action: () => window.location.href = 'mailto:contact@donation.org'
-    },
-    { 
-      id: 'location',
-      icon: MapPin, 
-      title: 'العنوان الرئيس', 
-      value: 'مجمع الملك حسين للأعمال، عمّان', 
-      color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-900/30',
-      action: () => window.open('https://maps.google.com/?q=King+Hussein+Business+Park,+Amman', '_blank')
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-background py-16 md:py-24">

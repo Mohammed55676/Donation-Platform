@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router';
 import api from '../utils/api';
 import { DashboardLayout } from '../components/DashboardLayout';
@@ -162,10 +162,13 @@ export function AdminDashboard() {
 
   useEffect(() => { fetchVerifications(); fetchAdminRequests(); }, []);
 
-  const displayedUsers = (users || []).filter(
-    (u) =>
-      (u.name || '').toLowerCase().includes(userSearch.toLowerCase()) ||
-      (u.email || '').toLowerCase().includes(userSearch.toLowerCase())
+  const displayedUsers = useMemo(
+    () => (users || []).filter(
+      (u) =>
+        (u.name || '').toLowerCase().includes(userSearch.toLowerCase()) ||
+        (u.email || '').toLowerCase().includes(userSearch.toLowerCase())
+    ),
+    [users, userSearch]
   );
 
   // ── Add User ─────────────────────────────────────────────────

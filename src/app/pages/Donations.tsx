@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -13,17 +13,11 @@ import { useNavigate } from 'react-router';
 
 export function Donations() {
   const { user, toggleWishlist } = useAuth();
-  const { donations } = useDonations();
+  const { donations, loading: donationsLoading } = useDonations();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const [isLoading, setIsLoading] = useState(true);
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const publicDonations = donations.filter(d => d.status === 'متاح' || d.status === 'محجوز' || d.status === 'تم التسليم');
+  const isLoading = donationsLoading;
 
   const [categoryFilter, setCategoryFilter] = useState<string>('الكل');
   const [urgencyFilter, setUrgencyFilter] = useState<string>('الكل');
@@ -37,17 +31,21 @@ export function Donations() {
     }
   }, [searchParams]);
 
-  let filteredDonations = publicDonations;
-  if (categoryFilter !== 'الكل') filteredDonations = filteredDonations.filter(d => d.category === categoryFilter);
-  if (urgencyFilter !== 'الكل') filteredDonations = filteredDonations.filter(d => d.urgency === urgencyFilter);
-  if (conditionFilter !== 'الكل') filteredDonations = filteredDonations.filter(d => d.condition === conditionFilter);
-  if (searchQuery) {
-    filteredDonations = filteredDonations.filter(d =>
-      d.title.includes(searchQuery) ||
-      d.description.includes(searchQuery) ||
-      d.location.includes(searchQuery)
-    );
-  }
+  const filteredDonations = useMemo(() => {
+    let result = donations.filter(d => d.status === 'متاح' || d.status === 'محجوز' || d.status === 'تم التسليم');
+    if (categoryFilter !== 'الكل') result = result.filter(d => d.category === categoryFilter);
+    if (urgencyFilter !== 'الكل') result = result.filter(d => d.urgency === urgencyFilter);
+    if (conditionFilter !== 'الكل') result = result.filter(d => d.condition === conditionFilter);
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim();
+      result = result.filter(d =>
+        d.title.includes(q) ||
+        d.description.includes(q) ||
+        d.location.includes(q)
+      );
+    }
+    return result;
+  }, [donations, categoryFilter, urgencyFilter, conditionFilter, searchQuery]);
 
   const handleCategoryChange = (value: string) => { setCategoryFilter(value); };
   const handleUrgencyChange = (value: string) => { setUrgencyFilter(value); };

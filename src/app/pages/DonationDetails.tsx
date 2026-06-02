@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -35,6 +35,8 @@ interface BeneficiaryProfile {
   verification_rejection_reason?: string | null;
   national_id_number?: string;
 }
+
+const HIGH_VALUE_CATEGORIES = ['أثاث', 'مستلزمات طبية', 'أجهزة', 'أجهزة كهربائية', 'إلكترونيات'];
 
 export function DonationDetails() {
   const { id } = useParams();
@@ -76,8 +78,10 @@ export function DonationDetails() {
     fetchProfile();
   }, [fetchProfile]);
 
-  const HIGH_VALUE_CATEGORIES = ['أثاث', 'مستلزمات طبية', 'أجهزة', 'أجهزة كهربائية', 'إلكترونيات'];
-  const isHighValue = donation ? HIGH_VALUE_CATEGORIES.includes(donation.category) : false;
+  const isHighValue = useMemo(
+    () => donation ? HIGH_VALUE_CATEGORIES.includes(donation.category) : false,
+    [donation]
+  );
 
   const handleRequestDonation = async () => {
     // 1. Not logged in

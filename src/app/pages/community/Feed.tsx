@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useCommunityStore } from "../../context/CommunityContext";
 import { PostCard } from "../../components/community/PostCard";
 import { FilterBar } from "../../components/community/FilterBar";
@@ -48,31 +48,31 @@ export const Feed: React.FC = () => {
   }, [fetchPosts]);
 
   // ── Filtering ────────────────────────────────────────────────────────
-  let displayedPosts = [...posts];
-
-  if (categoryFilter !== "الكل") {
-    displayedPosts = displayedPosts.filter((p) => p.category === categoryFilter);
-  }
-
-  if (searchQuery.trim()) {
-    const q = searchQuery.toLowerCase();
-    displayedPosts = displayedPosts.filter(
-      (p) =>
-        p.title.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q) ||
-        (p.location || "").toLowerCase().includes(q)
-    );
-  }
-
-  if (sortFilter === "urgent") {
-    displayedPosts = [...displayedPosts].sort((a, b) => {
-      const aUrgent = a.urgency === "عالية";
-      const bUrgent = b.urgency === "عالية";
-      if (aUrgent && !bUrgent) return -1;
-      if (!aUrgent && bUrgent) return 1;
-      return 0;
-    });
-  }
+  const displayedPosts = useMemo(() => {
+    let result = [...posts];
+    if (categoryFilter !== "الكل") {
+      result = result.filter((p) => p.category === categoryFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.title.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          (p.location || "").toLowerCase().includes(q)
+      );
+    }
+    if (sortFilter === "urgent") {
+      result = [...result].sort((a, b) => {
+        const aUrgent = a.urgency === "عالية";
+        const bUrgent = b.urgency === "عالية";
+        if (aUrgent && !bUrgent) return -1;
+        if (!aUrgent && bUrgent) return 1;
+        return 0;
+      });
+    }
+    return result;
+  }, [posts, categoryFilter, searchQuery, sortFilter]);
 
   // ── Handlers ──────────────────────────────────────────────────────────
   const handleLike = useCallback(

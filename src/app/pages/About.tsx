@@ -3,7 +3,15 @@ import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { motion } from 'motion/react';
 import { Link } from 'react-router';
+import { useMemo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+
+const slideUp = {
+  initial: { opacity: 0, y: 32 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: '-60px' },
+  transition: { duration: 0.55, ease: 'easeOut' as const },
+};
 
 const goals = [
   {
@@ -109,18 +117,11 @@ const heroStats = [
 export function About() {
   const { t } = useLanguage();
 
-  const slideUp = {
-    initial: { opacity: 0, y: 32 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true, margin: "-60px" },
-    transition: { duration: 0.55, ease: "easeOut" as const }
-  };
-
-  const impactStats = [
+  const impactStats = useMemo(() => [
     { label: t('home.stats_donations'), value: '2,340', icon: Gift, color: 'text-primary', bg: 'bg-primary/10 dark:bg-primary/20' },
     { label: t('home.stats_volunteers'), value: '156', icon: Users, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
     { label: t('home.stats_posts'), value: '4,521', icon: MessageCircle, color: 'text-pink-600 dark:text-pink-400', bg: 'bg-pink-100 dark:bg-pink-900/30' },
-  ];
+  ], [t]);
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
