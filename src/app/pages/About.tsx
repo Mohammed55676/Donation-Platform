@@ -2,6 +2,7 @@ import { Heart, Target, Users, Shield, Globe, Star, Award, Code2, Lock, Monitor,
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { motion } from 'motion/react';
+import { Link } from 'react-router';
 import { useLanguage } from '../context/LanguageContext';
 
 const goals = [
@@ -81,7 +82,7 @@ const team = [
     role: 'مطور برمجيات',
     specialty: 'هندسة البرمجيات',
     icon: Code2,
-    badge: 'Software Dev',
+    badge: 'BackEnd',
     badgeColor: 'bg-violet-500 text-white',
     gradient: 'from-violet-400/20 to-purple-400/20',
     img: 'https://images.unsplash.com/photo-1566753323558-f4e0952af115?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=400&q=80',
@@ -444,14 +445,14 @@ export function About() {
             سواء كنت متبرعاً أو متطوعاً أو محتاجاً للمساعدة — مكانك دائماً محفوظ في منصة الخير.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/add-donation" className="inline-flex items-center justify-center gap-2 bg-white text-primary font-semibold px-8 py-3 rounded-full shadow-lg hover:shadow-xl hover:bg-gray-50 transition-all">
+            <Link to="/add-donation" className="inline-flex items-center justify-center gap-2 bg-white text-primary font-semibold px-8 py-3 rounded-full shadow-lg hover:shadow-xl hover:bg-gray-50 transition-all">
               <Heart className="h-5 w-5 fill-primary" />
               تبرع الآن
-            </a>
-            <a href="/volunteer" className="inline-flex items-center justify-center gap-2 border-2 border-white text-white font-semibold px-8 py-3 rounded-full hover:bg-white/10 transition-all">
+            </Link>
+            <Link to="/volunteer" className="inline-flex items-center justify-center gap-2 border-2 border-white text-white font-semibold px-8 py-3 rounded-full hover:bg-white/10 transition-all">
               <Users className="h-5 w-5" />
               انضم كمتطوع
-            </a>
+            </Link>
           </div>
         </div>
       </section>
