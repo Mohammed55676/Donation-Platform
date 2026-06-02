@@ -89,7 +89,7 @@ export function Dashboard() {
 
   // Donations mapping
   const { donations, deleteDonation, updateDonation } = useDonations();
-  const myDonations = donations.filter(d => d.donor.name === user?.name);
+  const myDonations = donations.filter(d => d.donor.id === user?.id || d.donor.id === user?._id);
   const [isEditDonationOpen, setIsEditDonationOpen] = useState(false);
   const [donationToEdit, setDonationToEdit] = useState<any>(null);
 
@@ -107,7 +107,7 @@ export function Dashboard() {
       .then(res => setMyBeneficiaryRequests(res.data.data || []))
       .catch(() => setMyBeneficiaryRequests([]))
       .finally(() => setRequestsLoading(false));
-  }, [user]);
+  }, [user?.id, user?.user_type]);
 
   // For donor users: show donations they reserved/received (backwards compat)
   const myDonorRequests = donations
@@ -197,8 +197,10 @@ export function Dashboard() {
   };
 
   const handleDeleteItem = () => {
-    if (itemToDelete) deleteDonation(itemToDelete);
-    toast.success('تم حذف التبرع!');
+    if (itemToDelete) {
+      deleteDonation(itemToDelete);
+      toast.success('تم حذف التبرع!');
+    }
     setIsDeleteDialogOpen(false);
     setItemToDelete(null);
   };
@@ -644,7 +646,7 @@ export function Dashboard() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-semibold">اسم المسخدم</Label>
+              <Label className="text-sm font-semibold">اسم المستخدم</Label>
               <Input value={editUserForm.name} className={`bg-muted/50 ${profileErrors.name ? 'border-destructive' : ''}`} onChange={(e) => { setEditUserForm({ ...editUserForm, name: e.target.value }); setProfileErrors(p => ({ ...p, name: undefined })); }} />
               {profileErrors.name && <p className="text-xs text-destructive">{profileErrors.name}</p>}
             </div>

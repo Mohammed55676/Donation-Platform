@@ -144,8 +144,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUser = async (updates: Partial<AuthUser>) => {
     if (!user) return;
+    const userId = user.id ?? user._id;
     try {
-      const res = await api.put(`/users/${user.id}`, updates);
+      const res = await api.put(`/users/${userId}`, updates);
       setUser(res.data.data);
     } catch (err) {
       console.error('Failed to update user', err);
@@ -154,23 +155,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const toggleWishlist = async (donationId: string) => {
     if (!user) return;
-    
-    // Optimistic update
+
     const currentWishlist = user.wishlist || [];
     const isWished = currentWishlist.includes(donationId);
-    
-    const newWishlist = isWished 
+    const newWishlist = isWished
       ? currentWishlist.filter(id => id !== donationId)
       : [...currentWishlist, donationId];
-      
-    setUser({ ...user, wishlist: newWishlist });
-    
+
+    // Optimistic update using functional form to avoid stale closure
+    setUser(prev => prev ? { ...prev, wishlist: newWishlist } : prev);
+
+    const userId = user.id ?? user._id;
     try {
-      await api.post(`/users/${user.id}/wishlist`, { donationId });
+      await api.post(`/users/${userId}/wishlist`, { donationId });
     } catch (err) {
       console.error('Failed to toggle wishlist', err);
-      // Revert optimistic update
-      setUser({ ...user, wishlist: currentWishlist });
+      setUser(prev => prev ? { ...prev, wishlist: currentWishlist } : prev);
     }
   };
 

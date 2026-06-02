@@ -17,24 +17,21 @@ interface MapViewProps {
   zoom?: number;
 }
 
-export function MapView({ locations, center = [31.9522, 35.2332], zoom = 10 }: MapViewProps) {
-  const donationIcon = new Icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
-  });
+const SHADOW_URL = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png';
+const ICON_OPTIONS = { iconSize: [25, 41] as [number, number], iconAnchor: [12, 41] as [number, number], popupAnchor: [1, -34] as [number, number], shadowSize: [41, 41] as [number, number], shadowUrl: SHADOW_URL };
 
-  const requestIcon = new Icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
-  });
+const donationIcon = new Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+  ...ICON_OPTIONS,
+});
+
+const requestIcon = new Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  ...ICON_OPTIONS,
+});
+
+export function MapView({ locations, center = [31.9522, 35.2332], zoom = 10 }: MapViewProps) {
+  const validLocations = locations.filter(l => isFinite(l.lat) && isFinite(l.lng));
 
   return (
     <MapContainer
@@ -46,7 +43,7 @@ export function MapView({ locations, center = [31.9522, 35.2332], zoom = 10 }: M
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      {locations.map((location) => (
+      {validLocations.map((location) => (
         <Marker
           key={location.id}
           position={[location.lat, location.lng]}

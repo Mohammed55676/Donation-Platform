@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
@@ -30,43 +30,40 @@ interface ChatDialogProps {
 
 export function ChatDialog({ open, onOpenChange, recipientName, recipientAvatar, currentUser }: ChatDialogProps) {
   const currentUserName = currentUser?.name || 'زائر';
-  
-  // Create a symmetric key so both users see the same chat
-  const chatParticipants = [currentUserName, recipientName].sort();
-  const CHAT_KEY = `chat_history_${chatParticipants[0]}_${chatParticipants[1]}`;
+
+  // Stable symmetric key — recomputed only when participants change
+  const CHAT_KEY = useMemo(() => {
+    const participants = [currentUserName, recipientName].sort();
+    return `chat_history_${participants[0]}_${participants[1]}`;
+  }, [currentUserName, recipientName]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const saved = localStorage.getItem(CHAT_KEY);
-    if (saved) return JSON.parse(saved);
-    return [
-      {
-        id: '1',
-        senderName: recipientName,
-        text: 'مرحباً! شكراً لاهتمامك بالتبرع',
-        time: '10:30 ص',
-      },
-      {
-        id: '2',
-        senderName: currentUserName,
-        text: 'أهلاً، متى يمكنني استلام التبرع؟',
-        time: '10:32 ص',
-      },
-      {
-        id: '3',
-        senderName: recipientName,
-        text: 'يمكنك الاستلام اليوم بعد الساعة 3 عصراً',
-        time: '10:35 ص',
-      },
-    ];
-  });
+  const defaultMessages: Message[] = [
+    { id: '1', senderName: recipientName, text: 'مرحباً! شكراً لاهتمامك بالتبرع', time: '10:30 ص' },
+    { id: '2', senderName: currentUserName, text: 'أهلاً، متى يمكنني استلام التبرع؟', time: '10:32 ص' },
+    { id: '3', senderName: recipientName, text: 'يمكنك الاستلام اليوم بعد الساعة 3 عصراً', time: '10:35 ص' },
+  ];
+
+  const [messages, setMessages] = useState<Message[]>(defaultMessages);
+
+  // Load correct conversation when CHAT_KEY changes (recipient changes)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(CHAT_KEY);
+      setMessages(saved ? JSON.parse(saved) : defaultMessages);
+    } catch {
+      setMessages(defaultMessages);
+    }
+  }, [CHAT_KEY]);
 
   useEffect(() => {
     localStorage.setItem(CHAT_KEY, JSON.stringify(messages));
-    setTimeout(() => {
+    const t = setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
-  }, [messages, recipientName]);
+    return () => clearTimeout(t);
+  }, [messages, CHAT_KEY]);
 
   const [newMessage, setNewMessage] = useState('');
 
@@ -79,7 +76,7 @@ export function ChatDialog({ open, onOpenChange, recipientName, recipientAvatar,
         text: newMessage,
         time: new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
       };
-      setMessages([...messages, message]);
+      setMessages(prev => [...prev, message]);
       setNewMessage('');
     }
   };

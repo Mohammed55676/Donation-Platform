@@ -32,9 +32,8 @@ api.interceptors.response.use(
       // Clearing here causes a race condition with Google login where an old token's 401
       // wipes the new valid token before it can be used.
       const url = error.config?.url || '';
-      if (!url.endsWith('/auth/me')) {
+      if (!url.includes('/auth/me')) {
         localStorage.removeItem('token');
-        localStorage.removeItem('user');
         window.dispatchEvent(new Event('auth_changed')); // notify AuthContext
       }
     }

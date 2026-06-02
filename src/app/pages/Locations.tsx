@@ -1,12 +1,12 @@
-import { useState, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Search, MapPin, AlertCircle, LayoutList, Map as MapIcon, CheckCircle2, Navigation, Activity } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, MapPin, AlertCircle, LayoutList, Map as MapIcon, CheckCircle2, Navigation, Activity, Shield } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
+import { Badge } from '../components/ui/badge';
 
 // Data
-import { mockCenters, mockCampaigns, DonationType, DonationCenter } from '../data/donationCenters';
+import { mockCenters, mockCampaigns, DonationType } from '../data/donationCenters';
 
 // Components
 import { DonationTypeFilters } from '../components/locations/DonationTypeFilters';
@@ -132,25 +132,28 @@ export function Locations() {
             ابحث عن أقرب جهة مناسبة حسب نوع تبرعك، وتواصل معها أو احجز استلاماً من المنزل.
           </p>
           
-          <div className="relative max-w-3xl mx-auto flex flex-col md:flex-row gap-3">
-            <div className="relative flex-1">
-              <div className="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
-                <Search className="h-5 w-5 text-slate-400" />
+            <div className="relative max-w-3xl mx-auto flex flex-col md:flex-row gap-3">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
+                  <Search className="h-5 w-5 text-slate-400" />
+                </div>
+                <Input 
+                  type="text"
+                  placeholder="ابحث عن محافظة، مركز، أو نوع تبرع..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full ps-12 h-14 rounded-full border-slate-200 dark:border-slate-700 shadow-sm text-base bg-white dark:bg-[#1A2332]/60 dark:text-white focus-visible:ring-primary/20"
+                />
               </div>
-              <Input 
-                type="text"
-                placeholder="ابحث عن محافظة، مركز، أو نوع تبرع..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full ps-12 h-14 rounded-full border-slate-200 dark:border-slate-700 shadow-sm text-base bg-white dark:bg-[#1A2332]/60 dark:text-white focus-visible:ring-primary/20"
-              />
+              <div className="flex gap-2 flex-col sm:flex-row">
+                <Button className="h-14 px-6 rounded-full bg-primary hover:bg-primary/90 text-white shadow-md hidden sm:flex items-center">
+                  ابحث
+                </Button>
+                <Button onClick={handleNearestMe} className="h-14 px-6 rounded-full bg-[#10B981] hover:bg-[#059669] text-white shadow-md flex items-center justify-center">
+                  <MapPin className="me-2 h-5 w-5" /> الأقرب إليّ
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleNearestMe} className="h-14 px-6 rounded-full bg-[#10B981] hover:bg-[#059669] text-white shadow-md">
-                <MapPin className="me-2 h-5 w-5" /> الأقرب إليّ
-              </Button>
-            </div>
-          </div>
           
           {locationError && (
             <p className="text-rose-500 text-sm mt-3 flex items-center justify-center gap-1">
@@ -348,8 +351,3 @@ export function Locations() {
   );
 }
 
-// Just importing Shield directly since it was missing above
-import { Shield } from 'lucide-react';
-function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
-  return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${className}`}>{children}</span>;
-}

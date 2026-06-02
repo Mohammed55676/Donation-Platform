@@ -82,9 +82,11 @@ export function BeneficiaryVerification() {
           setPhone(user?.phone || '');
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        setProfileLoading(false);
+      })
       .finally(() => setProfileLoading(false));
-  }, [user]);
+  }, [user?.id]);
 
   const handleIdFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -127,7 +129,7 @@ export function BeneficiaryVerification() {
   const validate = () => {
     const e: Record<string, string> = {};
     if (!nationalIdNumber.trim()) e.nationalId = 'رقم الهوية الوطنية مطلوب.';
-    else if (nationalIdNumber.trim().length < 9) e.nationalId = 'رقم الهوية يبدو قصيراً جداً.';
+    else if (nationalIdNumber.trim().length !== 10) e.nationalId = 'رقم الهوية يجب أن يتكون من 10 أرقام.';
     if (!existingProfile && !idFile) e.idFile = 'يجب رفع صورة وثيقة الهوية.';
     if (!phone.trim()) e.phone = 'رقم الهاتف مطلوب.';
     if (!city.trim()) e.city = 'المدينة / المنطقة مطلوبة.';
@@ -170,9 +172,7 @@ export function BeneficiaryVerification() {
 
       proofFiles.forEach(f => formData.append('proof_documents', f));
 
-      await api.post('/beneficiary/profile', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await api.post('/beneficiary/profile', formData);
 
       setSubmitted(true);
       toast.success('تم إرسال طلب التحقق بنجاح!');

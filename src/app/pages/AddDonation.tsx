@@ -89,14 +89,15 @@ export function AddDonation() {
   };
 
   const handleSubmit = async () => {
+    if (!user) {
+      toast.error('يجب تسجيل الدخول لإضافة تبرع');
+      navigate('/login');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      if (!user) {
-        toast.error('يجب تسجيل الدخول لإضافة تبرع');
-        navigate('/login');
-        return;
-      }
 
       await new Promise(resolve => setTimeout(resolve, 1500));
 

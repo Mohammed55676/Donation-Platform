@@ -23,6 +23,7 @@ import { useDonations } from '../context/DonationContext';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { BeneficiaryVerificationModal } from '../components/BeneficiaryVerificationModal';
+import { BeneficiaryProfileModal } from '../components/community/BeneficiaryProfileModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { Textarea } from '../components/ui/textarea';
 import api from '../utils/api';
@@ -44,6 +45,7 @@ export function DonationDetails() {
 
   // Verification modal state
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [beneficiaryProfile, setBeneficiaryProfile] = useState<BeneficiaryProfile | null | undefined>(undefined);
   const [profileLoading, setProfileLoading] = useState(false);
 
@@ -68,7 +70,7 @@ export function DonationDetails() {
     } finally {
       setProfileLoading(false);
     }
-  }, [user]);
+  }, [user?.id, user?.user_type]);
 
   useEffect(() => {
     fetchProfile();
@@ -391,14 +393,17 @@ export function DonationDetails() {
                 <CardTitle>معلومات المتبرع</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
+                <div 
+                  className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-xl cursor-pointer transition-colors"
+                  onClick={() => setProfileModalOpen(true)}
+                >
                   <img
                     src={donation.donor.avatar}
                     alt={donation.donor.name}
                     className="w-16 h-16 rounded-full object-cover"
                   />
                   <div>
-                    <p className="font-semibold text-lg">{donation.donor.name}</p>
+                    <p className="font-semibold text-lg hover:underline">{donation.donor.name}</p>
                     <p className="text-sm text-muted-foreground">متبرع نشط</p>
                   </div>
                 </div>
@@ -516,6 +521,22 @@ export function DonationDetails() {
           fetchProfile(); // Refresh profile after successful submission
         }}
       />
+
+      {/* Donor Profile Modal */}
+      {donation && (
+        <BeneficiaryProfileModal
+          open={profileModalOpen}
+          onClose={() => setProfileModalOpen(false)}
+          user={{
+            id: (donation.donor as any).id || (donation.donor as any)._id || '1',
+            name: donation.donor.name,
+            avatar: donation.donor.avatar,
+            role: 'user'
+          }}
+          initialShowMsgInput={false}
+          contextPostId={donation.id}
+        />
+      )}
 
       {/* Message Modal */}
       <Dialog open={messageModalOpen} onOpenChange={setMessageModalOpen}>

@@ -145,7 +145,7 @@ function FilterChip({ label, isActive, onClick, fullWidth = false }: { label: st
   return (
     <button
       onClick={onClick}
-      className={`text-xs font-medium py-2 px-3 rounded-lg border transition-all duration-200 text-center ${fullWidth ? 'w-full' : 'w-full'} ${
+      className={`text-xs font-medium py-2 px-3 rounded-lg border transition-all duration-200 text-center ${fullWidth ? 'w-full' : ''} ${
         isActive
           ? 'bg-primary/10 border-primary text-primary'
           : 'bg-slate-50 dark:bg-slate-800/50 border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-700'

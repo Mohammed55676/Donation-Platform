@@ -40,12 +40,12 @@ export function MessageBadge() {
     // Poll every 30 seconds
     const interval = setInterval(fetchCounts, 30000);
     return () => clearInterval(interval);
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user?.id]);
 
   if (!isAuthenticated) return null;
 
   return (
-    <Link to="/messages" className="relative inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer me-">
+    <Link to="/messages" className="relative inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer">
       <MessageSquare className="h-5 w-5" />
       {unreadCount > 0 && (
         <motion.span

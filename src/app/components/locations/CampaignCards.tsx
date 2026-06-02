@@ -4,6 +4,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { AlertCircle, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 
 interface CampaignCardsProps {
   campaigns: DonationCampaign[];
@@ -35,6 +36,7 @@ export function CampaignCards({ campaigns }: CampaignCardsProps) {
 
 function CampaignCard({ campaign }: { campaign: DonationCampaign }) {
   const [imgError, setImgError] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <Card className="overflow-hidden border-none shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-[#1A2332]/60 flex flex-col group">
@@ -78,7 +80,7 @@ function CampaignCard({ campaign }: { campaign: DonationCampaign }) {
         
         <div className="flex items-center gap-2 mt-auto">
           <Button 
-            onClick={() => window.location.href = '/add-donation?campaignId=' + campaign.id}
+            onClick={() => navigate(`/add-donation?campaignId=${campaign.id}`)}
             className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white text-xs h-9 shadow-sm rounded-lg"
           >
             {campaign.actionLabel}
@@ -86,7 +88,7 @@ function CampaignCard({ campaign }: { campaign: DonationCampaign }) {
           {campaign.secondaryActionLabel && (
             <Button 
               variant="outline" 
-              onClick={() => window.location.href = '/add-donation?campaignId=' + campaign.id}
+              onClick={() => navigate(`/add-donation?campaignId=${campaign.id}`)}
               className="flex-1 text-xs h-9 border-border/50 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
             >
               {campaign.secondaryActionLabel}

@@ -423,7 +423,7 @@ export function AdminDashboard() {
                     <div key={u.id} className={`flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border transition-colors ${u.status === 'banned' ? 'bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-900' : 'bg-background hover:bg-muted/40'}`}>
                       <Avatar className="h-10 w-10 flex-shrink-0">
                         <AvatarImage src={u.avatar} />
-                        <AvatarFallback className="text-sm bg-primary text-white">{u.name.slice(0, 2)}</AvatarFallback>
+                        <AvatarFallback className="text-sm bg-primary text-white">{(u.name || '').slice(0, 2)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
@@ -517,7 +517,7 @@ export function AdminDashboard() {
                 )}
                 <div className="space-y-4">
                   {campaigns.map((c) => {
-                    const pct = Math.min(100, Math.round((c.current / c.target) * 100));
+                    const pct = c.target > 0 ? Math.min(100, Math.round((c.current / c.target) * 100)) : 0;
                     return (
                       <div key={c.id} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border bg-background hover:bg-muted/40 transition-colors">
                         {c.image && <img src={c.image} alt={c.title} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />}
@@ -571,7 +571,7 @@ export function AdminDashboard() {
                 )}
                 <div className="space-y-4">
                   {opportunities.map((opp) => {
-                    const pct = Math.min(100, Math.round((opp.volunteers / opp.maxVolunteers) * 100));
+                    const pct = opp.maxVolunteers > 0 ? Math.min(100, Math.round((opp.volunteers / opp.maxVolunteers) * 100)) : 0;
                     const spotsLeft = opp.maxVolunteers - opp.volunteers;
                     return (
                       <div key={opp.id} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border bg-background hover:bg-muted/40 transition-colors">
