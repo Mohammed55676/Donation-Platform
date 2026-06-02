@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useSearchParams, useNavigate } from 'react-router';
 import { isValidEmail, isLettersOnly, sanitizePhone } from '../utils/validators';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
@@ -71,6 +71,7 @@ function StatCard({ label, value, icon: Icon, color, bgColor, trend }: any) {
 export function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
+  const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const { t } = useLanguage();
   const { addNotification } = useNotifications();
@@ -330,9 +331,9 @@ export function Dashboard() {
                               <span className="text-xs text-muted-foreground mt-1">📅 {new Date(donation.createdAt).toLocaleDateString('ar-SA')}</span>
                             </div>
                             <div className="flex gap-2 pt-1">
-                              <Link to={`/donations/${donation.id}`}><Button variant="outline" size="sm"><Eye className="ms- h-4 w-4" />عرض</Button></Link>
-                              <Button variant="outline" size="sm" onClick={() => { setDonationToEdit(donation); setIsEditDonationOpen(true); }}><Edit className="ms- h-4 w-4" />تعديل</Button>
-                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setItemToDelete(donation.id); setIsDeleteDialogOpen(true); }}><Trash2 className="ms- h-4 w-4" />حذف</Button>
+                              <Link to={`/donations/${donation.id}`}><Button variant="outline" size="sm"><Eye className="me-2 h-4 w-4" />عرض</Button></Link>
+                              <Button variant="outline" size="sm" onClick={() => { setDonationToEdit(donation); setIsEditDonationOpen(true); }}><Edit className="me-2 h-4 w-4" />تعديل</Button>
+                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setItemToDelete(donation.id); setIsDeleteDialogOpen(true); }}><Trash2 className="me-2 h-4 w-4" />حذف</Button>
                             </div>
                           </div>
                         </div>
@@ -388,7 +389,7 @@ export function Dashboard() {
                                   </p>
                                 )}
                                 <div className="flex items-center gap-2 pt-1">
-                                  {don?.id && <Link to={`/donations/${don.id}`}><Button variant="outline" size="sm"><Eye className="ms- h-4 w-4" />عرض</Button></Link>}
+                                  {don?.id && <Link to={`/donations/${don.id}`}><Button variant="outline" size="sm"><Eye className="me-2 h-4 w-4" />عرض</Button></Link>}
                                   {request.status === 'received' && (
                                      <Button variant="outline" size="sm" onClick={() => {
                                        const donId = don?.id || don?._id;
@@ -397,7 +398,7 @@ export function Dashboard() {
                                          setRatingTarget({ donationId: donId, rateeId: donorId, rateeName: 'المتبرع' });
                                          setShowRating(true);
                                        }
-                                     }}><Star className="ms- h-4 w-4" />تقييم</Button>
+                                     }}><Star className="me-2 h-4 w-4" />تقييم</Button>
                                    )}
                                 </div>
                               </div>
@@ -432,12 +433,12 @@ export function Dashboard() {
                                 <Badge variant="outline">📅 {new Date(request.requestDate).toLocaleDateString('ar-SA')}</Badge>
                               </div>
                               <div className="flex items-center gap-2 pt-1">
-                                <Link to={`/donations/${request.donation.id}`}><Button variant="outline" size="sm"><Eye className="ms- h-4 w-4" />عرض</Button></Link>
+                                <Link to={`/donations/${request.donation.id}`}><Button variant="outline" size="sm"><Eye className="me-2 h-4 w-4" />عرض</Button></Link>
                                 {request.status === 'تم التسليم' && (
                                   <Button variant="outline" size="sm" onClick={() => {
                                     setRatingTarget({ donationId: request.donation.id, rateeId: '', rateeName: 'المستفيد' });
                                     setShowRating(true);
-                                  }}><Star className="ms- h-4 w-4" />تقييم</Button>
+                                  }}><Star className="me-2 h-4 w-4" />تقييم</Button>
                                 )}
                               </div>
                             </div>
@@ -573,13 +574,13 @@ export function Dashboard() {
                       {user?.location && <div className="flex items-center justify-end gap-2 text-sm">{user.location}<span className="text-muted-foreground">📍</span></div>}
                       <div className="flex items-center justify-end gap-2 text-sm">انضم في {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('ar-SA') : '-'}<span className="text-muted-foreground">📅</span></div>
                       {/* Rating & completed donations */}
-                      {(user?.average_rating > 0 || user?.completed_donations_count > 0) && (
+                      {((user?.average_rating ?? 0) > 0 || (user?.completed_donations_count ?? 0) > 0) && (
                         <div className="flex items-center justify-end gap-4 text-sm mt-1">
-                          {user.average_rating > 0 && (
-                            <span className="flex items-center gap-1">⭐ {user.average_rating.toFixed(1)} ({user.rating_count} تقييم)</span>
+                          {(user?.average_rating ?? 0) > 0 && (
+                            <span className="flex items-center gap-1">⭐ {user!.average_rating!.toFixed(1)} ({user?.rating_count} تقييم)</span>
                           )}
-                          {user.completed_donations_count > 0 && (
-                            <span className="flex items-center gap-1">✅ {user.completed_donations_count} تبرع مكتمل</span>
+                          {(user?.completed_donations_count ?? 0) > 0 && (
+                            <span className="flex items-center gap-1">✅ {user?.completed_donations_count} تبرع مكتمل</span>
                           )}
                         </div>
                       )}
@@ -591,11 +592,11 @@ export function Dashboard() {
                           ) : user.verification_status === 'pending_review' ? (
                             <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30">⏳ قيد المراجعة</Badge>
                           ) : user.verification_status === 'rejected' ? (
-                            <Badge className="bg-red-100 text-red-600 dark:bg-red-900/30">❌ مرفوض — <button className="underline" onClick={() => window.location.href = '/verify-beneficiary'}>إعادة التقديم</button></Badge>
+                            <Badge className="bg-red-100 text-red-600 dark:bg-red-900/30">❌ مرفوض — <button className="underline" onClick={() => navigate('/verify-beneficiary')}>إعادة التقديم</button></Badge>
                           ) : user.verification_status === 'blocked' ? (
                             <Badge className="bg-red-200 text-red-800 dark:bg-red-900/50">🚫 موقوف</Badge>
                           ) : (
-                            <Badge variant="outline" className="cursor-pointer" onClick={() => window.location.href = '/verify-beneficiary'}>غير موثق — أكمل التحقق</Badge>
+                            <Badge variant="outline" className="cursor-pointer" onClick={() => navigate('/verify-beneficiary')}>غير موثق — أكمل التحقق</Badge>
                           )}
                         </div>
                       )}
