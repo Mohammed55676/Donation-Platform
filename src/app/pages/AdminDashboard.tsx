@@ -33,6 +33,15 @@ import { useVolunteerOpportunities } from '../hooks/useVolunteerOpportunities';
 import type { Campaign } from '../hooks/useCampaigns';
 import type { VolunteerOpportunity } from '../hooks/useVolunteerOpportunities';
 
+// ── Status maps ────────────────────────────────────────────────
+const DONATION_STATUS_BADGE: Record<string, string> = {
+  'متاح':          'bg-blue-100 text-blue-700 dark:bg-blue-900/30 text-xs',
+  'محجوز':         'bg-orange-100 text-orange-700 dark:bg-orange-900/30 text-xs',
+  'تم التسليم':    'bg-green-100 text-green-700 dark:bg-green-900/30 text-xs',
+  'قيد المراجعة': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 text-xs',
+  'مرفوض':         'bg-red-100 text-red-700 dark:bg-red-900/30 text-xs',
+};
+
 // ── Mock Data ──────────────────────────────────────────────────
 const monthlyData = [
   { month: 'أكتوبر', users: 42, donations: 78, deliveries: 65 },
@@ -614,18 +623,14 @@ export function AdminDashboard() {
               <CardHeader><CardTitle>مراقبة الطلبات</CardTitle><CardDescription>جميع طلبات المستخدمين</CardDescription></CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {donations.slice(0, 5).map((d, i) => (
+                  {donations.slice(0, 5).map((d) => (
                     <div key={d.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border bg-background hover:bg-muted/40 transition-colors">
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           <span className="font-medium text-sm">{d.title}</span>
                           <Badge variant="outline" className="text-xs">{d.category}</Badge>
-                          <Badge className={
-                            i % 3 === 0 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 text-xs' :
-                            i % 3 === 1 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 text-xs' :
-                            'bg-green-100 text-green-700 dark:bg-green-900/30 text-xs'
-                          }>
-                            {i % 3 === 0 ? 'قيد المراجعة' : i % 3 === 1 ? 'تم القبول' : 'تم التسليم'}
+                          <Badge className={DONATION_STATUS_BADGE[d.status] ?? 'bg-muted text-muted-foreground text-xs'}>
+                            {d.status}
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground">من: {d.donor.name} • {d.location}</p>
@@ -964,9 +969,14 @@ export function AdminDashboard() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAssignCase(null)}>إلغاء</Button>
-            <Button className="bg-primary text-white" disabled={!selectedVolunteer} onClick={() => {
+            <Button className="bg-primary text-white" disabled={!selectedVolunteer} onClick={async () => {
               const vol = users.find((u) => u.id === selectedVolunteer);
-              toast.success(`تم تعيين ${vol?.name} للحالة: ${assignCase?.title}`);
+              try {
+                await api.post(`/admin/cases/${assignCase?.id}/assign`, { volunteerId: selectedVolunteer });
+                toast.success(`تم تعيين ${vol?.name} للحالة: ${assignCase?.title}`);
+              } catch {
+                toast.error('حدث خطأ أثناء تعيين المتطوع');
+              }
               setAssignCase(null);
             }}>
               تأكيد التعيين
@@ -1000,7 +1010,7 @@ export function AdminDashboard() {
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16">
                   <AvatarImage src={selectedUser.avatar} />
-                  <AvatarFallback>{selectedUser.name.slice(0, 2)}</AvatarFallback>
+                  <AvatarFallback>{(selectedUser.name || '').slice(0, 2)}</AvatarFallback>
                 </Avatar>
                 <div>
                   <h3 className="text-xl font-bold">{selectedUser.name}</h3>

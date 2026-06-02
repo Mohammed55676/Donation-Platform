@@ -121,13 +121,18 @@ export function Volunteer() {
     const errs = validateContact();
     if (Object.keys(errs).length > 0) { setContactErrors(errs); return; }
     setIsContactSending(true);
-    await new Promise(r => setTimeout(r, 1200));
-    addNotification({ type: 'success', title: 'تم إرسال رسالتك', message: 'شكراً لتواصلك معنا! سنرد عليك قريباً.' });
-    toast.success('تم إرسال رسالتك بنجاح ❤️');
-    setContactForm({ name: '', email: '', message: '' });
-    setContactErrors({});
-    setIsContactSending(false);
-    setIsContactOpen(false);
+    try {
+      await api.post('/contact', contactForm);
+      addNotification({ type: 'success', title: 'تم إرسال رسالتك', message: 'شكراً لتواصلك معنا! سنرد عليك قريباً.' });
+      toast.success('تم إرسال رسالتك بنجاح ❤️');
+      setContactForm({ name: '', email: '', message: '' });
+      setContactErrors({});
+      setIsContactOpen(false);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'حدث خطأ أثناء إرسال الرسالة، يرجى المحاولة مرة أخرى.');
+    } finally {
+      setIsContactSending(false);
+    }
   };
 
   const stats = [
