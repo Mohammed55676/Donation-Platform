@@ -1,19 +1,90 @@
-import { useNotifications } from '../context/NotificationContext';
-import { Bell, Check, Package, Heart, MessageSquare, Star, X } from 'lucide-react';
-import { Button } from './ui/button';
+import { useState } from 'react';
+import { Bell, Check, Package, Heart, MessageSquare, Star, X, ArrowLeft } from 'lucide-react';
+import { Button } from '../ui/button';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from './ui/popover';
-import { Badge } from './ui/badge';
-import { ScrollArea } from './ui/scroll-area';
-import { Separator } from './ui/separator';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
+import { Badge } from '../ui/badge';
+import { ScrollArea } from '../ui/scroll-area';
+import { Separator } from '../ui/separator';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router';
+
+interface Notification {
+  id: string;
+  type: 'request' | 'accept' | 'message' | 'rating' | 'delivered';
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+  donationId?: string;
+}
 
 export function NotificationDropdown() {
-  const { notifications, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
+  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState<Notification[]>([
+    {
+      id: '1',
+      type: 'request',
+      title: 'طلب جديد',
+      message: 'محمد يوسف طلب التبرع: ملابس شتوية للأطفال',
+      time: 'منذ 5 دقائق',
+      read: false,
+      donationId: '1',
+    },
+    {
+      id: '2',
+      type: 'accept',
+      title: 'تم قبول طلبك',
+      message: 'تم قبول طلبك للحصول على: كتب دراسية ومراجع',
+      time: 'منذ ساعة',
+      read: false,
+      donationId: '2',
+    },
+    {
+      id: '3',
+      type: 'message',
+      title: 'رسالة جديدة',
+      message: 'أحمد محمد أرسل لك رسالة حول التبرع',
+      time: 'منذ ساعتين',
+      read: false,
+    },
+    {
+      id: '4',
+      type: 'delivered',
+      title: 'تم التسليم',
+      message: 'تم تسليم التبرع: أثاث منزلي',
+      time: 'منذ يوم',
+      read: true,
+      donationId: '3',
+    },
+    {
+      id: '5',
+      type: 'rating',
+      title: 'تقييم جديد',
+      message: 'فاطمة علي قيمتك بـ 5 نجوم',
+      time: 'منذ يومين',
+      read: true,
+    },
+  ]);
+
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const markAsRead = (id: string) => {
+    setNotifications(notifications.map(n => 
+      n.id === id ? { ...n, read: true } : n
+    ));
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  };
+
+  const deleteNotification = (id: string) => {
+    setNotifications(notifications.filter(n => n.id !== id));
+  };
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -50,9 +121,9 @@ export function NotificationDropdown() {
   };
 
   return (
-    <Popover>
-      <PopoverTrigger>
-        <div className="relative inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <motion.span
@@ -63,11 +134,12 @@ export function NotificationDropdown() {
               {unreadCount}
             </motion.span>
           )}
-        </div>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0" sideOffset={8}>
-        <div className="flex items-center justify-between p-4">
-          <h3 className="font-semibold">الإشعارات</h3>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80 p-0">
+        <div dir="rtl">
+          <div className="flex items-center justify-between p-4">
+            <h3 className="font-semibold">الإشعارات</h3>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
@@ -91,10 +163,10 @@ export function NotificationDropdown() {
               {notifications.map((notification) => (
                 <motion.div
                   key={notification.id}
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className={`p-4 hover:bg-accent/50 transition-colors cursor-pointer border-b border-border/50 group ${
+                  exit={{ opacity: 0, x: -20 }}
+                  className={`group p-4 hover:bg-accent/50 transition-colors cursor-pointer border-b border-border/50 ${
                     !notification.read ? 'bg-accent/30' : ''
                   }`}
                   onClick={() => markAsRead(notification.id)}
@@ -103,13 +175,13 @@ export function NotificationDropdown() {
                     <div className={`p-2 rounded-full h-fit ${getIconColor(notification.type)}`}>
                       {getIcon(notification.type)}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 text-right">
                       <div className="flex items-start justify-between gap-2">
                         <p className="font-semibold text-sm">{notification.title}</p>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
                           onClick={(e) => {
                             e.stopPropagation();
                             deleteNotification(notification.id);
@@ -121,7 +193,7 @@ export function NotificationDropdown() {
                       <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
                         {notification.message}
                       </p>
-                      <div className="flex items-center gap-2 mt-2">
+                      <div className="flex items-center justify-between mt-2">
                         <p className="text-xs text-muted-foreground">{notification.time}</p>
                         {!notification.read && (
                           <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-primary text-white">
@@ -136,7 +208,19 @@ export function NotificationDropdown() {
             </AnimatePresence>
           )}
         </ScrollArea>
-      </PopoverContent>
-    </Popover>
+        <Separator />
+        <div className="p-3">
+          <Button
+            variant="ghost"
+            className="w-full justify-center gap-2"
+            onClick={() => navigate('/notifications')}
+          >
+            عرض جميع الإشعارات
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          </div>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

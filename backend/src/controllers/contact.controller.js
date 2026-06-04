@@ -47,7 +47,7 @@ async function sendContactMessage(req, res, next) {
 
     const info = await transporter.sendMail({
       from: `"${user_name}" <${process.env.SMTP_EMAIL || 'noreply@example.com'}>`,
-      to: process.env.SMTP_EMAIL || 'mohaa34356@gmail.com', // Sending to the admin email
+      to: process.env.ADMIN_EMAIL || process.env.SMTP_EMAIL,
       replyTo: user_email,
       subject: `[منصة الخير] رسالة اتصال: ${subject}`,
       html: htmlMessage,

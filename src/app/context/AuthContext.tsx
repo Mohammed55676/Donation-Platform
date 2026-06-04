@@ -19,6 +19,10 @@ export interface AuthUser {
   createdAt: string;
   wishlist?: string[];
   profileComplete?: number;
+  average_rating?: number;
+  rating_count?: number;
+  completed_donations_count?: number;
+  verification_status?: 'not_verified' | 'pending_review' | 'trusted' | 'rejected' | 'blocked';
 }
 
 interface AuthContextValue {

@@ -54,6 +54,9 @@ build.log
 ehthumbs.db
 Thumbs.db
 
+# Team credentials (share privately, NEVER push to GitHub)
+TEAM_ENV.md
+
 # Agent/Temp files
 .openhands/
 .agents/

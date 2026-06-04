@@ -17,7 +17,7 @@ export const createPostApi = async (payload: any) => {
   // Mock API delay
   return new Promise<void>((resolve) => {
     setTimeout(() => {
-      console.log('Post created via API snippet', payload);
+      // TODO: Replace with actual backend API call
       resolve();
     }, 500);
   });

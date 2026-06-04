@@ -8,7 +8,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { NotificationDropdown } from './NotificationDropdown';
+import { NotificationDropdown } from './notifications/NotificationDropdown';
 import { MessageBadge } from './MessageBadge';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';

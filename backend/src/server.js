@@ -105,15 +105,19 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // ── Socket.IO ────────────────────────────────────────────────────────
-const io = new Server(server, {
-  cors: {
-    origin: (origin, callback) => {
+const socketCorsOrigin = process.env.NODE_ENV === 'production'
+  ? process.env.CLIENT_ORIGIN
+  : (origin, callback) => {
       if (!origin || /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
       }
-    },
+    };
+
+const io = new Server(server, {
+  cors: {
+    origin: socketCorsOrigin,
     methods: ['GET', 'POST'],
     credentials: true,
   },

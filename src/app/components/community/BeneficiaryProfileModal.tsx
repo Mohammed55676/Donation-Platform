@@ -118,19 +118,34 @@ export const BeneficiaryProfileModal: React.FC<Props> = ({
             </AvatarFallback>
           </Avatar>
 
-          <div className="text-center space-y-1">
-            <h2 className="text-xl font-bold">{profileUser.name}</h2>
-            <p className="text-sm text-muted-foreground">عضو في مجتمع الخير</p>
-            {/* Safe public indicators — no private data */}
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+          <div className="text-center space-y-1 w-full px-4">
+            <h2 className="text-2xl font-bold">{profileUser.name}</h2>
+            <p className="text-sm text-muted-foreground">{profileUser.role === 'admin' ? 'مدير النظام' : profileUser.role === 'volunteer' ? 'متطوع نشط' : 'عضو في مجتمع الخير'}</p>
+            
+            {/* Detailed Info Grid */}
+            <div className="grid grid-cols-2 gap-3 mt-4 text-sm bg-muted/30 p-4 rounded-xl text-right">
+              {(isSelf || currentUser?.role === 'admin') && (
+                <div>
+                  <span className="text-muted-foreground block text-xs">البريد الإلكتروني</span>
+                  <span className="font-medium truncate block" dir="ltr">{profileUser.email || 'غير متوفر'}</span>
+                </div>
+              )}
+              <div className={!(isSelf || currentUser?.role === 'admin') ? 'col-span-2' : ''}>
+                <span className="text-muted-foreground block text-xs">تاريخ الانضمام</span>
+                <span className="font-medium block">{(profileUser as any).createdAt ? formatDistanceToNow(new Date((profileUser as any).createdAt), { addSuffix: true, locale: arSA }) : 'منذ فترة'}</span>
+              </div>
+            </div>
+
+            {/* Safe public indicators */}
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-4">
               {(profileUser as any).verification_status === 'trusted' && (
-                <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 text-xs">✅ موثق</Badge>
+                <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 text-xs">✅ موثق وموثوق</Badge>
               )}
               {(profileUser as any).average_rating > 0 && (
-                <Badge variant="outline" className="text-xs">⭐ {(profileUser as any).average_rating?.toFixed(1)} ({(profileUser as any).rating_count} تقييم)</Badge>
+                <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-900/10 border-amber-200">⭐ {(profileUser as any).average_rating?.toFixed(1)} ({(profileUser as any).rating_count} تقييم)</Badge>
               )}
               {(profileUser as any).completed_donations_count > 0 && (
-                <Badge variant="outline" className="text-xs">🤝 {(profileUser as any).completed_donations_count} تبرع مكتمل</Badge>
+                <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/10 border-blue-200">🤝 {(profileUser as any).completed_donations_count} تبرع مكتمل</Badge>
               )}
             </div>
           </div>

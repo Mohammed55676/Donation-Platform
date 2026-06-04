@@ -33,6 +33,10 @@ import { ConversationChat } from './pages/messages/ConversationChat';
 // Beneficiary Verification
 import { BeneficiaryVerification } from './pages/BeneficiaryVerification';
 
+// Notifications
+import { Notifications } from './pages/Notifications';
+import { DemoNotifications } from './pages/DemoNotifications';
+
 export const router = createBrowserRouter([
   // Auth pages (no navbar/footer)
   {
@@ -80,6 +84,8 @@ export const router = createBrowserRouter([
       { path: 'community/:postId', element: <ProtectedRoute><Details /></ProtectedRoute> },
       { path: 'messages', element: <ProtectedRoute><Messages /></ProtectedRoute> },
       { path: 'messages/:conversationId', element: <ProtectedRoute><ConversationChat /></ProtectedRoute> },
+      { path: 'notifications', element: <ProtectedRoute><Notifications /></ProtectedRoute> },
+      { path: 'demo/notifications', element: <ProtectedRoute><DemoNotifications /></ProtectedRoute> },
       { path: 'verify-beneficiary', element: <ProtectedRoute><BeneficiaryVerification /></ProtectedRoute> },
       { path: '*', Component: NotFound },
     ],
