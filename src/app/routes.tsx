@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router';
+import { createBrowserRouter } from 'react-router';
 import { Layout } from './components/Layout';
 import { Home } from './pages/Home';
 import { Donations } from './pages/Donations';
@@ -30,16 +30,13 @@ import { Details } from './pages/community/Details';
 import { Messages } from './pages/messages/Messages';
 import { ConversationChat } from './pages/messages/ConversationChat';
 
-// Beneficiary Verification (legacy — now redirects to join-charity)
 import { BeneficiaryVerification } from './pages/BeneficiaryVerification';
 
 // Charity system
 import { JoinCharity } from './pages/JoinCharity';
 import { CharityDashboard } from './pages/CharityDashboard';
 
-// Notifications
 import { Notifications } from './pages/Notifications';
-import { DemoNotifications } from './pages/DemoNotifications';
 
 // Demo Payment
 import { PaymentSuccess } from './pages/PaymentSuccess';
@@ -100,7 +97,6 @@ export const router = createBrowserRouter([
       { path: 'messages', element: <ProtectedRoute><Messages /></ProtectedRoute> },
       { path: 'messages/:conversationId', element: <ProtectedRoute><ConversationChat /></ProtectedRoute> },
       { path: 'notifications', element: <ProtectedRoute><Notifications /></ProtectedRoute> },
-      { path: 'demo/notifications', element: <ProtectedRoute><DemoNotifications /></ProtectedRoute> },
       { path: 'payment-success', Component: PaymentSuccess },
       { path: 'verify-beneficiary', element: <ProtectedRoute allowedRole="user" allowedUserType="beneficiary"><BeneficiaryVerification /></ProtectedRoute> },
       { path: 'join-charity', element: <ProtectedRoute allowedRole="user" allowedUserType="beneficiary"><JoinCharity /></ProtectedRoute> },

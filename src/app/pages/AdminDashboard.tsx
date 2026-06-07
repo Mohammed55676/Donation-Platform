@@ -27,7 +27,6 @@ import { Textarea } from '../components/ui/textarea';
 import { Progress } from '../components/ui/progress';
 import { toast } from 'sonner';
 import { useDonations } from '../context/DonationContext';
-import { useAuth } from '../context/AuthContext';
 import { useCampaigns } from '../hooks/useCampaigns';
 import { useVolunteerOpportunities } from '../hooks/useVolunteerOpportunities';
 import type { Campaign } from '../hooks/useCampaigns';
@@ -96,7 +95,6 @@ export function AdminDashboard() {
   const activeTab = searchParams.get('tab') || 'analytics';
 
   const { donations, updateDonationStatus, fetchDonations } = useDonations();
-  const { user } = useAuth();
 
   // ── Users state ──────────────────────────────────────────────
   const [users, setUsers] = useState<any[]>([]);

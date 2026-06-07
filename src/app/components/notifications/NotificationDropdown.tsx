@@ -1,4 +1,4 @@
-import { Bell, Check, Package, Heart, MessageSquare, Star, X, ArrowLeft, Bell as ReminderIcon, Settings } from 'lucide-react';
+import { Bell, Check, Package, Heart, MessageSquare, Star, X, ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
