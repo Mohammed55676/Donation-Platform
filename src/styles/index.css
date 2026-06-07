@@ -1,7 +1,6 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
-@import 'leaflet/dist/leaflet.css';
 
 @layer base {
   input:-webkit-autofill,

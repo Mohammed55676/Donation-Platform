@@ -142,8 +142,11 @@ async function submitVerification(req, res, next) {
       Object.assign(existing, updateData);
       await existing.save();
 
-      // Sync verification_status to User model
-      await User.findByIdAndUpdate(req.user._id, { verification_status: 'pending_review' });
+      // Sync status to User model
+      await User.findByIdAndUpdate(req.user._id, {
+        verification_status: 'pending_review',
+        beneficiaryStatus: 'pending_admin',
+      });
 
       return sendSuccess(res, existing, 'تم تحديث بيانات التحقق. سيتم مراجعة طلبك قريباً.');
     }
@@ -153,8 +156,11 @@ async function submitVerification(req, res, next) {
       ...updateData,
     });
 
-    // Sync verification_status to User model
-    await User.findByIdAndUpdate(req.user._id, { verification_status: 'pending_review' });
+    // Sync status to User model
+    await User.findByIdAndUpdate(req.user._id, {
+      verification_status: 'pending_review',
+      beneficiaryStatus: 'pending_admin',
+    });
 
     return sendSuccess(res, profile, 'تم إرسال طلب التحقق، انتظر مراجعة الإدارة.', 201);
   } catch (err) {
@@ -212,9 +218,17 @@ async function adminUpdateStatus(req, res, next) {
     await profile.save();
     await profile.populate('user_id', 'name email');
 
-    // Sync verification_status to User model
+    // Map profile status → User.beneficiaryStatus
+    const beneficiaryStatusMap = {
+      trusted:  'verified',
+      rejected: 'rejected',
+      blocked:  'rejected',
+    };
+
     await User.findByIdAndUpdate(profile.user_id._id || profile.user_id, {
       verification_status,
+      beneficiaryStatus: beneficiaryStatusMap[verification_status] || 'pending_admin',
+      verifiedBy: verification_status === 'trusted' ? 'admin' : null,
     });
 
     return sendSuccess(res, profile, 'تم تحديث حالة التحقق.');

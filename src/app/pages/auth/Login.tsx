@@ -8,6 +8,7 @@ import { Label } from '../../components/ui/label';
 import { Eye, EyeOff, Mail, Lock, Heart, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { isValidEmail } from '../../utils/validators';
+import { UserTypeModal } from '../../components/auth/UserTypeModal';
 
 type Errors = { email?: string; password?: string };
 
@@ -18,6 +19,8 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
+  const [showTypeModal, setShowTypeModal] = useState(false);
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
   const { login, loginWithGoogle } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -55,7 +58,7 @@ export function Login() {
     if (result.success) {
       toast.success(t('auth.welcome'));
       const user = result.user;
-      const redirect = from || (user && roleRedirectMap[user.role] ? roleRedirectMap[user.role] : '/');
+      const redirect = from || (user?.role === 'admin' ? '/dashboard/admin' : user?.user_type === 'charity' ? '/dashboard/charity' : '/');
       navigate(redirect, { replace: true });
     } else {
       toast.error(result.error || t('auth.error_generic'));
@@ -67,17 +70,32 @@ export function Login() {
     const result = await loginWithGoogle();
     setGoogleLoading(false);
     if (result.success) {
-      toast.success(t('auth.welcome'));
       const user = result.user;
-      const redirect = from || (user && roleRedirectMap[user.role] ? roleRedirectMap[user.role] : '/dashboard');
-      navigate(redirect, { replace: true });
+      const redirect = from || (user?.role === 'admin' ? '/dashboard/admin' : user?.user_type === 'charity' ? '/dashboard/charity' : '/dashboard');
+
+      if (result.isNewUser) {
+        // New Google user — ask them to pick donor/beneficiary before redirecting
+        setPendingRedirect(redirect);
+        setShowTypeModal(true);
+      } else {
+        toast.success(t('auth.welcome'));
+        navigate(redirect, { replace: true });
+      }
     } else {
       toast.error(result.error || t('auth.error_generic'));
     }
   };
 
+  const handleTypeModalClose = (selectedType: 'donor' | 'beneficiary') => {
+    setShowTypeModal(false);
+    toast.success(t('auth.welcome'));
+    navigate(pendingRedirect || '/dashboard', { replace: true });
+  };
+
   return (
     <div>
+      {/* User type selection modal for new Google signups */}
+      <UserTypeModal open={showTypeModal} onClose={handleTypeModalClose} />
       {/* Header */}
       <div className="text-center mb-8">
         <div className="hidden lg:flex justify-center mb-4">

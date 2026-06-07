@@ -36,7 +36,7 @@ export function DonationProvider({ children }: { children: ReactNode }) {
 
   const fetchDonations = async () => {
     try {
-      const res = await api.get('/donations');
+      const res = await api.get('/donations?limit=500&sort=newest');
       setDonations(res.data.data || []);
     } catch (error) {
       console.error('Failed to fetch donations', error);

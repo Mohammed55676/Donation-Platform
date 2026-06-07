@@ -95,7 +95,7 @@ export function AdminDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'analytics';
 
-  const { donations, updateDonationStatus } = useDonations();
+  const { donations, updateDonationStatus, fetchDonations } = useDonations();
   const { user } = useAuth();
 
   // ── Users state ──────────────────────────────────────────────
@@ -142,6 +142,11 @@ export function AdminDashboard() {
   const [emergencyDialog, setEmergencyDialog] = useState<{ open: boolean; requestId: string } | null>(null);
   const [emergencyReason, setEmergencyReason] = useState('');
 
+  // ── Charities (admin) state ─────────────────────────────────
+  const [adminCharities, setAdminCharities] = useState<any[]>([]);
+  const [charitiesLoading, setCharitiesLoading] = useState(false);
+  const [charityFilter, setCharityFilter] = useState('pending');
+
   const fetchVerifications = async () => {
     setVerificationsLoading(true);
     try {
@@ -160,7 +165,18 @@ export function AdminDashboard() {
     finally { setAdminRequestsLoading(false); }
   };
 
-  useEffect(() => { fetchVerifications(); fetchAdminRequests(); }, []);
+  const fetchCharities = async () => {
+    setCharitiesLoading(true);
+    try {
+      const res = await api.get(`/charity/admin/list?status=${charityFilter}`);
+      setAdminCharities(Array.isArray(res.data.data) ? res.data.data : []);
+    } catch { setAdminCharities([]); }
+    finally { setCharitiesLoading(false); }
+  };
+
+  useEffect(() => { fetchVerifications(); fetchAdminRequests(); fetchCharities(); }, []);
+  useEffect(() => { fetchCharities(); }, [charityFilter]);
+  useEffect(() => { if (activeTab === 'donations') fetchDonations(); }, [activeTab]);
 
   const displayedUsers = useMemo(
     () => (users || []).filter(
@@ -353,6 +369,7 @@ export function AdminDashboard() {
             <TabsTrigger value="donations" className="rounded-lg text-sm font-semibold">التبرعات</TabsTrigger>
             <TabsTrigger value="campaigns" className="rounded-lg text-sm font-semibold">الحملات</TabsTrigger>
             <TabsTrigger value="volunteer" className="rounded-lg text-sm font-semibold">فرص التطوع</TabsTrigger>
+            <TabsTrigger value="charities" className="rounded-lg text-sm font-semibold">الجمعيات الخيرية</TabsTrigger>
             <TabsTrigger value="requests" className="rounded-lg text-sm font-semibold">الطلبات</TabsTrigger>
             <TabsTrigger value="verifications" className="rounded-lg text-sm font-semibold">التحقق من الهوية</TabsTrigger>
             <TabsTrigger value="donation-requests" className="rounded-lg text-sm font-semibold">طلبات التبرع</TabsTrigger>
@@ -474,7 +491,15 @@ export function AdminDashboard() {
           {/* DONATIONS */}
           <TabsContent value="donations" className="mt-6">
             <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
-              <CardHeader><CardTitle>إدارة التبرعات</CardTitle><CardDescription>مراجعة وقبول أو رفض التبرعات</CardDescription></CardHeader>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>إدارة التبرعات</CardTitle>
+                    <CardDescription>مراجعة وقبول أو رفض التبرعات</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={fetchDonations}>تحديث</Button>
+                </div>
+              </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {adminDonationsList.map((d) => (
@@ -616,6 +641,104 @@ export function AdminDashboard() {
                     );
                   })}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* CHARITIES */}
+          <TabsContent value="charities" className="mt-6">
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>إدارة الجمعيات الخيرية</CardTitle>
+                    <CardDescription>مراجعة واعتماد أو رفض الجمعيات</CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    {['pending', 'verified', 'rejected'].map(s => (
+                      <Button
+                        key={s}
+                        variant={charityFilter === s ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCharityFilter(s)}
+                        className="text-xs"
+                      >
+                        {s === 'pending' ? 'معلقة' : s === 'verified' ? 'موثقة' : 'مرفوضة'}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {charitiesLoading ? (
+                  <div className="text-center py-10 text-muted-foreground">جاري التحميل...</div>
+                ) : adminCharities.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground">لا توجد جمعيات في هذه الفئة</div>
+                ) : (
+                  <div className="space-y-3">
+                    {adminCharities.map((ch: any) => (
+                      <div key={ch.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border bg-background hover:bg-muted/40 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <span className="font-medium text-sm">{ch.charityName || ch.name}</span>
+                            {ch.charityBadge && (
+                              <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 text-xs">
+                                <ShieldCheck className="h-3 w-3 me-1" /> موثقة
+                              </Badge>
+                            )}
+                            <Badge className={
+                              ch.charityStatus === 'pending' ? 'bg-amber-100 text-amber-700 text-xs' :
+                              ch.charityStatus === 'verified' ? 'bg-emerald-100 text-emerald-700 text-xs' :
+                              'bg-red-100 text-red-600 text-xs'
+                            }>
+                              {ch.charityStatus === 'pending' ? 'معلقة' : ch.charityStatus === 'verified' ? 'موثقة' : 'مرفوضة'}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground" dir="ltr">{ch.email}</p>
+                          {ch.phone && <p className="text-xs text-muted-foreground" dir="ltr">{ch.phone}</p>}
+                          <p className="text-xs text-muted-foreground">
+                            تاريخ التسجيل: {new Date(ch.createdAt).toLocaleDateString('ar-SA')}
+                          </p>
+                        </div>
+                        {ch.charityStatus === 'pending' && (
+                          <div className="flex gap-2 flex-shrink-0">
+                            <Button
+                              size="sm"
+                              className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                              onClick={async () => {
+                                try {
+                                  await api.put(`/charity/admin/${ch.id}/review`, { action: 'approve' });
+                                  toast.success('تم اعتماد الجمعية');
+                                  fetchCharities();
+                                } catch (err: any) {
+                                  toast.error(err.response?.data?.error || 'حدث خطأ');
+                                }
+                              }}
+                            >
+                              <Check className="h-3.5 w-3.5" /> اعتماد
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-destructive hover:text-destructive gap-1"
+                              onClick={async () => {
+                                try {
+                                  await api.put(`/charity/admin/${ch.id}/review`, { action: 'reject' });
+                                  toast.success('تم رفض الجمعية');
+                                  fetchCharities();
+                                } catch (err: any) {
+                                  toast.error(err.response?.data?.error || 'حدث خطأ');
+                                }
+                              }}
+                            >
+                              <X className="h-3.5 w-3.5" /> رفض
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -844,7 +967,7 @@ export function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>طلبات التبرع</CardTitle>
-                    <CardDescription>مراجعة وإدارة طلبات المستفيدين للتبرعات</CardDescription>
+                    <CardDescription>إشراف عام — الموافقة أو الرفض تتم من المتبرع صاحب التبرع</CardDescription>
                   </div>
                   <Button variant="outline" size="sm" onClick={fetchAdminRequests}>تحديث</Button>
                 </div>
@@ -890,48 +1013,9 @@ export function AdminDashboard() {
                               <p className="text-xs bg-muted p-2 rounded">ملاحظة: {r.admin_notes}</p>
                             )}
 
-                            {r.status === 'pending_review' && (
-                              <div className="flex flex-wrap gap-2">
-                                {/* Accept */}
-                                <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white gap-1" onClick={async () => {
-                                  try {
-                                    await api.put(`/donation-requests/${r.id}/review`, { action: 'accept' });
-                                    toast.success('تم قبول الطلب وحجز التبرع');
-                                    fetchAdminRequests();
-                                  } catch (err: any) {
-                                    if (err.response?.data?.requires_emergency_exception) {
-                                      setEmergencyReason('');
-                                      setEmergencyDialog({ open: true, requestId: r.id });
-                                    } else {
-                                      toast.error(err.response?.data?.error || 'حدث خطأ');
-                                    }
-                                  }
-                                }}>
-                                  <Check className="h-3.5 w-3.5" /> قبول
-                                </Button>
-                                {/* Reject */}
-                                <Button size="sm" variant="outline" className="text-destructive border-destructive/40 gap-1" onClick={async () => {
-                                  try {
-                                    await api.put(`/donation-requests/${r.id}/review`, { action: 'reject', admin_notes: 'رُفض من قِبَل الإدارة' });
-                                    toast.success('تم رفض الطلب');
-                                    fetchAdminRequests();
-                                  } catch (e: any) { toast.error(e.response?.data?.error || 'حدث خطأ'); }
-                                }}>
-                                  <X className="h-3.5 w-3.5" /> رفض
-                                </Button>
-                              </div>
-                            )}
-
-                            {r.status === 'accepted' && (
-                              <Button size="sm" className="bg-primary text-white gap-1" onClick={async () => {
-                                try {
-                                  await api.put(`/donation-requests/${r.id}/received`);
-                                  toast.success('تم تأكيد الاستلام — التبرع أصبح تم التسليم');
-                                  fetchAdminRequests();
-                                } catch (e: any) { toast.error(e.response?.data?.error || 'حدث خطأ'); }
-                              }}>
-                                <CheckCircle className="h-3.5 w-3.5" /> تأكيد الاستلام
-                              </Button>
+                            {/* Read-only oversight: donor handles accept/reject */}
+                            {r.donor_notes && (
+                              <p className="text-xs bg-muted p-2 rounded">ملاحظة المتبرع: {r.donor_notes}</p>
                             )}
                           </CardContent>
                         </Card>

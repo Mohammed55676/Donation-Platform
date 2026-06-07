@@ -6,9 +6,10 @@ import { Loader2 } from 'lucide-react';
 interface ProtectedRouteProps {
   children: ReactNode;
   allowedRole?: UserRole | UserRole[];
+  allowedUserType?: string | string[];
 }
 
-export function ProtectedRoute({ children, allowedRole }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, allowedRole, allowedUserType }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
@@ -24,18 +25,22 @@ export function ProtectedRoute({ children, allowedRole }: ProtectedRouteProps) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  const isAllowed = Array.isArray(allowedRole)
+  const isRoleAllowed = Array.isArray(allowedRole)
     ? allowedRole.includes(user!.role)
     : allowedRole ? user?.role === allowedRole : true;
 
-  if (!isAllowed) {
-    // Redirect to the appropriate dashboard for their actual role
-    const roleRoutes: Record<UserRole, string> = {
-      user: '/dashboard',
-      admin: '/dashboard/admin',
-      volunteer: '/dashboard',
-    };
-    return <Navigate to={roleRoutes[user!.role]} replace />;
+  // Users without a user_type (e.g. volunteers) always pass the user_type check
+  const isUserTypeAllowed = allowedUserType
+    ? !user?.user_type ||
+      (Array.isArray(allowedUserType)
+        ? allowedUserType.includes(user!.user_type!)
+        : user?.user_type === allowedUserType)
+    : true;
+
+  if (!isRoleAllowed || !isUserTypeAllowed) {
+    if (user?.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
+    if (user?.user_type === 'charity') return <Navigate to="/dashboard/charity" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

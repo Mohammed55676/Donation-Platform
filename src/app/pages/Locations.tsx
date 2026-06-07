@@ -1,101 +1,111 @@
 import { useState, useMemo } from 'react';
-import { Search, MapPin, AlertCircle, LayoutList, Map as MapIcon, CheckCircle2, Navigation, Activity, Shield } from 'lucide-react';
+import {
+  Search, MapPin, AlertCircle, X, Gift,
+  Droplet, Utensils, Armchair, Shirt, Pill, HeartHandshake, Users, LayoutGrid,
+  Navigation, Activity, LayoutList, Shield, CheckCircle2,
+} from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
-import { Badge } from '../components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Skeleton } from '../components/ui/skeleton';
 
 // Data
-import { mockCenters, mockCampaigns, DonationType } from '../data/donationCenters';
+import { mockCenters, DonationType } from '../data/donationCenters';
+import { useCampaigns } from '../hooks/useCampaigns';
 
 // Components
-import { DonationTypeFilters } from '../components/locations/DonationTypeFilters';
-import { CampaignCards } from '../components/locations/CampaignCards';
-import { CenterFilters, FiltersState } from '../components/locations/CenterFilters';
 import { CenterCard } from '../components/locations/CenterCard';
-import { CentersMap } from '../components/locations/CentersMap';
 import { EmptyCentersState } from '../components/locations/EmptyCentersState';
+import { CampaignCards } from '../components/locations/CampaignCards';
 
-// Helper: Haversine distance in KM
-function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371; // Radius of the earth in km
+// ── Category config (matches Donations page) ─────────────────────────────────
+const CATEGORIES = [
+  { value: 'all' as const,       label: 'الكل',   icon: LayoutGrid,    color: 'text-slate-600 dark:text-slate-300',   bg: 'bg-slate-100 dark:bg-slate-800' },
+  { value: 'blood' as const,     label: 'دم',     icon: Droplet,       color: 'text-rose-600 dark:text-rose-400',     bg: 'bg-rose-100 dark:bg-rose-900/30' },
+  { value: 'food' as const,      label: 'طعام',   icon: Utensils,      color: 'text-amber-600 dark:text-amber-400',   bg: 'bg-amber-100 dark:bg-amber-900/30' },
+  { value: 'furniture' as const, label: 'أثاث',   icon: Armchair,      color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900/30' },
+  { value: 'clothes' as const,   label: 'ملابس',  icon: Shirt,         color: 'text-sky-600 dark:text-sky-400',       bg: 'bg-sky-100 dark:bg-sky-900/30' },
+  { value: 'medicine' as const,  label: 'أدوية',  icon: Pill,          color: 'text-fuchsia-600 dark:text-fuchsia-400', bg: 'bg-fuchsia-100 dark:bg-fuchsia-900/30' },
+  { value: 'money' as const,     label: 'مال',    icon: HeartHandshake,color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
+  { value: 'volunteer' as const, label: 'تطوع',   icon: Users,         color: 'text-teal-600 dark:text-teal-400',     bg: 'bg-teal-100 dark:bg-teal-900/30' },
+] as const;
+
+// ── Haversine distance helper ─────────────────────────────────────────────────
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a = 
+  const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
-    Math.sin(dLon / 2) * Math.sin(dLon / 2); 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
-  return R * c; // Distance in km
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
+// ── Page ─────────────────────────────────────────────────────────────────────
 export function Locations() {
   const [selectedType, setSelectedType] = useState<DonationType>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [cityFilter, setCityFilter] = useState('الكل');
+  const [deliveryFilter, setDeliveryFilter] = useState('الكل');
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [locationError, setLocationError] = useState('');
-  
-  const initialFilters: FiltersState = { city: 'all', deliveryMethod: 'all', centerType: 'all', status: 'all' };
-  const [filters, setFilters] = useState<FiltersState>(initialFilters);
-  
-  const [selectedCenterId, setSelectedCenterId] = useState<string | null>(null);
 
-  // Filter Campaigns based on selectedType
-  const filteredCampaigns = useMemo(() => {
-    if (selectedType === 'all') return mockCampaigns;
-    return mockCampaigns.filter(c => c.type === selectedType);
-  }, [selectedType]);
-
-  // Filter Centers based on all criteria
+  // Filter centers
   const filteredCenters = useMemo(() => {
     let result = [...mockCenters];
 
-    // 1. Search Query
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(c => 
-        c.name.toLowerCase().includes(q) || 
+    // Search
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(q) ||
         c.city.toLowerCase().includes(q) ||
-        c.address.toLowerCase().includes(q)
+        c.address.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q)
       );
     }
 
-    // 2. Donation Type Chip
+    // Category filter
     if (selectedType !== 'all') {
       result = result.filter(c => c.acceptedTypes.includes(selectedType));
     }
 
-    // 3. Sidebar Filters
-    if (filters.city !== 'all') {
-      result = result.filter(c => c.city === filters.city);
-    }
-    
-    if (filters.deliveryMethod !== 'all') {
-      result = result.filter(c => c.deliveryMethods.includes(filters.deliveryMethod as any));
+    // City filter
+    if (cityFilter !== 'الكل') {
+      result = result.filter(c => c.city === cityFilter);
     }
 
-    if (filters.centerType !== 'all') {
-      result = result.filter(c => c.centerType === filters.centerType);
+    // Delivery method filter
+    if (deliveryFilter !== 'الكل') {
+      result = result.filter(c => c.deliveryMethods.includes(deliveryFilter as any));
     }
 
-    if (filters.status !== 'all') {
-      if (filters.status === 'open_now') result = result.filter(c => c.isOpen);
-      if (filters.status === 'urgent') result = result.filter(c => c.isUrgent);
-      if (filters.status === 'requires_appointment') result = result.filter(c => c.requiresAppointment);
-    }
-
-    // 4. Calculate Distance if user location exists
+    // Calculate distance if user location exists
     if (userLocation) {
       result = result.map(c => ({
         ...c,
-        distanceKm: getDistanceFromLatLonInKm(userLocation[0], userLocation[1], c.lat, c.lng)
+        distanceKm: getDistanceKm(userLocation[0], userLocation[1], c.lat, c.lng),
       }));
-      // Sort by distance
       result.sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0));
     }
 
     return result;
-  }, [selectedType, searchQuery, filters, userLocation]);
+  }, [selectedType, searchQuery, cityFilter, deliveryFilter, userLocation]);
+
+  const { campaigns } = useCampaigns();
+  const filteredCampaigns = campaigns.filter(c => c.isActive);
+
+  const hasActiveFilters =
+    selectedType !== 'all' || cityFilter !== 'الكل' || deliveryFilter !== 'الكل' || !!searchQuery;
+
+  const resetFilters = () => {
+    setSelectedType('all');
+    setCityFilter('الكل');
+    setDeliveryFilter('الكل');
+    setSearchQuery('');
+  };
 
   const handleNearestMe = () => {
     setLocationError('');
@@ -103,7 +113,6 @@ export function Locations() {
       setLocationError('متصفحك لا يدعم تحديد الموقع.');
       return;
     }
-    
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setUserLocation([position.coords.latitude, position.coords.longitude]);
@@ -114,188 +123,157 @@ export function Locations() {
     );
   };
 
-  const handleResetFilters = () => {
-    setFilters(initialFilters);
-    setSelectedType('all');
-    setSearchQuery('');
-  };
-
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F1623]" dir="rtl">
-      
-      {/* ── Hero Section ── */}
-      <section className="bg-gradient-to-b from-primary/10 via-primary/5 to-transparent pt-20 pb-12">
-        <div className="container mx-auto px-4 max-w-5xl text-center">
-          <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20 border-none">بيانات تجريبية للعرض</Badge>
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 text-[#0F172A] dark:text-white">أماكن ومراكز التبرع</h1>
-          <p className="text-slate-600 dark:text-slate-300 text-lg mb-10 max-w-2xl mx-auto">
-            ابحث عن أقرب جهة مناسبة حسب نوع تبرعك، وتواصل معها أو احجز استلاماً من المنزل.
-          </p>
-          
-            <div className="relative max-w-3xl mx-auto flex flex-col md:flex-row gap-3">
-              <div className="relative flex-1">
-                <div className="absolute inset-y-0 start-0 flex items-center ps-4 pointer-events-none">
-                  <Search className="h-5 w-5 text-slate-400" />
-                </div>
-                <Input 
-                  type="text"
-                  placeholder="ابحث عن محافظة، مركز، أو نوع تبرع..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full ps-12 h-14 rounded-full border-slate-200 dark:border-slate-700 shadow-sm text-base bg-white dark:bg-[#1A2332]/60 dark:text-white focus-visible:ring-primary/20"
-                />
-              </div>
-              <div className="flex gap-2 flex-col sm:flex-row">
-                <Button className="h-14 px-6 rounded-full bg-primary hover:bg-primary/90 text-white shadow-md hidden sm:flex items-center">
-                  ابحث
-                </Button>
-                <Button onClick={handleNearestMe} className="h-14 px-6 rounded-full bg-[#10B981] hover:bg-[#059669] text-white shadow-md flex items-center justify-center">
-                  <MapPin className="me-2 h-5 w-5" /> الأقرب إليّ
-                </Button>
-              </div>
+    <div className="min-h-screen bg-background">
+
+      {/* ── Page header — same style as Donations ────────────────── */}
+      <div className="border-b border-border/50 bg-card/60 backdrop-blur">
+        <div className="container mx-auto px-4 py-7">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-1">أماكن ومراكز التبرع</h1>
+              <p className="text-muted-foreground text-sm">
+                {`${filteredCenters.length} مركز متاح`}
+              </p>
             </div>
-          
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button
+                size="lg"
+                onClick={handleNearestMe}
+                className="h-11 px-7 rounded-xl font-semibold shadow-md shadow-emerald-500/20 bg-[#10B981] hover:bg-[#059669] text-white w-full sm:w-auto"
+              >
+                <MapPin className="me-2 h-5 w-5" />
+                الأقرب إليّ
+              </Button>
+            </div>
+          </div>
           {locationError && (
-            <p className="text-rose-500 text-sm mt-3 flex items-center justify-center gap-1">
+            <p className="text-rose-500 text-sm mt-3 flex items-center gap-1">
               <AlertCircle className="h-4 w-4" /> {locationError}
             </p>
           )}
         </div>
-      </section>
+      </div>
 
-      {/* ── Donation Type Chips (Sticky) ── */}
-      <DonationTypeFilters selectedType={selectedType} onSelectType={setSelectedType} />
+      {/* ── Sticky filter bar — same style as Donations ─────────── */}
+      <div className="sticky top-[64px] md:top-[72px] z-20 bg-background/95 backdrop-blur border-b border-border/50 shadow-sm">
+        <div className="container mx-auto px-4 py-3 space-y-2.5">
 
-      <div className="container mx-auto px-4 py-12">
-        
-        {/* ── Featured Campaigns ── */}
-        <section className="mb-16">
-          <CampaignCards campaigns={filteredCampaigns} />
-        </section>
-
-        {/* ── Filters & Results Layout ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Sidebar Filters (Desktop) */}
-          <div className="hidden lg:block lg:col-span-3">
-            <CenterFilters 
-              filters={filters} 
-              onChange={setFilters} 
-              onReset={() => setFilters(initialFilters)} 
-              resultCount={filteredCenters.length}
-            />
+          {/* Search + dropdowns */}
+          <div className="flex flex-wrap gap-2">
+            <div className="relative flex-1 min-w-[180px] max-w-sm">
+              <Search className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="ابحث عن مركز، محافظة، أو نوع تبرع..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="pe-10 rounded-xl h-9 text-sm"
+              />
+            </div>
+            <Select value={cityFilter} onValueChange={setCityFilter}>
+              <SelectTrigger className="rounded-xl h-9 w-[130px] text-sm">
+                <SelectValue placeholder="المحافظة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="الكل">كل المحافظات</SelectItem>
+                <SelectItem value="عمان">عمان</SelectItem>
+                <SelectItem value="إربد">إربد</SelectItem>
+                <SelectItem value="الزرقاء">الزرقاء</SelectItem>
+                <SelectItem value="العقبة">العقبة</SelectItem>
+                <SelectItem value="الكرك">الكرك</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={deliveryFilter} onValueChange={setDeliveryFilter}>
+              <SelectTrigger className="rounded-xl h-9 w-[140px] text-sm">
+                <SelectValue placeholder="طريقة التسليم" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="الكل">كل الطرق</SelectItem>
+                <SelectItem value="self_delivery">أوصلها بنفسي</SelectItem>
+                <SelectItem value="home_pickup">استلام منزلي</SelectItem>
+                <SelectItem value="online">تبرع أونلاين</SelectItem>
+                <SelectItem value="mobile_campaign">حملة متنقلة</SelectItem>
+              </SelectContent>
+            </Select>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resetFilters}
+                className="h-9 px-3 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 text-sm"
+              >
+                <X className="h-3.5 w-3.5" />
+                مسح
+              </Button>
+            )}
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-9">
-            
-            {/* Mobile Tabs */}
-            <div className="lg:hidden mb-6">
-              <Tabs defaultValue="list" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-                  <TabsTrigger value="list" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-[#1A2332] data-[state=active]:shadow-sm"><LayoutList className="me-2 h-4 w-4" /> القائمة</TabsTrigger>
-                  <TabsTrigger value="map" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-[#1A2332] data-[state=active]:shadow-sm"><MapIcon className="me-2 h-4 w-4" /> الخريطة</TabsTrigger>
-                </TabsList>
-                
-                {/* Mobile Filters Trigger (Optional enhancement for real mobile UI) */}
-                <div className="mt-4">
-                   {/* We render filters directly for simplicity in this artifact, but a Drawer is better */}
-                   <CenterFilters 
-                    filters={filters} 
-                    onChange={setFilters} 
-                    onReset={() => setFilters(initialFilters)} 
-                    resultCount={filteredCenters.length}
-                  />
-                </div>
-
-                <TabsContent value="list" className="mt-6">
-                  {filteredCenters.length === 0 ? (
-                    <EmptyCentersState onReset={handleResetFilters} />
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {filteredCenters.map(center => (
-                        <CenterCard 
-                          key={center.id} 
-                          center={center} 
-                          isSelected={selectedCenterId === center.id}
-                          onClick={() => setSelectedCenterId(center.id)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-                <TabsContent value="map" className="mt-6 h-[500px]">
-                  <CentersMap 
-                    centers={filteredCenters} 
-                    selectedCenterId={selectedCenterId} 
-                    onSelectCenter={setSelectedCenterId}
-                    userLocation={userLocation}
-                  />
-                </TabsContent>
-              </Tabs>
-            </div>
-
-            {/* Desktop Grid (List + Map) */}
-            <div className="hidden lg:grid grid-cols-12 gap-6 h-[800px]">
-              
-              {/* List */}
-              <div className="col-span-5 flex flex-col h-full bg-white dark:bg-[#1A2332]/60 rounded-3xl border border-border/50 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-border/50 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
-                  <h3 className="font-bold text-lg text-foreground">المراكز المتاحة</h3>
-                  <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-md font-medium">{filteredCenters.length} نتيجة</span>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-200">
-                  {filteredCenters.length === 0 ? (
-                    <EmptyCentersState onReset={handleResetFilters} />
-                  ) : (
-                    filteredCenters.map(center => (
-                      <CenterCard 
-                        key={center.id} 
-                        center={center} 
-                        isSelected={selectedCenterId === center.id}
-                        onClick={() => setSelectedCenterId(center.id)}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Map */}
-              <div className="col-span-7 h-full">
-                <CentersMap 
-                  centers={filteredCenters} 
-                  selectedCenterId={selectedCenterId} 
-                  onSelectCenter={setSelectedCenterId}
-                  userLocation={userLocation}
-                />
-              </div>
-
-            </div>
-
+          {/* Category chips */}
+          <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide snap-x">
+            {CATEGORIES.map(cat => {
+              const Icon = cat.icon;
+              const active = selectedType === cat.value;
+              return (
+                <button
+                  key={cat.value}
+                  onClick={() => setSelectedType(cat.value)}
+                  className={`snap-center flex-shrink-0 flex items-center gap-1.5 h-8 px-3.5 rounded-full text-xs font-semibold border transition-all duration-200 ${
+                    active
+                      ? 'bg-primary text-primary-foreground border-transparent shadow-sm'
+                      : 'bg-card border-border/60 text-muted-foreground hover:border-border hover:text-foreground'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {cat.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* ── How It Works Section ── */}
-      <section className="py-20 bg-white dark:bg-[#1A2332]/40 border-y border-border/50 mt-12">
-        <div className="container mx-auto px-4 max-w-5xl text-center">
-          <h2 className="text-3xl font-bold mb-12 text-foreground">كيف تسلّم تبرعك؟</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
-            <div className="hidden md:block absolute top-8 start-1/8 end-1/8 h-0.5 bg-slate-100 dark:bg-slate-800 z-0" />
-            
+      {/* ── Grid — same layout as Donations ──────────────────────── */}
+      <div className="container mx-auto px-4 py-8">
+        {filteredCenters.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filteredCenters.map(center => (
+              <CenterCard key={center.id} center={center} />
+            ))}
+          </div>
+        ) : (
+          <EmptyCentersState onReset={resetFilters} />
+        )}
+      </div>
+
+      {/* ── Campaigns section (small, at bottom) ────────────────── */}
+      {filteredCampaigns.length > 0 && (
+        <section className="border-t border-border/50 bg-card/40">
+          <div className="container mx-auto px-4 py-12">
+            <CampaignCards campaigns={filteredCampaigns} />
+          </div>
+        </section>
+      )}
+
+      {/* ── How It Works — simplified ─────────────────────────────── */}
+      <section className="py-16 bg-card/60 border-t border-border/50">
+        <div className="container mx-auto px-4 max-w-4xl text-center">
+          <h2 className="text-2xl font-bold mb-10 text-foreground">كيف تسلّم تبرعك؟</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 relative">
+            <div className="hidden md:block absolute top-6 start-1/8 end-1/8 h-0.5 bg-border/50 z-0" />
+
             {[
-              { icon: LayoutList, title: 'اختر نوع التبرع', desc: 'حدد ماذا تريد التبرع به من الأعلى' },
-              { icon: Search, title: 'ابحث عن جهة', desc: 'استخدم الفلاتر والخريطة لإيجاد أقرب مركز' },
-              { icon: Navigation, title: 'تواصل أو احجز', desc: 'تواصل معهم أو احجز استلام من المنزل' },
-              { icon: Activity, title: 'تابع تبرعك', desc: 'تابع حالة التبرع من خلال لوحة التحكم' },
+              { icon: LayoutList,  title: 'اختر نوع التبرع', desc: 'حدد ماذا تريد التبرع به' },
+              { icon: Search,     title: 'ابحث عن جهة',    desc: 'استخدم الفلاتر لإيجاد أقرب مركز' },
+              { icon: Navigation, title: 'تواصل أو احجز',  desc: 'تواصل معهم أو احجز استلام' },
+              { icon: Activity,   title: 'تابع تبرعك',     desc: 'تابع الحالة من لوحة التحكم' },
             ].map((step, i) => (
               <div key={i} className="relative z-10 flex flex-col items-center">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-[#059669] text-white flex items-center justify-center shadow-lg mb-4">
-                  <step.icon className="h-7 w-7" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-[#059669] text-white flex items-center justify-center shadow-md mb-3">
+                  <step.icon className="h-5 w-5" />
                 </div>
-                <h4 className="font-bold text-lg mb-2 text-foreground">{step.title}</h4>
-                <p className="text-sm text-muted-foreground">{step.desc}</p>
-                <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center text-xs font-bold mt-4">
+                <h4 className="font-bold text-sm mb-1 text-foreground">{step.title}</h4>
+                <p className="text-xs text-muted-foreground">{step.desc}</p>
+                <div className="w-5 h-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[10px] font-bold mt-2">
                   {i + 1}
                 </div>
               </div>
@@ -304,50 +282,38 @@ export function Locations() {
         </div>
       </section>
 
-      {/* ── Trust Section ── */}
-      <section className="py-20 bg-[#F8FAFC] dark:bg-[#0F1623] border-t border-border/40">
-        <div className="container mx-auto px-4 max-w-5xl">
-          {/* Section Header */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-1.5 bg-primary/10 dark:bg-primary/20 text-primary px-4 py-1.5 rounded-full text-xs font-semibold mb-3">
-              <Shield className="h-3.5 w-3.5" />
+      {/* ── Trust section — simplified ────────────────────────────── */}
+      <section className="py-16 bg-background border-t border-border/40">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-1.5 bg-primary/10 dark:bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-semibold mb-2">
+              <Shield className="h-3 w-3" />
               معايير الأمان والثقة
             </div>
-            <h3 className="text-2xl md:text-3xl font-extrabold text-foreground mb-3">
+            <h3 className="text-xl md:text-2xl font-extrabold text-foreground">
               لماذا تثق بمنصة الخير؟
             </h3>
-            <p className="text-sm md:text-base text-muted-foreground max-w-lg mx-auto">
-              نلتزم بأعلى معايير الشفافية والحماية لضمان وصول مساهماتك وتبرعاتك بأمان وموثوقية تامة.
-            </p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { icon: CheckCircle2, title: 'جهات موثقة', desc: 'مراكز وجمعيات معتمدة ومسجلة رسمياً' },
-              { icon: MapPin, title: 'تتبع التبرعات', desc: 'متابعة مسار تبرعك خطوة بخطوة حتى وصوله' },
-              { icon: LayoutList, title: 'تقارير شهرية', desc: 'شفافية كاملة وتقارير دورية بالأثر المحقق' },
-              { icon: Shield, title: 'حماية بياناتك', desc: 'تشفير آمن لجميع بياناتك ومعلوماتك الشخصية' },
+              { icon: CheckCircle2, title: 'جهات موثقة',    desc: 'مراكز معتمدة رسمياً' },
+              { icon: MapPin,       title: 'تتبع التبرعات', desc: 'متابعة خطوة بخطوة' },
+              { icon: LayoutList,   title: 'تقارير شهرية', desc: 'شفافية كاملة' },
+              { icon: Shield,       title: 'حماية بياناتك', desc: 'تشفير آمن' },
             ].map((item, i) => (
-              <div key={i} className="bg-white dark:bg-[#1A2332]/60 p-6 rounded-2xl border border-border/80 dark:border-border/40 text-center hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                <div className="w-12 h-12 bg-primary/10 dark:bg-primary/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <item.icon className="h-6 w-6 text-primary" />
+              <div key={i} className="bg-card p-5 rounded-xl border border-border/60 text-center hover:shadow-md transition-all duration-300 hover:-translate-y-0.5">
+                <div className="w-10 h-10 bg-primary/10 dark:bg-primary/20 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <item.icon className="h-5 w-5 text-primary" />
                 </div>
-                <h5 className="font-bold text-base text-foreground mb-1">{item.title}</h5>
-                <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                <h5 className="font-bold text-sm text-foreground mb-0.5">{item.title}</h5>
+                <p className="text-[11px] text-muted-foreground">{item.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Mobile Sticky Button */}
-      <div className="fixed bottom-6 start-4 end-4 lg:hidden z-40">
-        <Button onClick={handleNearestMe} className="w-full h-14 rounded-2xl bg-primary text-white shadow-xl shadow-primary/20 text-lg font-bold">
-          <MapPin className="me-2 h-5 w-5" /> اعرض أقرب مركز
-        </Button>
-      </div>
-
     </div>
   );
 }
-

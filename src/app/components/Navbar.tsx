@@ -19,6 +19,13 @@ const roleRoutes: Record<string, string> = {
   admin: '/dashboard/admin',
 };
 
+// Get the correct dashboard path for the current user
+function getDashboardPath(user: any): string {
+  if (user?.role === 'admin') return '/dashboard/admin';
+  if (user?.user_type === 'charity') return '/dashboard/charity';
+  return '/dashboard';
+}
+
 export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -141,7 +148,7 @@ export function Navbar() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to={roleRoutes[user.role] ?? '/dashboard'} className="flex items-center gap-2">
+                    <Link to={getDashboardPath(user)} className="flex items-center gap-2">
                       <LayoutDashboard className="h-4 w-4" /> {t('nav.dashboard')}
                     </Link>
                   </DropdownMenuItem>
@@ -227,7 +234,7 @@ export function Navbar() {
                             </div>
                           </div>
                           <Link
-                            to={roleRoutes[user.role] ?? '/dashboard'}
+                            to={getDashboardPath(user)}
                             className="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-muted transition-colors text-sm"
                             onClick={() => setMobileMenuOpen(false)}
                           >

@@ -1,58 +1,127 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
+import { Link, useSearchParams, useNavigate } from 'react-router';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
-import { MapPin, Search, Filter, Gift, Heart, SlidersHorizontal, X } from 'lucide-react';
-import { useDonations, type ExtendedDonation } from '../context/DonationContext';
+import {
+  MapPin, Search, Gift, Heart, X,
+  Shirt, Utensils, Armchair, BookOpen, Pill, Package, LayoutGrid,
+} from 'lucide-react';
+import { useDonations } from '../context/DonationContext';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router';
 
+// ── Category config ────────────────────────────────────────────────────────────
+const CATEGORIES = [
+  { value: 'الكل',           label: 'الكل',   icon: LayoutGrid, color: 'text-slate-600 dark:text-slate-300',   bg: 'bg-slate-100 dark:bg-slate-800' },
+  { value: 'ملابس',          label: 'ملابس',  icon: Shirt,      color: 'text-sky-600 dark:text-sky-400',        bg: 'bg-sky-100 dark:bg-sky-900/30' },
+  { value: 'طعام',           label: 'طعام',   icon: Utensils,   color: 'text-amber-600 dark:text-amber-400',    bg: 'bg-amber-100 dark:bg-amber-900/30' },
+  { value: 'أثاث',           label: 'أثاث',   icon: Armchair,   color: 'text-orange-600 dark:text-orange-400',  bg: 'bg-orange-100 dark:bg-orange-900/30' },
+  { value: 'كتب',            label: 'كتب',    icon: BookOpen,   color: 'text-violet-600 dark:text-violet-400',  bg: 'bg-violet-100 dark:bg-violet-900/30' },
+  { value: 'مستلزمات طبية', label: 'طبية',   icon: Pill,       color: 'text-rose-600 dark:text-rose-400',      bg: 'bg-rose-100 dark:bg-rose-900/30' },
+  { value: 'أخرى',           label: 'أخرى',   icon: Package,    color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
+] as const;
+
+const getCategoryConfig = (category: string) =>
+  CATEGORIES.find(c => c.value === category) ?? CATEGORIES[CATEGORIES.length - 1];
+
+const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  'متاح':       { label: 'متاح',       className: 'bg-emerald-500/90 text-white' },
+  'محجوز':      { label: 'محجوز',      className: 'bg-amber-500/90 text-white' },
+  'تم التسليم': { label: 'تم التسليم', className: 'bg-slate-500/80 text-white' },
+};
+
+const CONDITION_CONFIG: Record<string, { label: string; className: string }> = {
+  'جديد':   { label: 'جديد',   className: 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800' },
+  'جيد':    { label: 'جيد',    className: 'bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800' },
+  'مستعمل': { label: 'مستعمل', className: 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' },
+};
+
+const URGENCY_DOT: Record<string, string> = {
+  'عالية':    'bg-red-500',
+  'متوسطة':  'bg-amber-400',
+  'منخفضة':  'bg-emerald-500',
+};
+
+// ── DonationImage ──────────────────────────────────────────────────────────────
+function DonationImage({ src, alt, category }: { src?: string; alt: string; category: string }) {
+  const [error, setError] = useState(false);
+  const cfg = getCategoryConfig(category);
+  const Icon = cfg.icon;
+
+  if (!src || error) {
+    return (
+      <div className={`w-full h-full flex items-center justify-center ${cfg.bg}`}>
+        <Icon className={`h-14 w-14 ${cfg.color} opacity-25`} />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+      onError={() => setError(true)}
+    />
+  );
+}
+
+// ── DonorAvatar ────────────────────────────────────────────────────────────────
+function DonorAvatar({ donor }: { donor: any }) {
+  const name = donor?.name || 'مجهول';
+  const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=7c3aed&color=fff&size=56&bold=true`;
+  const [src, setSrc] = useState<string>(donor?.avatar || fallback);
+
+  return (
+    <img
+      src={src}
+      alt={name}
+      className="w-7 h-7 rounded-full object-cover ring-2 ring-background flex-shrink-0"
+      onError={() => setSrc(fallback)}
+    />
+  );
+}
+
+// ── Page ───────────────────────────────────────────────────────────────────────
 export function Donations() {
   const { user, toggleWishlist } = useAuth();
-  const { donations, loading: donationsLoading } = useDonations();
+  const { donations, loading } = useDonations();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const isLoading = donationsLoading;
-
-  const [categoryFilter, setCategoryFilter] = useState<string>('الكل');
-  const [urgencyFilter, setUrgencyFilter] = useState<string>('الكل');
-  const [conditionFilter, setConditionFilter] = useState<string>('الكل');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter]   = useState('الكل');
+  const [urgencyFilter,  setUrgencyFilter]    = useState('الكل');
+  const [conditionFilter, setConditionFilter] = useState('الكل');
+  const [searchQuery, setSearchQuery]         = useState('');
 
   useEffect(() => {
     const cat = searchParams.get('category');
-    if (cat) {
-      setCategoryFilter(cat);
-    }
+    if (cat) setCategoryFilter(cat);
   }, [searchParams]);
 
   const filteredDonations = useMemo(() => {
-    let result = donations.filter(d => d.status === 'متاح' || d.status === 'محجوز' || d.status === 'تم التسليم');
-    if (categoryFilter !== 'الكل') result = result.filter(d => d.category === categoryFilter);
-    if (urgencyFilter !== 'الكل') result = result.filter(d => d.urgency === urgencyFilter);
+    let result = donations.filter(
+      d => d.status === 'متاح' || d.status === 'محجوز' || d.status === 'تم التسليم',
+    );
+    if (categoryFilter !== 'الكل')  result = result.filter(d => d.category  === categoryFilter);
+    if (urgencyFilter  !== 'الكل')  result = result.filter(d => d.urgency   === urgencyFilter);
     if (conditionFilter !== 'الكل') result = result.filter(d => d.condition === conditionFilter);
     if (searchQuery.trim()) {
-      const q = searchQuery.trim();
-      result = result.filter(d =>
-        d.title.includes(q) ||
-        d.description.includes(q) ||
-        d.location.includes(q)
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(
+        d =>
+          d.title.toLowerCase().includes(q) ||
+          d.description.toLowerCase().includes(q) ||
+          d.location.toLowerCase().includes(q),
       );
     }
     return result;
   }, [donations, categoryFilter, urgencyFilter, conditionFilter, searchQuery]);
 
-  const handleCategoryChange = (value: string) => { setCategoryFilter(value); };
-  const handleUrgencyChange = (value: string) => { setUrgencyFilter(value); };
-  const handleConditionChange = (value: string) => { setConditionFilter(value); };
-  const handleSearchChange = (value: string) => { setSearchQuery(value); };
-
-  const hasActiveFilters = categoryFilter !== 'الكل' || urgencyFilter !== 'الكل' || conditionFilter !== 'الكل' || searchQuery;
+  const hasActiveFilters =
+    categoryFilter !== 'الكل' || urgencyFilter !== 'الكل' || conditionFilter !== 'الكل' || !!searchQuery;
 
   const resetFilters = () => {
     setCategoryFilter('الكل');
@@ -61,231 +130,305 @@ export function Donations() {
     setSearchQuery('');
   };
 
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case 'عالية': return 'bg-red-500 text-white border-0';
-      case 'متوسطة': return 'bg-amber-500 text-white border-0';
-      case 'منخفضة': return 'bg-emerald-500 text-white border-0';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
+  const availableCount = useMemo(
+    () => donations.filter(d => d.status === 'متاح').length,
+    [donations],
+  );
 
   return (
-    <div className="min-h-screen py-10">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-background">
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5 mb-10">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold mb-1.5 tracking-tight">جميع التبرعات</h1>
-            <p className="text-muted-foreground">تصفح التبرعات المتاحة واطلب ما تحتاج</p>
-          </div>
-          <Button
-            size="lg"
-            onClick={() => user ? navigate('/add-donation') : navigate('/login')}
-            className="bg-primary hover:bg-primary/90 text-white w-full sm:w-auto h-11 px-7 rounded-xl font-semibold shadow-md shadow-primary/20"
-          >
-            <Gift className="me-2 h-5 w-5" />
-            تبرع الآن
-          </Button>
-        </div>
-
-        {/* Main Content Layout */}
-        <div className="flex flex-col lg:flex-row gap-8">
-          
-          {/* Sidebar Filters (25%) */}
-          <div className="lg:w-1/4 flex flex-col gap-5">
-            <Card className="border-none shadow-sm sticky top-24">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-4">
-              <SlidersHorizontal className="h-4 w-4" />
-              تصفية النتائج
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-3 text-xs rounded-lg ms-auto text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
-                  onClick={resetFilters}
-                >
-                  <X className="h-3 w-3" />
-                  مسح الفلاتر
-                </Button>
-              )}
+      {/* ── Page header ────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden border-b border-border/50">
+        {/* gradient backdrop */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-background to-violet-500/5 pointer-events-none" />
+        <div className="relative container mx-auto px-4 py-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2.5 mb-1">
+                <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Gift className="h-4 w-4 text-primary" />
+                </div>
+                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">التبرعات</h1>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                {loading ? (
+                  <Skeleton className="h-4 w-32 inline-block" />
+                ) : (
+                  <>
+                    <span className="font-semibold text-primary">{availableCount}</span>
+                    {' '}تبرع متاح الآن
+                    {hasActiveFilters && filteredDonations.length !== availableCount && (
+                      <span className="text-muted-foreground/70"> · {filteredDonations.length} نتيجة</span>
+                    )}
+                  </>
+                )}
+              </p>
             </div>
-            <div className="flex flex-col gap-4">
-              <div className="relative">
-                <Search className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  placeholder="ابحث عن تبرع..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="pe-10 rounded-xl h-10"
-                />
-              </div>
-              <Select value={categoryFilter} onValueChange={handleCategoryChange}>
-                <SelectTrigger className="rounded-xl h-10">
-                  <SelectValue placeholder="الفئة" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="الكل">جميع الفئات</SelectItem>
-                  <SelectItem value="ملابس">ملابس</SelectItem>
-                  <SelectItem value="طعام">طعام</SelectItem>
-                  <SelectItem value="أثاث">أثاث</SelectItem>
-                  <SelectItem value="كتب">كتب</SelectItem>
-                  <SelectItem value="مستلزمات طبية">مستلزمات طبية</SelectItem>
-                  <SelectItem value="أخرى">أخرى</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={urgencyFilter} onValueChange={handleUrgencyChange}>
-                <SelectTrigger className="rounded-xl h-10">
-                  <SelectValue placeholder="مستوى الأولوية" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="الكل">جميع المستويات</SelectItem>
-                  <SelectItem value="عالية">عالية</SelectItem>
-                  <SelectItem value="متوسطة">متوسطة</SelectItem>
-                  <SelectItem value="منخفضة">منخفضة</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={conditionFilter} onValueChange={handleConditionChange}>
-                <SelectTrigger className="rounded-xl h-10">
-                  <SelectValue placeholder="الحالة" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="الكل">جميع الحالات</SelectItem>
-                  <SelectItem value="جديد">جديد</SelectItem>
-                  <SelectItem value="جيد">جيد</SelectItem>
-                  <SelectItem value="مستعمل">مستعمل</SelectItem>
-                </SelectContent>
-              </Select>
-              </div>
-            </CardContent>
-          </Card>
+            <Button
+              size="lg"
+              onClick={() => navigate(user ? '/add-donation' : '/login')}
+              className="h-11 px-7 rounded-xl font-semibold shadow-md shadow-primary/25 w-full sm:w-auto cursor-pointer"
+            >
+              <Gift className="me-2 h-5 w-5" />
+              تبرع الآن
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Sticky filter bar ──────────────────────────────────────── */}
+      <div className="sticky top-[64px] md:top-[72px] z-20 bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm">
+        <div className="container mx-auto px-4 py-3 space-y-2.5">
+
+          {/* Search + dropdowns */}
+          <div className="flex flex-wrap gap-2">
+            <div className="relative flex-1 min-w-[180px] max-w-sm">
+              <Search className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="ابحث في التبرعات..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="pe-10 rounded-xl h-9 text-sm"
+              />
+            </div>
+
+            {/* Priority select — no emoji, use colored dots */}
+            <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
+              <SelectTrigger className="rounded-xl h-9 w-[140px] text-sm cursor-pointer">
+                <SelectValue placeholder="الأولوية" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="الكل">كل الأولويات</SelectItem>
+                <SelectItem value="عالية">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-red-500 inline-block flex-shrink-0" />
+                    عالية
+                  </span>
+                </SelectItem>
+                <SelectItem value="متوسطة">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-amber-400 inline-block flex-shrink-0" />
+                    متوسطة
+                  </span>
+                </SelectItem>
+                <SelectItem value="منخفضة">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block flex-shrink-0" />
+                    منخفضة
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={conditionFilter} onValueChange={setConditionFilter}>
+              <SelectTrigger className="rounded-xl h-9 w-[120px] text-sm cursor-pointer">
+                <SelectValue placeholder="الحالة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="الكل">كل الحالات</SelectItem>
+                <SelectItem value="جديد">جديد</SelectItem>
+                <SelectItem value="جيد">جيد</SelectItem>
+                <SelectItem value="مستعمل">مستعمل</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resetFilters}
+                className="h-9 px-3 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 text-sm cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+                مسح
+              </Button>
+            )}
           </div>
 
-          {/* Grid Area (75%) */}
-          <div className="lg:w-3/4 flex flex-col">
-            {/* Results count */}
-            {!isLoading && (
-              <div className="mb-5 flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  تم العثور على <span className="font-bold text-foreground">{filteredDonations.length}</span> تبرع
-                </p>
-              </div>
-            )}
+          {/* Category chips */}
+          <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide snap-x">
+            {CATEGORIES.map(cat => {
+              const Icon = cat.icon;
+              const active = categoryFilter === cat.value;
+              return (
+                <button
+                  key={cat.value}
+                  onClick={() => setCategoryFilter(cat.value)}
+                  className={`snap-center flex-shrink-0 flex items-center gap-1.5 h-8 px-3.5 rounded-full text-xs font-semibold border transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                    active
+                      ? 'bg-primary text-primary-foreground border-transparent shadow-md shadow-primary/25 scale-[1.03]'
+                      : 'bg-card border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground hover:bg-accent/50'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {cat.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
-        {/* Grid */}
-        {isLoading ? (
+      {/* ── Grid ───────────────────────────────────────────────────── */}
+      <div className="container mx-auto px-4 py-8">
+        {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Card key={i} className="overflow-hidden border-none bg-card">
-                <Skeleton className="h-48 w-full rounded-none" />
+              <div key={i} className="rounded-2xl overflow-hidden border border-border/50 bg-card">
+                <Skeleton className="h-52 w-full" />
                 <div className="p-4 space-y-3">
-                  <div className="flex justify-between">
-                    <Skeleton className="h-5 w-16 rounded-full" />
-                    <Skeleton className="h-5 w-12 rounded-full" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-5 w-14 rounded-full" />
+                    <Skeleton className="h-5 w-10 rounded-full" />
                   </div>
                   <Skeleton className="h-5 w-3/4" />
                   <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-5/6" />
-                  <div className="flex items-center gap-2 pt-2">
-                    <Skeleton className="h-8 w-8 rounded-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+                    <Skeleton className="h-7 w-7 rounded-full" />
                     <Skeleton className="h-4 w-24" />
                   </div>
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
         ) : filteredDonations.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {filteredDonations.map((donation) => (
-              <Link key={donation.id} to={`/donations/${donation.id}`}>
-                <Card className="overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full flex flex-col border-none group bg-card">
-                  <div className="relative h-48 overflow-hidden">
-                    <img
-                      src={donation.image}
-                      alt={donation.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                    {/* Urgency badge on image (Only for medical items) */}
-                    {donation.category === 'مستلزمات طبية' && (
-                      <div className="absolute top-3 start-3">
-                        <Badge className="bg-red-500 text-white border-0 text-xs font-semibold shadow">عاجل</Badge>
+            {filteredDonations.map(donation => {
+              const catCfg    = getCategoryConfig(donation.category);
+              const statusCfg = STATUS_CONFIG[donation.status] ?? { label: donation.status, className: 'bg-muted/80 text-muted-foreground' };
+              const condCfg   = donation.condition ? (CONDITION_CONFIG[donation.condition] ?? { label: donation.condition, className: 'bg-muted text-muted-foreground border border-border' }) : null;
+              const isWishlisted = user?.wishlist?.includes(donation.id);
+              const urgencyDot   = donation.urgency ? URGENCY_DOT[donation.urgency] : null;
+
+              return (
+                <Link key={donation.id} to={`/donations/${donation.id}`} className="group block cursor-pointer">
+                  <article className="rounded-2xl overflow-hidden border border-border/60 bg-card shadow-sm hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:border-primary/25 transition-all duration-300 flex flex-col h-full">
+
+                    {/* Image */}
+                    <div className="relative h-52 overflow-hidden bg-muted flex-shrink-0">
+                      <DonationImage src={donation.image} alt={donation.title} category={donation.category} />
+
+                      {/* gradient scrim */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+
+                      {/* Status badge — bottom-left over scrim */}
+                      <div className="absolute bottom-3 start-3">
+                        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm ${statusCfg.className}`}>
+                          {statusCfg.label}
+                        </span>
                       </div>
-                    )}
-                    {/* Wishlist button */}
-                    <Button
-                      size="icon"
-                      variant="secondary"
-                      className={`absolute top-3 end-3 h-8 w-8 rounded-full bg-white/90 dark:bg-black/60 shadow hover:bg-white transition-all ${user?.wishlist?.includes(donation.id) ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
+
+                      {/* Urgency dot — top-left */}
+                      {urgencyDot && (
+                        <div className="absolute top-3 start-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5">
+                          <span className={`h-2 w-2 rounded-full ${urgencyDot} flex-shrink-0`} />
+                          <span className="text-[10px] text-white font-medium">{donation.urgency}</span>
+                        </div>
+                      )}
+
+                      {/* Wishlist button — top-right with 44px touch target */}
+                      <button
+                        aria-label={isWishlisted ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}
+                        className={`absolute top-2 end-2 h-9 w-9 rounded-full flex items-center justify-center bg-white/90 dark:bg-black/60 shadow-md backdrop-blur-sm transition-all duration-200 cursor-pointer hover:scale-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                          isWishlisted ? 'text-red-500' : 'text-slate-400 hover:text-red-500'
                         }`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (!user) { navigate('/login'); return; }
-                        toggleWishlist(donation.id);
-                      }}
-                    >
-                      <Heart className={`h-3.5 w-3.5 ${user?.wishlist?.includes(donation.id) ? 'fill-current' : ''}`} />
-                    </Button>
-                  </div>
-
-                  <CardHeader className="pb-2 pt-4">
-                    <div className="flex items-center justify-between mb-2 gap-2">
-                      <Badge variant="outline" className="text-xs font-semibold border-primary/30 text-primary bg-primary/5">
-                        {donation.category}
-                      </Badge>
-                      <Badge
-                        className={`text-xs font-semibold ${donation.status === 'متاح'
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0'
-                            : 'bg-muted text-muted-foreground border-0'
-                          }`}
+                        onClick={e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!user) { navigate('/login'); return; }
+                          toggleWishlist(donation.id);
+                        }}
                       >
-                        {donation.status}
-                      </Badge>
+                        <Heart className={`h-4 w-4 transition-transform duration-200 ${isWishlisted ? 'fill-current scale-110' : ''}`} />
+                      </button>
                     </div>
-                    <CardTitle className="line-clamp-1 text-base group-hover:text-primary transition-colors">{donation.title}</CardTitle>
-                    <CardDescription className="line-clamp-2 text-sm">{donation.description}</CardDescription>
-                  </CardHeader>
 
-                  <CardContent className="mt-auto pt-0">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <MapPin className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                        <span className="truncate">{donation.location}</span>
+                    {/* Body */}
+                    <div className="flex flex-col flex-1 p-4 gap-2">
+
+                      {/* Category + Condition badges */}
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${catCfg.bg} ${catCfg.color}`}>
+                          <catCfg.icon className="h-3 w-3" />
+                          {donation.category}
+                        </span>
+                        {condCfg && (
+                          <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full ${condCfg.className}`}>
+                            {condCfg.label}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2.5 pt-2 border-t border-border/60">
-                        <img
-                          src={donation.donor.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(donation.donor.name)}&background=random&color=fff`}
-                          alt={donation.donor.name}
-                          className="w-7 h-7 rounded-full object-cover ring-2 ring-background"
-                        />
-                        <span className="text-sm text-muted-foreground font-medium truncate">{donation.donor.name}</span>
+
+                      {/* Title */}
+                      <h3 className="font-bold text-sm leading-snug line-clamp-1 group-hover:text-primary transition-colors duration-200">
+                        {donation.title}
+                      </h3>
+
+                      {/* Description */}
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                        {donation.description}
+                      </p>
+
+                      {/* Footer */}
+                      <div className="mt-auto pt-3 border-t border-border/40 space-y-2">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <MapPin className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                          <span className="truncate">{donation.location}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <DonorAvatar donor={donation.donor} />
+                          <span className="text-xs text-muted-foreground font-medium truncate">
+                            {donation.donor?.name || 'مجهول'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+                  </article>
+                </Link>
+              );
+            })}
           </div>
         ) : (
-          /* Empty state */
-          <div className="text-center py-20">
-            <div className="w-20 h-20 rounded-3xl bg-muted flex items-center justify-center mx-auto mb-5">
-              <Gift className="h-10 w-10 text-muted-foreground/30" />
+          /* ── Empty state ── */
+          <div className="flex flex-col items-center justify-center py-28 text-center">
+            <div className="relative mb-6">
+              {/* outer ring */}
+              <div className="h-28 w-28 rounded-3xl bg-primary/5 flex items-center justify-center">
+                <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Gift className="h-9 w-9 text-primary/40" />
+                </div>
+              </div>
             </div>
-            <h3 className="text-lg font-bold mb-2">لم يتم العثور على تبرعات</h3>
-            <p className="text-muted-foreground mb-6 text-sm">لا توجد تبرعات تطابق معايير البحث الحالية</p>
-            <Button variant="outline" className="rounded-xl font-semibold" onClick={resetFilters}>
-              <X className="me-2 h-4 w-4" />
-              إعادة تعيين الفلاتر
-            </Button>
+            <h3 className="text-lg font-bold mb-2 text-foreground">
+              {hasActiveFilters ? 'لا توجد نتائج مطابقة' : 'لا توجد تبرعات حالياً'}
+            </h3>
+            <p className="text-muted-foreground text-sm mb-7 max-w-xs leading-relaxed">
+              {hasActiveFilters
+                ? 'جرب تغيير معايير البحث أو مسح الفلاتر للاطلاع على كل التبرعات'
+                : 'كن أول من يضيف تبرعاً ويساعد من يحتاج'}
+            </p>
+            {hasActiveFilters ? (
+              <Button
+                variant="outline"
+                className="rounded-xl font-semibold cursor-pointer"
+                onClick={resetFilters}
+              >
+                <X className="me-2 h-4 w-4" />
+                مسح الفلاتر
+              </Button>
+            ) : (
+              <Button
+                className="rounded-xl font-semibold shadow-md shadow-primary/20 cursor-pointer"
+                onClick={() => navigate(user ? '/add-donation' : '/login')}
+              >
+                <Gift className="me-2 h-4 w-4" />
+                أضف تبرعاً
+              </Button>
+            )}
           </div>
         )}
-          </div>
-        </div>
       </div>
     </div>
   );

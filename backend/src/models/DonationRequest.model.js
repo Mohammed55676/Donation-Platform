@@ -34,6 +34,7 @@ const donationRequestSchema = new mongoose.Schema(
     emergency_exception: { type: Boolean, default: false },
     emergency_reason:    { type: String,  default: null },
     admin_notes:         { type: String,  default: null },
+    donor_notes:         { type: String,  default: null },
     accepted_at:         { type: Date,    default: null },
     received_at:         { type: Date,    default: null },
   },

@@ -51,9 +51,14 @@ export function DonationDetails() {
   const [beneficiaryProfile, setBeneficiaryProfile] = useState<BeneficiaryProfile | null | undefined>(undefined);
   const [profileLoading, setProfileLoading] = useState(false);
 
-  // Donation request state
+  // Donation request state (beneficiary side)
   const [isRequesting, setIsRequesting] = useState(false);
   const [requestDone, setRequestDone] = useState(false);
+
+  // Donor-side: incoming requests for this donation
+  const [donorRequests, setDonorRequests] = useState<any[]>([]);
+  const [donorRequestsLoading, setDonorRequestsLoading] = useState(false);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
 
   // Message modal state
   const [messageModalOpen, setMessageModalOpen] = useState(false);
@@ -78,6 +83,37 @@ export function DonationDetails() {
     fetchProfile();
   }, [fetchProfile]);
 
+  // Fetch requests for donor view — only when user owns this donation
+  const isDonationOwner = user && donation &&
+    ((donation.donor as any)?.id === user.id || (donation.donor as any)?._id === user.id);
+
+  useEffect(() => {
+    if (!isDonationOwner) return;
+    setDonorRequestsLoading(true);
+    api.get('/donation-requests/for-my-donations')
+      .then(res => {
+        const all: any[] = res.data.data || [];
+        setDonorRequests(all.filter(r => r.donation_id?.id === id || r.donation_id?._id === id));
+      })
+      .catch(() => setDonorRequests([]))
+      .finally(() => setDonorRequestsLoading(false));
+  }, [isDonationOwner, id]);
+
+  const handleDonorReview = async (requestId: string, action: 'accept' | 'reject') => {
+    setReviewingId(requestId);
+    try {
+      await api.put(`/donation-requests/${requestId}/donor-review`, { action });
+      toast.success(action === 'accept' ? 'تم قبول الطلب وحجز التبرع' : 'تم رفض الطلب');
+      setDonorRequests(prev => prev.map(r =>
+        r.id === requestId ? { ...r, status: action === 'accept' ? 'accepted' : 'rejected' } : r
+      ));
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'حدث خطأ');
+    } finally {
+      setReviewingId(null);
+    }
+  };
+
   const isHighValue = useMemo(
     () => donation ? HIGH_VALUE_CATEGORIES.includes(donation.category) : false,
     [donation]
@@ -97,52 +133,28 @@ export function DonationDetails() {
       return;
     }
 
-    // 3. Check verification status
-    if (profileLoading) return;
-
-    const status = beneficiaryProfile?.verification_status;
-
-    if (!beneficiaryProfile || !status || status === 'not_verified') {
-      // For high-value items, redirect to full verification page
-      if (isHighValue) {
-        toast.info('هذا التبرع من فئة عالية القيمة. يجب إكمال ملف التحقق أولاً.');
+    // 3. Check admin-based verification
+    if (user.beneficiaryStatus !== 'verified') {
+      if (user.beneficiaryStatus === 'pending_admin') {
+        toast.info('طلبك قيد مراجعة الإدارة. يرجى الانتظار.');
+      } else {
+        toast.info('يجب إكمال التحقق من الهوية أولاً.');
         navigate('/verify-beneficiary');
-        return;
       }
-      setVerificationModalOpen(true);
-      return;
-    }
-    if (status === 'pending_review') {
-      toast.info('طلب التحقق قيد المراجعة. يرجى الانتظار.');
-      return;
-    }
-    if (status === 'rejected') {
-      if (isHighValue) {
-        toast.info('تم رفض طلب التحقق. أعد تقديمه للحصول على تبرعات عالية القيمة.');
-        navigate('/verify-beneficiary');
-        return;
-      }
-      setVerificationModalOpen(true); // Allow resubmission
-      return;
-    }
-    if (status === 'blocked') {
-      toast.error('لا يمكنك طلب التبرعات حالياً، يرجى التواصل مع الإدارة.');
       return;
     }
 
-    // 4. Trusted — submit real request
-    if (status === 'trusted') {
-      setIsRequesting(true);
-      try {
-        await api.post('/donation-requests', { donation_id: id });
-        toast.success('تم تقديم طلب التبرع بنجاح! سيتم مراجعته من قِبَل الإدارة.');
-        setRequestDone(true);
-      } catch (err: any) {
-        const msg = err.response?.data?.error || 'حدث خطأ أثناء تقديم الطلب.';
-        toast.error(msg);
-      } finally {
-        setIsRequesting(false);
-      }
+    // 4. Verified — submit request, donor will approve
+    setIsRequesting(true);
+    try {
+      await api.post('/donation-requests', { donation_id: id });
+      toast.success('تم تقديم طلبك! في انتظار موافقة المتبرع.');
+      setRequestDone(true);
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'حدث خطأ أثناء تقديم الطلب.';
+      toast.error(msg);
+    } finally {
+      setIsRequesting(false);
     }
   };
 
@@ -167,44 +179,38 @@ export function DonationDetails() {
     }
   };
 
-  // Status UI for beneficiary sidebar card
+  // Status UI for beneficiary sidebar card — uses new charity verification
   const renderBeneficiaryStatus = () => {
     if (!user || user.user_type !== 'beneficiary') return null;
-    if (profileLoading) return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> جاري التحقق...
-      </div>
-    );
 
-    const status = beneficiaryProfile?.verification_status;
-    if (!status || status === 'not_verified') return (
+    const status = user.beneficiaryStatus || 'not_submitted';
+
+    if (status === 'not_submitted') return (
       <div className="flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400">
         <AlertCircle className="h-4 w-4 flex-shrink-0" />
-        <span>يجب التحقق من هويتك أولاً</span>
+        <Link to="/verify-beneficiary" className="hover:underline">
+          يجب رفع مستنداتك للمراجعة — انقر هنا
+        </Link>
       </div>
     );
-    if (status === 'pending_review') return (
+    if (status === 'pending_admin') return (
       <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
         <Clock className="h-4 w-4 flex-shrink-0" />
-        <span>التحقق قيد المراجعة</span>
+        <span>طلبك قيد مراجعة الإدارة</span>
       </div>
     );
     if (status === 'rejected') return (
       <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
         <XCircle className="h-4 w-4 flex-shrink-0" />
-        <span>تم رفض التحقق — انقر لإعادة التقديم</span>
+        <Link to="/verify-beneficiary" className="hover:underline">
+          تم رفض طلبك — انقر لإعادة التقديم
+        </Link>
       </div>
     );
-    if (status === 'blocked') return (
-      <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-        <ShieldAlert className="h-4 w-4 flex-shrink-0" />
-        <span>حسابك موقوف</span>
-      </div>
-    );
-    if (status === 'trusted') return (
+    if (status === 'verified') return (
       <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
         <CheckCircle className="h-4 w-4 flex-shrink-0" />
-        <span>هويتك محققة — يمكنك طلب التبرعات</span>
+        <span>موثق من الإدارة — يمكنك طلب التبرعات</span>
       </div>
     );
     return null;
@@ -364,6 +370,69 @@ export function DonationDetails() {
               </CardContent>
             </Card>
 
+            {/* Donor: Incoming Requests Panel */}
+            {isDonationOwner && (
+              <Card className="border-none shadow-sm">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>طلبات الحصول على هذا التبرع</CardTitle>
+                    <Badge variant="outline">{donorRequests.filter(r => r.status === 'pending_review').length} معلق</Badge>
+                  </div>
+                  <CardDescription>الهويات مخفية لحماية خصوصية المستفيدين</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {donorRequestsLoading ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">جاري التحميل...</p>
+                  ) : donorRequests.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">لا توجد طلبات بعد</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {donorRequests.map(r => {
+                        const b = r.beneficiary;
+                        const isPending = r.status === 'pending_review';
+                        return (
+                          <div key={r.id} className={`p-4 rounded-xl border text-sm space-y-2 ${isPending ? 'bg-background' : 'bg-muted/40 opacity-70'}`}>
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <span className="font-semibold text-primary">{b?.anonymousCode}</span>
+                              <Badge className={
+                                r.status === 'accepted' ? 'bg-green-100 text-green-700 dark:bg-green-900/30' :
+                                r.status === 'rejected' ? 'bg-red-100 text-red-600 dark:bg-red-900/30' :
+                                'bg-amber-100 text-amber-700 dark:bg-amber-900/30'
+                              }>
+                                {r.status === 'accepted' ? 'مقبول' : r.status === 'rejected' ? 'مرفوض' : 'قيد الانتظار'}
+                              </Badge>
+                            </div>
+                            <div className="flex flex-wrap gap-3 text-muted-foreground text-xs">
+                              {b?.city && <span>📍 {b.city}</span>}
+                              {b?.family_members && <span>👨‍👩‍👧 {b.family_members} أفراد</span>}
+                              {b?.needs_categories?.length > 0 && <span>📦 {b.needs_categories.join('، ')}</span>}
+                            </div>
+                            {b?.situation_explanation && (
+                              <p className="text-muted-foreground line-clamp-2">{b.situation_explanation}</p>
+                            )}
+                            {isPending && (
+                              <div className="flex gap-2 pt-1">
+                                <Button size="sm" className="h-8 bg-green-600 hover:bg-green-700 text-white gap-1"
+                                  disabled={reviewingId === r.id}
+                                  onClick={() => handleDonorReview(r.id, 'accept')}>
+                                  <CheckCircle className="h-3.5 w-3.5" /> قبول
+                                </Button>
+                                <Button size="sm" variant="outline" className="h-8 text-destructive gap-1"
+                                  disabled={reviewingId === r.id}
+                                  onClick={() => handleDonorReview(r.id, 'reject')}>
+                                  <XCircle className="h-3.5 w-3.5" /> رفض
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Additional Information */}
             <Card className="border-none shadow-sm">
               <CardHeader>
@@ -438,7 +507,7 @@ export function DonationDetails() {
                   requestDone ? (
                     <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-700 dark:text-green-400">
                       <CheckCircle className="h-4 w-4 flex-shrink-0" />
-                      <span>تم تقديم طلبك. بانتظار مراجعة الإدارة.</span>
+                      <span>تم تقديم طلبك. بانتظار موافقة المتبرع.</span>
                     </div>
                   ) : (
                     <>

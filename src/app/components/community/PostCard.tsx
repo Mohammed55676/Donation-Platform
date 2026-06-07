@@ -185,7 +185,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                             setShowEdit(true);
                           }}
                         >
-                          <Pencil className="h-4 w-4 ms-" />
+                          <Pencil className="h-4 w-4 ms-2" />
                           تعديل
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -196,7 +196,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                             onDelete?.();
                           }}
                         >
-                          <Trash2 className="h-4 w-4 ms-" />
+                          <Trash2 className="h-4 w-4 ms-2" />
                           حذف
                         </DropdownMenuItem>
                       </DropdownMenuContent>

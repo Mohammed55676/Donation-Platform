@@ -1,354 +1,226 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { 
-  Search, Mic, Paperclip, Smile, Send, Phone, Video, 
-  MoreVertical, Check, CheckCheck, Info, UserCircle, 
-  Image as ImageIcon, FileText, X, MessageSquare
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router';
+import {
+  MessageSquare, UserCircle, Loader2, RefreshCw, Search,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '../ui/badge';
+import { ScrollArea } from '../ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { OnlinePresenceIndicator } from './OnlinePresenceIndicator';
-import { BeneficiaryProfileModal } from '../community/BeneficiaryProfileModal';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../utils/api';
 
-interface Message {
-  id: string;
-  senderId: string;
-  text: string;
-  time: Date;
-  status: 'sent' | 'delivered' | 'read';
-  type: 'text' | 'image' | 'voice' | 'file';
-  attachmentUrl?: string;
+interface ConvUser {
+  id?: string;
+  _id?: string;
+  name: string;
+  avatar?: string;
+  phone?: string;
+}
+
+interface ConvPost {
+  id?: string;
+  _id?: string;
+  title: string;
 }
 
 interface Conversation {
-  id: string;
-  user: {
-    id: string;
-    name: string;
-    avatar?: string;
-    status: 'online' | 'offline' | 'busy' | 'away';
-    lastSeen?: Date;
-  };
-  lastMessage: string;
-  lastMessageTime: Date;
-  unreadCount: number;
-  isTyping?: boolean;
+  id?: string;
+  _id?: string;
+  requester_id: ConvUser;
+  receiver_id: ConvUser;
+  post_id?: ConvPost | null;
+  first_message: string;
+  status: 'pending' | 'active' | 'rejected' | 'blocked' | 'closed';
+  last_message_at?: string;
+  createdAt: string;
 }
 
-const MOCK_CONVERSATIONS: Conversation[] = [
-  {
-    id: '1',
-    user: { id: 'u1', name: 'أحمد محمود', status: 'online' },
-    lastMessage: 'تمام، هكون موجود في الموعد إن شاء الله',
-    lastMessageTime: new Date(Date.now() - 1000 * 60 * 5), // 5 mins ago
-    unreadCount: 2,
-    isTyping: true
-  },
-  {
-    id: '2',
-    user: { id: 'u2', name: 'سارة عبدالرحمن', status: 'away', lastSeen: new Date(Date.now() - 1000 * 60 * 30) },
-    lastMessage: 'شكراً جزيلاً لك',
-    lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-    unreadCount: 0
-  },
-  {
-    id: '3',
-    user: { id: 'u3', name: 'خالد عبدالله', status: 'offline', lastSeen: new Date(Date.now() - 1000 * 60 * 60 * 24) },
-    lastMessage: 'الملابس جاهزة للتسليم',
-    lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
-    unreadCount: 0
-  }
-];
+function getId(obj?: { id?: string; _id?: string } | null): string {
+  return obj?.id ?? obj?._id ?? '';
+}
 
-const MOCK_MESSAGES: Message[] = [
-  { id: 'm1', senderId: 'u1', text: 'السلام عليكم ورحمة الله', time: new Date(Date.now() - 1000 * 60 * 60), status: 'read', type: 'text' },
-  { id: 'm2', senderId: 'me', text: 'وعليكم السلام، أهلاً بك أخي أحمد', time: new Date(Date.now() - 1000 * 60 * 55), status: 'read', type: 'text' },
-  { id: 'm3', senderId: 'u1', text: 'بخصوص التبرع، متى الوقت المناسب للتسليم؟', time: new Date(Date.now() - 1000 * 60 * 10), status: 'read', type: 'text' },
-  { id: 'm4', senderId: 'me', text: 'ممكن اليوم بعد العصر إن شاء الله، الساعة 4:30', time: new Date(Date.now() - 1000 * 60 * 8), status: 'read', type: 'text' },
-  { id: 'm5', senderId: 'u1', text: 'تمام، هكون موجود في الموعد إن شاء الله', time: new Date(Date.now() - 1000 * 60 * 5), status: 'read', type: 'text' },
-];
+const STATUS_CONFIG = {
+  pending:  { label: 'معلق',   cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+  active:   { label: 'نشط',    cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+  rejected: { label: 'مرفوض', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+  blocked:  { label: 'محظور', cls: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' },
+  closed:   { label: 'مغلق',  cls: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' },
+} as const;
 
 export function MessagesCenter() {
-  const [conversations, setConversations] = useState(MOCK_CONVERSATIONS);
-  const [activeConvId, setActiveConvId] = useState<string>(MOCK_CONVERSATIONS[0].id);
-  const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
-  const [inputValue, setInputValue] = useState('');
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const timerRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Clear timers on unmount to prevent state updates after unmount
-  useEffect(() => {
-    return () => { timerRefs.current.forEach(clearTimeout); };
+  const myId = getId(user as any);
+
+  const fetchConversations = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/conversations');
+      setConversations(res.data.data || []);
+    } catch {
+      // no-op — keep empty list, user will see empty state
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const activeConv = conversations.find(c => c.id === activeConvId);
-
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    fetchConversations();
+  }, [fetchConversations]);
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
-    
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      senderId: 'me',
-      text: inputValue.trim(),
-      time: new Date(),
-      status: 'sent',
-      type: 'text'
-    };
+  function getOtherUser(conv: Conversation): ConvUser {
+    return getId(conv.requester_id as any) === myId
+      ? conv.receiver_id
+      : conv.requester_id;
+  }
 
-    setMessages(prev => [...prev, newMessage]);
-    setInputValue('');
+  const filtered = conversations.filter(conv => {
+    const other = getOtherUser(conv);
+    return other?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
-    // Simulate delivery and read receipts
-    timerRefs.current.push(
-      setTimeout(() => {
-        setMessages(prev => prev.map(m => m.id === newMessage.id ? { ...m, status: 'delivered' } : m));
-      }, 1000),
-      setTimeout(() => {
-        setMessages(prev => prev.map(m => m.id === newMessage.id ? { ...m, status: 'read' } : m));
-      }, 3000)
-    );
-  };
-
-  const filteredConversations = conversations.filter(c => 
-    c.user.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const pendingCount = conversations.filter(c => c.status === 'pending').length;
 
   return (
-    <div className="flex h-[85vh] bg-white dark:bg-[#1A2332] rounded-3xl border shadow-xl overflow-hidden" dir="rtl">
-      
-      {/* ── Sidebar: Conversations List ── */}
-      <div className="w-80 md:w-96 border-l flex flex-col bg-muted/20">
-        {/* Header */}
-        <div className="p-4 border-b bg-white dark:bg-[#1A2332] flex items-center justify-between">
-          <h2 className="text-xl font-bold flex items-center gap-2">
+    <div className="max-w-2xl mx-auto" dir="rtl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
             الرسائل
-            <Badge className="bg-primary">{conversations.reduce((acc, c) => acc + c.unreadCount, 0)}</Badge>
-          </h2>
-          <Button variant="ghost" size="icon">
-            <MoreVertical className="h-5 w-5 text-muted-foreground" />
-          </Button>
+            {pendingCount > 0 && (
+              <Badge className="bg-amber-500 text-white border-none">{pendingCount}</Badge>
+            )}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {loading ? 'جاري التحميل...' :
+             conversations.length > 0 ? `${conversations.length} محادثة` : 'لا توجد محادثات'}
+          </p>
         </div>
+        <Button
+          variant="outline"
+          size="icon"
+          className="rounded-xl"
+          onClick={fetchConversations}
+          disabled={loading}
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </Button>
+      </div>
 
-        {/* Search */}
-        <div className="p-4 border-b">
-          <div className="relative">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="ابحث في المحادثات..." 
-              className="pr-9 bg-white dark:bg-black/20"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+      {/* Search */}
+      <div className="relative mb-4">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input
+          placeholder="ابحث في المحادثات..."
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          className="pr-9 h-11 rounded-xl"
+        />
+      </div>
+
+      {/* Loading */}
+      {loading && (
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <p className="text-sm">جاري تحميل المحادثات...</p>
+        </div>
+      )}
+
+      {/* Empty */}
+      {!loading && filtered.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+            <MessageSquare className="h-8 w-8 text-muted-foreground opacity-40" />
+          </div>
+          <div>
+            <p className="font-semibold text-lg">
+              {searchQuery ? 'لا نتائج' : 'لا توجد محادثات بعد'}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {searchQuery
+                ? 'جرّب بحثاً آخر'
+                : 'يمكنك بدء محادثة من صفحة تفاصيل التبرع'}
+            </p>
           </div>
         </div>
+      )}
 
-        {/* List */}
-        <ScrollArea className="flex-1">
-          <div className="p-2 space-y-1">
-            {filteredConversations.map(conv => (
-              <button
-                key={conv.id}
-                onClick={() => {
-                  setActiveConvId(conv.id);
-                  // mark as read
-                  setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c));
-                }}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-right ${
-                  activeConvId === conv.id 
-                    ? 'bg-primary/10 border-primary/20' 
-                    : 'hover:bg-accent border-transparent'
-                } border`}
-              >
-                <div className="relative">
-                  <Avatar className="h-12 w-12 border shadow-sm">
-                    <AvatarImage src={conv.user.avatar} />
-                    <AvatarFallback className="bg-primary/5 text-primary"><UserCircle className="h-6 w-6" /></AvatarFallback>
+      {/* Conversation list */}
+      {!loading && filtered.length > 0 && (
+        <ScrollArea className="h-[calc(100vh-280px)]">
+          <div className="space-y-2 pb-4">
+            {filtered.map(conv => {
+              const convId = getId(conv as any);
+              const other = getOtherUser(conv);
+              const statusCfg = STATUS_CONFIG[conv.status] ?? STATUS_CONFIG.closed;
+              const isPending = conv.status === 'pending';
+              const isRequester = getId(conv.requester_id as any) === myId;
+              const needsReply = isPending && !isRequester;
+              const timeStr = conv.last_message_at || conv.createdAt;
+
+              return (
+                <button
+                  key={convId}
+                  onClick={() => navigate(`/messages/${convId}`)}
+                  className="w-full flex items-center gap-3 p-4 rounded-2xl border border-border/60 bg-white dark:bg-[#1A2332]/60 hover:bg-muted/40 hover:border-primary/30 hover:shadow-sm transition-all text-right group"
+                >
+                  {/* Avatar */}
+                  <Avatar className="h-12 w-12 border shrink-0">
+                    <AvatarImage src={other?.avatar} />
+                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
+                      {other?.name?.slice(0, 2) || <UserCircle className="h-5 w-5" />}
+                    </AvatarFallback>
                   </Avatar>
-                  <OnlinePresenceIndicator status={conv.user.status} className="absolute bottom-0 right-0 border-2 border-white dark:border-[#1A2332]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center mb-1">
-                    <h3 className="font-bold text-sm truncate">{conv.user.name}</h3>
-                    <span className={`text-xs ${conv.unreadCount > 0 ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
-                      {formatDistanceToNow(conv.lastMessageTime, { locale: arSA })}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
-                      {conv.isTyping ? <span className="text-primary text-xs italic animate-pulse">يكتب الآن...</span> : conv.lastMessage}
-                    </p>
-                    {conv.unreadCount > 0 && (
-                      <Badge className="h-5 w-5 p-0 flex items-center justify-center rounded-full bg-primary shrink-0">
-                        {conv.unreadCount}
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p className="font-bold text-sm truncate group-hover:text-primary transition-colors">
+                        {other?.name || 'مستخدم'}
+                      </p>
+                      <span className="text-xs text-muted-foreground flex-shrink-0 ms-2">
+                        {timeStr
+                          ? formatDistanceToNow(new Date(timeStr), { addSuffix: true, locale: arSA })
+                          : ''}
+                      </span>
+                    </div>
+
+                    {conv.post_id && (
+                      <p className="text-xs text-primary font-medium mb-0.5 truncate">
+                        بخصوص: {conv.post_id.title}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm text-muted-foreground truncate flex-1">
+                        {conv.first_message}
+                      </p>
+                      <Badge className={`text-[10px] border-none flex-shrink-0 px-2 py-0.5 ${statusCfg.cls}`}>
+                        {statusCfg.label}
                       </Badge>
+                    </div>
+
+                    {needsReply && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 font-medium flex items-center gap-1">
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        طلب جديد يحتاج ردك
+                      </p>
                     )}
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </ScrollArea>
-      </div>
-
-      {/* ── Main Chat Area ── */}
-      <div className="flex-1 flex flex-col bg-slate-50/50 dark:bg-[#0F1623]/50">
-        {activeConv ? (
-          <>
-            {/* Chat Header */}
-            <div className="h-16 px-6 border-b bg-white dark:bg-[#1A2332] flex items-center justify-between shadow-sm z-10">
-              <div 
-                className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 p-2 rounded-xl transition-colors"
-                onClick={() => setProfileModalOpen(true)}
-              >
-                <Avatar className="h-10 w-10 border">
-                  <AvatarImage src={activeConv.user.avatar} />
-                  <AvatarFallback className="bg-primary/5 text-primary"><UserCircle className="h-6 w-6" /></AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-bold text-base">{activeConv.user.name}</h3>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <OnlinePresenceIndicator status={activeConv.isTyping ? 'isTyping' : activeConv.user.status} size="sm" />
-                    {activeConv.isTyping ? 'يكتب...' : 
-                     activeConv.user.status === 'online' ? 'متصل الآن' : 
-                     `آخر ظهور ${activeConv.user.lastSeen ? formatDistanceToNow(activeConv.user.lastSeen, { addSuffix: true, locale: arSA }) : ''}`}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10"><Phone className="h-5 w-5" /></Button>
-                <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10"><Video className="h-5 w-5" /></Button>
-                <div className="w-px h-6 bg-border mx-2" />
-                <Button variant="ghost" size="icon" className="text-muted-foreground"><Info className="h-5 w-5" /></Button>
-              </div>
-            </div>
-
-            {/* Chat Messages */}
-            <ScrollArea className="flex-1 p-6" ref={scrollRef}>
-              <div className="space-y-6">
-                {/* Date Divider */}
-                <div className="flex justify-center">
-                  <span className="text-xs bg-muted text-muted-foreground px-3 py-1 rounded-full border shadow-sm">
-                    اليوم
-                  </span>
-                </div>
-
-                {messages.map((msg) => {
-                  const isMe = msg.senderId === 'me';
-                  return (
-                    <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`flex gap-2 max-w-[75%] ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                        {!isMe && (
-                          <Avatar className="h-8 w-8 mt-auto shrink-0">
-                            <AvatarImage src={activeConv.user.avatar} />
-                            <AvatarFallback><UserCircle className="h-5 w-5" /></AvatarFallback>
-                          </Avatar>
-                        )}
-                        <div className={`relative px-4 py-2.5 rounded-2xl shadow-sm text-sm ${
-                          isMe 
-                            ? 'bg-primary text-white rounded-br-sm' 
-                            : 'bg-white dark:bg-[#1A2332] border rounded-bl-sm text-foreground'
-                        }`}>
-                          <p className="leading-relaxed">{msg.text}</p>
-                          <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${isMe ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                            <span>{msg.time.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>
-                            {isMe && (
-                              msg.status === 'read' ? <CheckCheck className="h-3 w-3 text-blue-300" /> :
-                              msg.status === 'delivered' ? <CheckCheck className="h-3 w-3" /> :
-                              <Check className="h-3 w-3" />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                {activeConv.isTyping && (
-                  <div className="flex justify-start">
-                    <div className="bg-white dark:bg-[#1A2332] border px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm flex gap-1 items-center">
-                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" />
-                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: '0.2s' }} />
-                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: '0.4s' }} />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-
-            {/* Message Input */}
-            <div className="p-4 bg-white dark:bg-[#1A2332] border-t">
-              <div className="flex items-end gap-2 bg-muted/30 p-2 rounded-2xl border focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all">
-                <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-primary rounded-xl h-10 w-10">
-                  <Smile className="h-5 w-5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-primary rounded-xl h-10 w-10">
-                  <Paperclip className="h-5 w-5" />
-                </Button>
-                <textarea 
-                  placeholder="اكتب رسالة..." 
-                  className="flex-1 bg-transparent border-0 focus:ring-0 resize-none min-h-[40px] max-h-[120px] py-2 text-sm"
-                  rows={1}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                />
-                {inputValue.trim() ? (
-                  <Button 
-                    size="icon" 
-                    className="shrink-0 bg-primary hover:bg-primary/90 text-white rounded-xl h-10 w-10 shadow-md transition-transform active:scale-95"
-                    onClick={handleSendMessage}
-                  >
-                    <Send className="h-4 w-4 ms-1" />
-                  </Button>
-                ) : (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className={`shrink-0 rounded-xl h-10 w-10 ${isRecording ? 'bg-red-100 text-red-500 animate-pulse' : 'text-muted-foreground hover:text-primary'}`}
-                    onClick={() => setIsRecording(!isRecording)}
-                  >
-                    <Mic className="h-5 w-5" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-            <MessageSquare className="h-16 w-16 mb-4 opacity-20" />
-            <p className="text-lg font-semibold">اختر محادثة للبدء</p>
-          </div>
-        )}
-      </div>
-
-      {activeConv && (
-        <BeneficiaryProfileModal
-          open={profileModalOpen}
-          onClose={() => setProfileModalOpen(false)}
-          user={{
-            id: activeConv.user.id,
-            name: activeConv.user.name,
-            avatar: activeConv.user.avatar,
-            role: 'user'
-          }}
-        />
       )}
     </div>
   );

@@ -1,9 +1,11 @@
-import { campaigns, donations } from '../data/donations';
+import { useCampaigns, type Campaign } from '../hooks/useCampaigns';
 import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useDonations } from '../context/DonationContext';
+import { useState } from 'react';
+import { CampaignPaymentModal, type PaymentCampaignInfo } from '../components/CampaignPaymentModal';
 import { Testimonials } from '../components/Testimonials';
 import {
   Shirt, UtensilsCrossed, Armchair, BookOpen, Package,
@@ -24,6 +26,7 @@ export function Home() {
   const { user, toggleWishlist } = useAuth();
   const { t, language } = useLanguage();
   const { donations: apiDonations } = useDonations();
+  const { campaigns } = useCampaigns();
   const navigate = useNavigate();
 
   const handleDonateClick = () => {
@@ -34,12 +37,31 @@ export function Home() {
     }
   };
 
+  const [paymentModal, setPaymentModal] = useState<{ open: boolean; campaign: PaymentCampaignInfo | null }>({
+    open: false,
+    campaign: null,
+  });
+
+  function openCampaignPayment(campaign: Campaign) {
+    setPaymentModal({
+      open: true,
+      campaign: {
+        id: `home-${campaign.id}`,
+        title: campaign.title,
+        organization: 'منصة الخير',
+        imageUrl: campaign.image,
+        target: campaign.target,
+        current: campaign.current,
+      },
+    });
+  }
+
   const categories = [
-    { name: 'ملابس', nameEn: 'Clothes', icon: Shirt, color: 'from-blue-500 to-blue-600', count: donations.filter(d => d.category === 'ملابس').length },
-    { name: 'طعام', nameEn: 'Food', icon: UtensilsCrossed, color: 'from-emerald-500 to-emerald-600', count: donations.filter(d => d.category === 'طعام').length },
-    { name: 'أثاث', nameEn: 'Furniture', icon: Armchair, color: 'from-purple-500 to-purple-600', count: donations.filter(d => d.category === 'أثاث').length },
-    { name: 'كتب', nameEn: 'Books', icon: BookOpen, color: 'from-orange-500 to-orange-600', count: donations.filter(d => d.category === 'كتب').length },
-    { name: 'أخرى', nameEn: 'Other', icon: Package, color: 'from-pink-500 to-pink-600', count: donations.filter(d => d.category === 'أخرى').length },
+    { name: 'ملابس', nameEn: 'Clothes', icon: Shirt, color: 'from-blue-500 to-blue-600', count: apiDonations.filter(d => d.category === 'ملابس').length },
+    { name: 'طعام', nameEn: 'Food', icon: UtensilsCrossed, color: 'from-emerald-500 to-emerald-600', count: apiDonations.filter(d => d.category === 'طعام').length },
+    { name: 'أثاث', nameEn: 'Furniture', icon: Armchair, color: 'from-purple-500 to-purple-600', count: apiDonations.filter(d => d.category === 'أثاث').length },
+    { name: 'كتب', nameEn: 'Books', icon: BookOpen, color: 'from-orange-500 to-orange-600', count: apiDonations.filter(d => d.category === 'كتب').length },
+    { name: 'أخرى', nameEn: 'Other', icon: Package, color: 'from-pink-500 to-pink-600', count: apiDonations.filter(d => d.category === 'أخرى').length },
   ];
 
 
@@ -201,7 +223,7 @@ export function Home() {
                       <span className="text-muted-foreground">{campaign.target - campaign.current} متبقية</span>
                     </div>
 
-                    <Button className="w-full h-9 rounded-xl font-semibold" onClick={handleDonateClick}>
+                    <Button className="w-full h-9 rounded-xl font-semibold" onClick={() => openCampaignPayment(campaign)}>
                       <Gift className="me-2 h-4 w-4" />
                       {t('home.campaigns_donate_btn')}
                     </Button>
@@ -212,6 +234,15 @@ export function Home() {
           </motion.div>
         </div>
       </section>
+
+      {/* Campaign Payment Modal */}
+      {paymentModal.campaign && (
+        <CampaignPaymentModal
+          open={paymentModal.open}
+          onOpenChange={(open) => setPaymentModal(prev => ({ ...prev, open }))}
+          campaign={paymentModal.campaign}
+        />
+      )}
 
       {/* ── How It Works ─────────────────────────────────── */}
       <section className="py-20 md:py-28 bg-white dark:bg-[#1A2332]/40">

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -366,7 +366,7 @@ export function AddDonation() {
                 className="font-semibold rounded-xl bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-primary/40 px-8" 
               >
                 {isSubmitting ? 'جاري الإرسال...' : (
-                  <><CheckCircle className="ms- h-5 w-5" /> نشر التبرع</>
+                  <><CheckCircle className="ms-2 h-5 w-5" /> نشر التبرع</>
                 )}
               </Button>
             )}

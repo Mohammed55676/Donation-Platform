@@ -51,7 +51,27 @@ async function getCampaign(req, res, next) {
 // ── POST /api/campaigns ──────────────────────────────────────────────
 async function createCampaign(req, res, next) {
   try {
-    const campaign = await Campaign.create({ ...req.body, createdBy: req.user._id });
+    const isAdmin = req.user.role === 'admin';
+    const isVerifiedCharity = req.user.user_type === 'charity' && req.user.charityStatus === 'verified';
+
+    if (!isAdmin && !isVerifiedCharity) {
+      throw new AppError('يمكن للأدمن أو الجمعيات الموثقة فقط إنشاء حملات.', 403);
+    }
+
+    const campaignData = {
+      ...req.body,
+      createdBy: req.user._id,
+    };
+
+    // Admin campaigns are active directly; charity campaigns need review
+    if (isAdmin) {
+      campaignData.status = 'active';
+    } else {
+      campaignData.status = 'pending_review';
+      campaignData.charityId = req.user._id;
+    }
+
+    const campaign = await Campaign.create(campaignData);
     return sendSuccess(res, campaign, 'Campaign created.', 201);
   } catch (err) {
     next(err);
@@ -83,4 +103,47 @@ async function deleteCampaign(req, res, next) {
   }
 }
 
-module.exports = { listCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign };
+// ── POST /api/campaigns/:id/donate ──────────────────────────────────
+// Demo-only: records a fake transaction and increments current amount.
+// Card data is NEVER received or stored here — it stays on the frontend.
+async function donateToCampaign(req, res, next) {
+  try {
+    const { amount, paymentMethod, isDemoPayment } = req.body;
+
+    if (!amount || Number(amount) <= 0) {
+      throw new AppError('المبلغ يجب أن يكون أكبر من صفر.', 400);
+    }
+
+    const campaign = await Campaign.findByIdAndUpdate(
+      req.params.id,
+      {
+        $inc: { current: Number(amount) },
+        $push: {
+          demoTransactions: {
+            donorId:       req.user?._id ?? null,
+            amount:        Number(amount),
+            paymentMethod: paymentMethod || 'card',
+            status:        'demo_success',
+            isDemoPayment: isDemoPayment !== false,
+            createdAt:     new Date(),
+          },
+        },
+      },
+      { new: true, runValidators: false }
+    );
+
+    if (!campaign) throw new AppError('Campaign not found.', 404);
+
+    return sendSuccess(res, {
+      campaignId:    campaign.id,
+      amount:        Number(amount),
+      newTotal:      campaign.current,
+      status:        'demo_success',
+      isDemoPayment: true,
+    }, 'Demo donation recorded.', 201);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign, donateToCampaign };

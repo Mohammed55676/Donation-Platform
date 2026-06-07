@@ -4,7 +4,7 @@ import { auth, googleProvider } from '../lib/firebase';
 import api from '../utils/api';
 
 export type UserRole = 'user' | 'admin' | 'volunteer';
-export type UserType = 'donor' | 'beneficiary';
+export type UserType = 'donor' | 'beneficiary' | 'charity';
 
 export interface AuthUser {
   id: string;
@@ -23,6 +23,16 @@ export interface AuthUser {
   rating_count?: number;
   completed_donations_count?: number;
   verification_status?: 'not_verified' | 'pending_review' | 'trusted' | 'rejected' | 'blocked';
+  // Beneficiary admin verification
+  beneficiaryStatus?: 'not_submitted' | 'pending_admin' | 'verified' | 'rejected';
+  verifiedBy?: 'admin' | 'charity' | null;
+  charityId?: string | null;
+  beneficiaryVerificationNote?: string | null;
+  // Charity fields
+  charityStatus?: 'pending' | 'verified' | 'rejected' | null;
+  charityName?: string | null;
+  charityBadge?: boolean;
+  charityLicenseDocument?: string | null;
 }
 
 interface AuthContextValue {
@@ -30,7 +40,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
-  loginWithGoogle: () => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string; user?: AuthUser; isNewUser?: boolean }>;
   signup: (
     name: string,
     email: string,
@@ -108,10 +118,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           avatar: gUser.photoURL 
         });
         
-        const { token, user: userData } = res.data.data;
+        const { token, user: userData, isNewUser } = res.data.data;
         localStorage.setItem('token', token);
         setUser(userData);
-        return { success: true, user: userData };
+        return { success: true, user: userData, isNewUser: !!isNewUser };
       } catch (backendErr: any) {
         console.error('Backend Google login error:', backendErr);
         return { success: false, error: backendErr.response?.data?.error || 'حدث خطأ أثناء مزامنة الدخول مع الخادم' };

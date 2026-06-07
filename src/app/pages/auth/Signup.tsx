@@ -65,7 +65,9 @@ export function Signup() {
     if (result.success) {
       toast.success(t('auth.signup_success'));
       const user = result.user;
-      const redirect = user?.role === 'admin' ? '/dashboard/admin' : '/dashboard';
+      let redirect = '/dashboard';
+      if (user?.role === 'admin') redirect = '/dashboard/admin';
+      else if (user?.user_type === 'charity') redirect = '/dashboard/charity';
       navigate(redirect, { replace: true });
     } else {
       toast.error(result.error || t('auth.error_generic'));
@@ -90,7 +92,7 @@ export function Signup() {
         {/* User type selection */}
         <div className="space-y-2">
           <Label>نوع الحساب</Label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <button
               type="button"
               onClick={() => setUserType('donor')}
@@ -116,6 +118,19 @@ export function Signup() {
               <HandCoins className="h-6 w-6" />
               <span className="text-sm font-semibold">مستفيد</span>
               <span className="text-xs opacity-70">أطلب التبرعات</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setUserType('charity')}
+              className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                userType === 'charity'
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30'
+                  : 'border-border/60 hover:border-emerald-400 text-muted-foreground'
+              }`}
+            >
+              <Heart className="h-6 w-6" />
+              <span className="text-sm font-semibold">جمعية</span>
+              <span className="text-xs opacity-70">جمعية خيرية</span>
             </button>
           </div>
         </div>
@@ -160,7 +175,7 @@ export function Signup() {
               id="phone"
               type="tel"
               placeholder="+9627xxxxxxxx"
-              className={`pe-10 h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary ${errors.phone ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+              className={`ps-10 h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary ${errors.phone ? 'border-destructive focus-visible:ring-destructive' : ''}`}
               value={phone}
               onChange={(e) => { setPhone(e.target.value); setErrors(prev => ({ ...prev, phone: undefined })); }}
               dir="ltr"

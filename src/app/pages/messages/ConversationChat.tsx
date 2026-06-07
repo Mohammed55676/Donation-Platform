@@ -30,7 +30,7 @@ export function ConversationChat() {
   const [sending, setSending] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
-  const myId = user?.id || user?._id;
+  const myId = String(user?.id ?? user?._id ?? '');
 
   const fetchChat = async () => {
     try {
@@ -94,24 +94,52 @@ export function ConversationChat() {
     }
   };
 
+  const handleAccept = async () => {
+    try {
+      await api.put(`/conversations/${conversationId}/accept`);
+      toast.success('تم قبول المحادثة');
+      fetchChat();
+    } catch (err) {
+      toast.error('تعذّر قبول المحادثة');
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      await api.put(`/conversations/${conversationId}/reject`);
+      toast.success('تم رفض الطلب');
+      navigate('/messages');
+    } catch (err) {
+      toast.error('تعذّر رفض المحادثة');
+    }
+  };
+
   if (loading) {
     return <div className="min-h-screen flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
 
   if (!conv) return null;
 
-  const isRequester = conv.requester_id.id === myId;
+  // Normalize IDs — populated subdocs may expose .id (virtual) or ._id
+  const reqId = String(conv.requester_id?.id ?? conv.requester_id?._id ?? '');
+  const isRequester = reqId === myId;
   const otherUser = isRequester ? conv.receiver_id : conv.requester_id;
+  const otherUserId = String(otherUser?.id ?? otherUser?._id ?? '');
+
   const isPending = conv.status === 'pending';
   const isBlocked = conv.status === 'blocked';
   const isRejected = conv.status === 'rejected';
 
-  const myAgreementConfirmed = conv.agreement_confirmed_by?.includes(myId);
-  const otherAgreementConfirmed = conv.agreement_confirmed_by?.includes(otherUser.id);
+  // agreement_confirmed_by stores string-ified ObjectIds — safe includes check
+  const agreedBy: string[] = (conv.agreement_confirmed_by ?? []).map(String);
+  const deliveredBy: string[] = (conv.delivery_confirmed_by ?? []).map(String);
+
+  const myAgreementConfirmed = agreedBy.includes(myId);
+  const otherAgreementConfirmed = agreedBy.includes(otherUserId);
   const bothAgreed = conv.agreed_at;
 
-  const myDeliveryConfirmed = conv.delivery_confirmed_by?.includes(myId);
-  const otherDeliveryConfirmed = conv.delivery_confirmed_by?.includes(otherUser.id);
+  const myDeliveryConfirmed = deliveredBy.includes(myId);
+  const otherDeliveryConfirmed = deliveredBy.includes(otherUserId);
   const bothDelivered = conv.delivered_at;
 
   return (
@@ -134,9 +162,24 @@ export function ConversationChat() {
       </div>
 
       {/* ── Status Banner ── */}
-      {isPending && (
+      {isPending && isRequester && (
         <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 p-4 text-center text-sm border-b border-amber-200">
           بانتظار قبول الطرف الآخر لبدء المحادثة ومشاركة بيانات التواصل.
+        </div>
+      )}
+      {isPending && !isRequester && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 p-4">
+          <p className="text-amber-800 dark:text-amber-200 text-sm text-center mb-3 font-medium">
+            لديك طلب تواصل جديد — قبوله يُتيح تبادل أرقام التواصل والرسائل.
+          </p>
+          <div className="flex justify-center gap-3">
+            <Button size="sm" onClick={handleAccept} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <CheckCircle className="h-4 w-4 me-1" /> قبول
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleReject} className="border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30">
+              رفض
+            </Button>
+          </div>
         </div>
       )}
       {isRejected && (
@@ -199,7 +242,7 @@ export function ConversationChat() {
 
         <AnimatePresence initial={false}>
           {messages.map((msg) => {
-            const isMe = msg.sender_id === myId;
+            const isMe = String(msg.sender_id) === myId;
             return (
               <motion.div
                 key={msg.id}

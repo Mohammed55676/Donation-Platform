@@ -34,7 +34,13 @@ async function register(req, res, next) {
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) throw new AppError('Email already registered.', 409);
 
-    const user = await User.create({ name, email, password, user_type: user_type || 'donor', phone });
+    const userData = { name, email, password, user_type: user_type || 'donor', phone };
+    // Charity accounts start with pending status
+    if (user_type === 'charity') {
+      userData.charityStatus = 'pending';
+      userData.charityName = name; // Use registration name as default charity name
+    }
+    const user = await User.create(userData);
     const token = signToken(user._id);
 
     return sendSuccess(res, { user, token }, 'Registration successful.', 201);
@@ -102,10 +108,11 @@ async function getMe(req, res) {
  */
 async function googleLogin(req, res, next) {
   try {
-    const { email, name, avatar } = req.body;
+    const { email, name, avatar, user_type } = req.body;
     if (!email) throw new AppError('Email is required.', 400);
 
     let user = await User.findOne({ email: email.toLowerCase() });
+    let isNewUser = false;
 
     if (!user) {
       // Create new user if they don't exist
@@ -116,14 +123,16 @@ async function googleLogin(req, res, next) {
         email: email.toLowerCase(),
         password: randomPass,
         avatar: avatar || null,
-        provider: 'google'
+        provider: 'google',
+        user_type: user_type || 'donor'
       });
+      isNewUser = true;
     }
 
     if (user.status === 'banned') throw new AppError('Your account has been suspended.', 403);
 
     const token = signToken(user._id);
-    return sendSuccess(res, { user, token }, 'Google login successful.');
+    return sendSuccess(res, { user, token, isNewUser }, 'Google login successful.');
   } catch (err) {
     next(err);
   }

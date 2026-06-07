@@ -55,11 +55,40 @@ const userSchema = new mongoose.Schema(
     // Distinguishes public user types — separate from the role field (admin/user)
     user_type: {
       type: String,
-      enum: ['donor', 'beneficiary'],
+      enum: ['donor', 'beneficiary', 'charity'],
       default: 'donor',
     },
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Donation' }],
-    // ── Verification & rating summary (synced from BeneficiaryProfile / Rating) ──
+
+    // ── Beneficiary verification (admin-based) ──────────────────────────
+    beneficiaryStatus: {
+      type: String,
+      enum: ['not_submitted', 'pending_admin', 'verified', 'rejected'],
+      default: 'not_submitted',
+    },
+    verifiedBy: {
+      type: String,
+      enum: ['admin', 'charity', null],
+      default: null,
+    },
+    charityId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    beneficiaryVerificationNote: { type: String, default: null },
+
+    // ── Charity-specific fields ─────────────────────────────────────────
+    charityStatus: {
+      type: String,
+      enum: ['pending', 'verified', 'rejected', null],
+      default: null,
+    },
+    charityLicenseDocument: { type: String, default: null },
+    charityName: { type: String, trim: true, default: null },
+    charityBadge: { type: Boolean, default: false },
+
+    // ── Legacy verification & rating summary ────────────────────────────
     verification_status: {
       type: String,
       enum: ['not_verified', 'pending_review', 'trusted', 'rejected', 'blocked'],

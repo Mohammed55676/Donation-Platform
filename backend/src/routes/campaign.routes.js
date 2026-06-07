@@ -12,7 +12,7 @@ const Joi     = require('joi');
 const router  = express.Router();
 
 const {
-  listCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign,
+  listCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign, donateToCampaign,
 } = require('../controllers/campaign.controller');
 const { protect }     = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/role.middleware');
@@ -28,10 +28,17 @@ const campaignSchema = Joi.object({
   isActive:    Joi.boolean().default(true),
 });
 
-router.get('/',        listCampaigns);
-router.get('/:id',     getCampaign);
-router.post('/',       protect, requireRole('admin'), validate(campaignSchema), createCampaign);
-router.put('/:id',     protect, requireRole('admin'), updateCampaign);
-router.delete('/:id',  protect, requireRole('admin'), deleteCampaign);
+const donateSchema = Joi.object({
+  amount:        Joi.number().min(0.01).required(),
+  paymentMethod: Joi.string().valid('card', 'apple_google', 'bank').default('card'),
+  isDemoPayment: Joi.boolean().default(true),
+});
+
+router.get('/',            listCampaigns);
+router.get('/:id',         getCampaign);
+router.post('/',           protect, validate(campaignSchema), createCampaign);
+router.post('/:id/donate', validate(donateSchema), donateToCampaign);
+router.put('/:id',         protect, requireRole('admin'), updateCampaign);
+router.delete('/:id',      protect, requireRole('admin'), deleteCampaign);
 
 module.exports = router;
