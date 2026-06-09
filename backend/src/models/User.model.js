@@ -70,8 +70,10 @@ const userSchema = new mongoose.Schema(
       enum: ['pending', 'verified', 'rejected', null],
       default: null,
     },
+    charityCategory: { type: String, default: null },
+    charityDescription: { type: String, default: null },
+    charityRegistrationNumber: { type: String, default: null },
     charityLicenseDocument: { type: String, default: null },
-    charityName: { type: String, trim: true, default: null },
     charityBadge: { type: Boolean, default: false },
 
     // ── Legacy verification & rating summary ────────────────────────────

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Button } from './ui/button';
+import { AIChatbot } from './AIChatbot';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
 import {
@@ -348,6 +349,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </main>
       </div>
+      <AIChatbot />
     </div>
   );
 }

@@ -44,6 +44,26 @@ async function listUsers(req, res, next) {
   }
 }
 
+// ── GET /api/users/contactable-charities ─────────────────────────────
+/**
+ * @route   GET /api/users/contactable-charities
+ * @access  Protected
+ */
+async function getContactableCharities(req, res, next) {
+  try {
+    const charities = await User.find({
+      user_type: 'charity',
+      charityStatus: 'verified',
+      status: 'active'
+    }).select('name avatar location charityCategory charityDescription charityBadge');
+
+    // Mongoose maps _id to id in toJSON if setup properly
+    return sendSuccess(res, charities, 'تم جلب الجمعيات الموثقة.');
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ── POST /api/users ──────────────────────────────────────────────────
 /**
  * @route   POST /api/users
@@ -169,4 +189,4 @@ async function toggleWishlist(req, res, next) {
   }
 }
 
-module.exports = { listUsers, createUser, getUser, updateUser, updateUserStatus, deleteUser, toggleWishlist };
+module.exports = { listUsers, getContactableCharities, createUser, getUser, updateUser, updateUserStatus, deleteUser, toggleWishlist };

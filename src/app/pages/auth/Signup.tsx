@@ -10,7 +10,7 @@ import { Eye, EyeOff, Mail, Lock, User, Heart, Loader2, HandCoins, Gift, Phone }
 import { toast } from 'sonner';
 import { isValidEmail, isLettersOnly, isValidPassword } from '../../utils/validators';
 
-type Errors = { name?: string; email?: string; password?: string; phone?: string };
+type Errors = { name?: string; email?: string; password?: string; phone?: string; location?: string; charityCategory?: string; charityRegistrationNumber?: string; charityLicenseDocument?: string; };
 
 export function Signup() {
   const [name, setName] = useState('');
@@ -19,6 +19,12 @@ export function Signup() {
   const [password, setPassword] = useState('');
   const [userType, setUserType] = useState<UserType>('donor');
   const [showPassword, setShowPassword] = useState(false);
+  const [location, setLocation] = useState('');
+  const [charityCategory, setCharityCategory] = useState('');
+  const [charityDescription, setCharityDescription] = useState('');
+  const [charityRegistrationNumber, setCharityRegistrationNumber] = useState('');
+  const [charityLicenseDocument, setCharityLicenseDocument] = useState('');
+  
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const { signup } = useAuth();
@@ -49,6 +55,12 @@ export function Signup() {
     } else if (!isValidPassword(password)) {
       e.password = 'كلمة المرور يجب أن تتكون من 8 خانات وتحتوي على حرف كبير ورقم ورمز خاص';
     }
+    if (userType === 'charity') {
+      if (!location.trim()) e.location = 'العنوان مطلوب';
+      if (!charityCategory.trim()) e.charityCategory = 'نوع الجمعية مطلوب';
+      if (!charityRegistrationNumber.trim()) e.charityRegistrationNumber = 'رقم الترخيص مطلوب';
+      if (!charityLicenseDocument.trim()) e.charityLicenseDocument = 'رابط مستند الترخيص مطلوب';
+    }
     return e;
   };
 
@@ -60,11 +72,24 @@ export function Signup() {
       return;
     }
     setLoading(true);
-    const result = await signup(name, email, password, userType, phone);
+    const result = await signup({
+      name, email, password, user_type: userType, phone,
+      ...(userType === 'charity' && {
+        location,
+        charityCategory,
+        charityDescription,
+        charityRegistrationNumber,
+        charityLicenseDocument
+      })
+    });
     setLoading(false);
     if (result.success) {
+      if (result.isPendingCharity) {
+        navigate('/pending-review', { replace: true });
+        return;
+      }
       if (result.requiresOTP) {
-        navigate('/verify-otp', { state: { email: result.email, previewUrl: result.previewUrl } });
+        navigate('/verify-otp', { state: { email: result.email, previewUrl: result.previewUrl, devOtp: result.devOtp } });
         return;
       }
       toast.success(t('auth.signup_success'));
@@ -100,11 +125,10 @@ export function Signup() {
             <button
               type="button"
               onClick={() => setUserType('donor')}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                userType === 'donor'
+              className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${userType === 'donor'
                   ? 'border-primary bg-primary/10 text-primary'
                   : 'border-border/60 hover:border-primary/40 text-muted-foreground'
-              }`}
+                }`}
             >
               <Gift className="h-6 w-6" />
               <span className="text-sm font-semibold">متبرع</span>
@@ -113,11 +137,10 @@ export function Signup() {
             <button
               type="button"
               onClick={() => setUserType('charity')}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                userType === 'charity'
+              className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${userType === 'charity'
                   ? 'border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30'
                   : 'border-border/60 hover:border-emerald-400 text-muted-foreground'
-              }`}
+                }`}
             >
               <Heart className="h-6 w-6" />
               <span className="text-sm font-semibold">جمعية</span>
@@ -127,12 +150,12 @@ export function Signup() {
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor="name">{t('auth.name')}</Label>
+          <Label htmlFor="name">{userType === 'charity' ? 'اسم الجمعية / المنظمة' : t('auth.name')}</Label>
           <div className="relative">
             <User className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="name"
-              placeholder={t('auth.name_placeholder')}
+              placeholder={userType === 'charity' ? 'اسم الجمعية الرسمي' : t('auth.name_placeholder')}
               className={`pe-10 h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary ${errors.name ? 'border-destructive focus-visible:ring-destructive' : ''}`}
               value={name}
               onChange={(e) => { setName(e.target.value); setErrors(prev => ({ ...prev, name: undefined })); }}
@@ -174,6 +197,71 @@ export function Signup() {
           </div>
           {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
         </div>
+
+        {userType === 'charity' && (
+          <>
+            <div className="space-y-1">
+              <Label htmlFor="location">الموقع (المدينة / المحافظة / العنوان التفصيلي)</Label>
+              <Input
+                id="location"
+                placeholder="مثال: الرياض، حي الورود، شارع التحلية"
+                className={`h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary ${errors.location ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                value={location}
+                onChange={(e) => { setLocation(e.target.value); setErrors(prev => ({ ...prev, location: undefined })); }}
+              />
+              {errors.location && <p className="text-xs text-destructive">{errors.location}</p>}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="category">مجال العمل / الفئة (مثال: أيتام، صحة، إغاثة)</Label>
+              <Input
+                id="category"
+                placeholder="مثال: رعاية الأيتام"
+                className={`h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary ${errors.charityCategory ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                value={charityCategory}
+                onChange={(e) => { setCharityCategory(e.target.value); setErrors(prev => ({ ...prev, charityCategory: undefined })); }}
+              />
+              {errors.charityCategory && <p className="text-xs text-destructive">{errors.charityCategory}</p>}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="description">وصف قصير للجمعية</Label>
+              <Input
+                id="description"
+                placeholder="نبذة مختصرة عن نشاط الجمعية..."
+                className="h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary"
+                value={charityDescription}
+                onChange={(e) => setCharityDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="regNumber">رقم الترخيص / التسجيل الرسمي</Label>
+              <Input
+                id="regNumber"
+                placeholder="مثال: 123456789"
+                className={`h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary ${errors.charityRegistrationNumber ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                value={charityRegistrationNumber}
+                onChange={(e) => { setCharityRegistrationNumber(e.target.value); setErrors(prev => ({ ...prev, charityRegistrationNumber: undefined })); }}
+                dir="ltr"
+              />
+              {errors.charityRegistrationNumber && <p className="text-xs text-destructive">{errors.charityRegistrationNumber}</p>}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="docUrl">رابط مستند الترخيص (Google Drive, Dropbox...)</Label>
+              <Input
+                id="docUrl"
+                placeholder="https://..."
+                className={`h-12 rounded-xl bg-background border border-border/60 focus-visible:ring-primary ${errors.charityLicenseDocument ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                value={charityLicenseDocument}
+                onChange={(e) => { setCharityLicenseDocument(e.target.value); setErrors(prev => ({ ...prev, charityLicenseDocument: undefined })); }}
+                dir="ltr"
+              />
+              {errors.charityLicenseDocument && <p className="text-xs text-destructive">{errors.charityLicenseDocument}</p>}
+            </div>
+          </>
+        )}
 
         <div className="space-y-1">
           <Label htmlFor="password">{t('auth.password')}</Label>

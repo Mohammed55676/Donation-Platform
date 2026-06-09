@@ -148,7 +148,7 @@ export function MessagesCenter() {
             <p className="text-sm text-muted-foreground mt-1">
               {searchQuery
                 ? 'جرّب بحثاً آخر'
-                : 'يمكنك بدء محادثة من صفحة تفاصيل التبرع'}
+                : 'يمكنك بدء محادثة مع جمعية موثقة من تبويب البحث عن جمعيات أو من صفحة تفاصيل التبرع.'}
             </p>
           </div>
         </div>

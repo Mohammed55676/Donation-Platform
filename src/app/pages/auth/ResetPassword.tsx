@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
-import { REGEXP_ONLY_DIGITS } from 'input-otp';
+
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '../../components/ui/input-otp';
 import { Lock, Heart, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '../../utils/api';
 import { isValidPassword } from '../../utils/validators';
 
 export function ResetPassword() {
-  const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,13 +17,14 @@ export function ResetPassword() {
   const location = useLocation();
 
   const email = (location.state as any)?.email as string | undefined;
-  const previewUrl = (location.state as any)?.previewUrl as string | undefined;
+  const otp = (location.state as any)?.otp as string | undefined;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (otp.length !== 6) {
-      toast.error('يرجى إدخال رمز التحقق المكوّن من 6 أرقام');
+    if (!otp || otp.length !== 6) {
+      toast.error('حدث خطأ بالتحقق، يرجى إعادة المحاولة من البداية');
+      navigate('/forgot-password');
       return;
     }
 
@@ -66,38 +65,12 @@ export function ResetPassword() {
         </div>
         <h2 className="text-2xl font-bold mb-1">تعيين كلمة مرور جديدة</h2>
         <p className="text-muted-foreground text-sm">
-          أدخل الرمز الذي أُرسل إلى{' '}
+          قم بتعيين كلمة مرور جديدة لحساب{' '}
           <span className="font-medium text-foreground">{email}</span>
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="space-y-2">
-          <Label>رمز التحقق</Label>
-          <div className="flex justify-center" dir="ltr">
-            <InputOTP
-              maxLength={6}
-              value={otp}
-              onChange={setOtp}
-              pattern={REGEXP_ONLY_DIGITS}
-            >
-              <InputOTPGroup>
-                {[0, 1, 2, 3, 4, 5].map(i => (
-                  <InputOTPSlot key={i} index={i} />
-                ))}
-              </InputOTPGroup>
-            </InputOTP>
-          </div>
-          {previewUrl && (
-            <p className="text-xs text-muted-foreground text-center">
-              [DEV]{' '}
-              <a href={previewUrl} target="_blank" rel="noreferrer" className="underline">
-                عاين الإيميل
-              </a>
-            </p>
-          )}
-        </div>
-
         <div className="space-y-2">
           <Label htmlFor="password">كلمة المرور الجديدة</Label>
           <div className="relative">

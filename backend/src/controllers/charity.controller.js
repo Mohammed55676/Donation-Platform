@@ -75,7 +75,7 @@ async function adminListCharities(req, res, next) {
     }
 
     const charities = await User.find(filter)
-      .select('name email charityName charityStatus charityBadge charityLicenseDocument phone location createdAt')
+      .select('name email charityName charityStatus charityBadge charityLicenseDocument phone location charityCategory charityDescription charityRegistrationNumber createdAt')
       .sort({ createdAt: -1 });
 
     return sendSuccess(res, charities, 'Charities retrieved.');

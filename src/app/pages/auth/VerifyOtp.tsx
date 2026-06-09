@@ -4,6 +4,8 @@ import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { useAuth } from '../../context/AuthContext';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '../../components/ui/input-otp';
 import { Heart, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import api from '../../utils/api';
 
 export function VerifyOtp() {
   const [otp, setOtp] = useState('');
@@ -17,10 +19,16 @@ export function VerifyOtp() {
 
   const email = (location.state as any)?.email as string | undefined;
   const previewUrl = (location.state as any)?.previewUrl as string | undefined;
+  const devOtp = (location.state as any)?.devOtp as string | undefined;
+  const type = (location.state as any)?.type as 'reset' | undefined;
 
   useEffect(() => {
     if (!email) navigate('/login', { replace: true });
-  }, [email, navigate]);
+    if (devOtp) {
+      setOtp(devOtp);
+      toast.info('تم تعبئة رمز التحقق تلقائياً (بيئة التطوير)');
+    }
+  }, [email, navigate, devOtp]);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -32,6 +40,20 @@ export function VerifyOtp() {
     if (value.length !== 6 || loading) return;
     setLoading(true);
     setError('');
+
+    if (type === 'reset') {
+      try {
+        await api.post('/auth/validate-reset-otp', { email, otp: value });
+        setLoading(false);
+        navigate('/reset-password', { replace: true, state: { email, otp: value } });
+      } catch (err: any) {
+        setLoading(false);
+        setError(err.response?.data?.error || err.response?.data?.message || 'رمز التحقق غير صحيح');
+        setOtp('');
+      }
+      return;
+    }
+
     const result = await verifyOtp(email!, value);
     setLoading(false);
     if (result.success) {
@@ -44,7 +66,7 @@ export function VerifyOtp() {
       setError(result.error || 'رمز التحقق غير صحيح');
       setOtp('');
     }
-  }, [email, verifyOtp, navigate, loading]);
+  }, [email, verifyOtp, navigate, loading, type]);
 
   useEffect(() => {
     if (otp.length === 6) handleVerify(otp);
@@ -58,6 +80,10 @@ export function VerifyOtp() {
     if (result.success) {
       setResendCooldown(60);
       setInfo('تم إرسال رمز جديد إلى بريدك الإلكتروني');
+      if (result.devOtp) {
+        setOtp(result.devOtp);
+        toast.info('تم تعبئة رمز التحقق تلقائياً (بيئة التطوير)');
+      }
     } else {
       setError(result.error || 'فشل إعادة الإرسال');
     }

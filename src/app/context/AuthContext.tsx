@@ -27,10 +27,13 @@ export interface AuthUser {
   charityName?: string | null;
   charityBadge?: boolean;
   charityLicenseDocument?: string | null;
+  charityCategory?: string | null;
+  charityDescription?: string | null;
+  charityRegistrationNumber?: string | null;
   isVerified?: boolean;
 }
 
-type OtpResult = { success: boolean; error?: string; user?: AuthUser; requiresOTP?: boolean; email?: string; previewUrl?: string };
+type OtpResult = { success: boolean; error?: string; user?: AuthUser; requiresOTP?: boolean; email?: string; previewUrl?: string; devOtp?: string; isPendingCharity?: boolean };
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -39,14 +42,21 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<OtpResult>;
   loginWithGoogle: () => Promise<{ success: boolean; error?: string; user?: AuthUser; isNewUser?: boolean }>;
   signup: (
-    name: string,
-    email: string,
-    password: string,
-    user_type?: UserType,
-    phone?: string
+    data: {
+      name: string;
+      email: string;
+      password: string;
+      user_type?: UserType;
+      phone?: string;
+      location?: string;
+      charityCategory?: string;
+      charityDescription?: string;
+      charityRegistrationNumber?: string;
+      charityLicenseDocument?: string;
+    }
   ) => Promise<OtpResult>;
   verifyOtp: (email: string, otp: string) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
-  resendOtp: (email: string) => Promise<{ success: boolean; error?: string; previewUrl?: string }>;
+  resendOtp: (email: string) => Promise<{ success: boolean; error?: string; previewUrl?: string; devOtp?: string }>;
   logout: () => void;
   updateUser: (updates: Partial<AuthUser>) => void;
   toggleWishlist: (donationId: string) => void;
@@ -91,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await api.post('/auth/login', { email, password });
       const data = res.data.data;
       if (data.requiresOTP) {
-        return { success: true, requiresOTP: true, email: data.email, previewUrl: data.previewUrl };
+        return { success: true, requiresOTP: true, email: data.email, previewUrl: data.previewUrl, devOtp: data.devOtp };
       }
       const { token, user: userData } = data;
       localStorage.setItem('token', token);
@@ -134,19 +144,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signup = async (name: string, email: string, password: string, user_type?: UserType, phone?: string): Promise<OtpResult> => {
+  const signup = async (data: any): Promise<OtpResult> => {
     try {
-      const res = await api.post('/auth/register', { name, email, password, user_type: user_type || 'donor', phone });
-      const data = res.data.data;
-      if (data.requiresOTP) {
-        return { success: true, requiresOTP: true, email: data.email, previewUrl: data.previewUrl };
+      const res = await api.post('/auth/register', data);
+      const { user, token, requiresOTP, email, devOtp, isPendingCharity } = res.data.data || {};
+      if (!requiresOTP && !isPendingCharity) {
+        localStorage.setItem('token', token);
+        setUser(user);
+        return { success: true, user };
       }
-      const { token, user: userData } = data;
-      localStorage.setItem('token', token);
-      setUser(userData);
-      return { success: true, user: userData };
+      return { success: true, requiresOTP, email, devOtp, isPendingCharity };
     } catch (err: any) {
-      return { success: false, error: err.response?.data?.error || 'حدث خطأ أثناء إنشاء الحساب' };
+      return { success: false, error: err.response?.data?.message || err.response?.data?.error || 'حدث خطأ أثناء إنشاء الحساب' };
     }
   };
 
@@ -165,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resendOtp = async (email: string) => {
     try {
       const res = await api.post('/auth/resend-otp', { email });
-      return { success: true, previewUrl: res.data.data?.previewUrl };
+      return { success: true, previewUrl: res.data.data?.previewUrl, devOtp: res.data.data?.devOtp };
     } catch (err: any) {
       return { success: false, error: err.response?.data?.error || 'فشل إعادة إرسال الرمز' };
     }

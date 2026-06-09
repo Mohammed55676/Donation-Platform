@@ -17,6 +17,7 @@ import { Signup } from './pages/auth/Signup';
 import { ForgotPassword } from './pages/auth/ForgotPassword';
 import { ResetPassword } from './pages/auth/ResetPassword';
 import { VerifyOtp } from './pages/auth/VerifyOtp';
+import { PendingReview } from './pages/auth/PendingReview';
 
 import { Dashboard } from './pages/Dashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -35,6 +36,7 @@ import { ConversationChat } from './pages/messages/ConversationChat';
 import { CharityDashboard } from './pages/CharityDashboard';
 
 import { Notifications } from './pages/Notifications';
+import { JoinCharity } from './pages/JoinCharity';
 
 // Demo Payment
 import { PaymentSuccess } from './pages/PaymentSuccess';
@@ -49,6 +51,7 @@ export const router = createBrowserRouter([
       { path: '/forgot-password', Component: ForgotPassword },
       { path: '/reset-password', Component: ResetPassword },
       { path: '/verify-otp', Component: VerifyOtp },
+      { path: '/pending-review', Component: PendingReview },
     ],
   },
 
@@ -85,7 +88,7 @@ export const router = createBrowserRouter([
       { index: true, Component: Home },
       { path: 'donations', Component: Donations },
       { path: 'donations/:id', Component: DonationDetails },
-      { path: 'add-donation', Component: AddDonation },
+      { path: 'add-donation', element: <ProtectedRoute><AddDonation /></ProtectedRoute> },
       { path: 'volunteer', Component: Volunteer },
       { path: 'about', Component: About },
       { path: 'contact', Component: Contact },
@@ -96,6 +99,7 @@ export const router = createBrowserRouter([
       { path: 'messages', element: <ProtectedRoute><Messages /></ProtectedRoute> },
       { path: 'messages/:conversationId', element: <ProtectedRoute><ConversationChat /></ProtectedRoute> },
       { path: 'notifications', element: <ProtectedRoute><Notifications /></ProtectedRoute> },
+      { path: 'join-charity', element: <ProtectedRoute><JoinCharity /></ProtectedRoute> },
       { path: 'payment-success', Component: PaymentSuccess },
       { path: '*', Component: NotFound },
     ],

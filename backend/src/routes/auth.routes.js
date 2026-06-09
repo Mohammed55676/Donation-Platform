@@ -7,7 +7,7 @@ const router  = express.Router();
 
 const {
   register, login, logout, getMe, googleLogin,
-  forgotPassword, resetPassword, verifyOtp, resendOtp,
+  forgotPassword, validateResetOtp, resetPassword, verifyOtp, resendOtp,
 } = require('../controllers/auth.controller');
 const { protect }  = require('../middleware/auth.middleware');
 const { validate } = require('../middleware/validate.middleware');
@@ -18,6 +18,11 @@ const registerSchema = Joi.object({
   password:  Joi.string().min(6).required(),
   user_type: Joi.string().valid('donor', 'charity').default('donor'),
   phone:     Joi.string().allow('', null).optional(),
+  location:  Joi.string().allow('', null).optional(),
+  charityCategory: Joi.string().allow('', null).optional(),
+  charityDescription: Joi.string().allow('', null).optional(),
+  charityRegistrationNumber: Joi.string().allow('', null).optional(),
+  charityLicenseDocument: Joi.string().allow('', null).optional(),
 });
 
 const loginSchema = Joi.object({
@@ -52,6 +57,7 @@ router.post('/google',                                          googleLogin);
 router.post('/logout',          protect,                        logout);
 router.get('/me',               protect,                        getMe);
 router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
+router.post('/validate-reset-otp', validate(otpSchema), validateResetOtp);
 router.post('/reset-password',  validate(resetPasswordSchema),  resetPassword);
 
 module.exports = router;

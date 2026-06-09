@@ -52,6 +52,34 @@ async function seedDatabase() {
       phone: '0772222222',
     });
 
+    const charity1 = await User.create({
+      name: 'جمعية الإحسان الخيرية',
+      email: 'ihsan@example.com',
+      password: 'Password123!',
+      role: 'user',
+      user_type: 'charity',
+      charityStatus: 'verified',
+      isVerified: true,
+      charityBadge: true,
+      location: 'عمان',
+      phone: '065000000',
+      avatar: 'https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?q=80&w=2070&auto=format&fit=crop'
+    });
+
+    const charity2 = await User.create({
+      name: 'مؤسسة الأمل للإغاثة',
+      email: 'amal@example.com',
+      password: 'Password123!',
+      role: 'user',
+      user_type: 'charity',
+      charityStatus: 'verified',
+      isVerified: true,
+      charityBadge: true,
+      location: 'إربد',
+      phone: '027000000',
+      avatar: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=2070&auto=format&fit=crop'
+    });
+
     console.log('🌱 Seeding donations...');
     const donation1 = await Donation.create({
       title: 'ملابس شتوية بحالة ممتازة',

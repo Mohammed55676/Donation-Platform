@@ -62,6 +62,18 @@ async function sendOtpEmail(to, otp, subject = 'رمز التحقق') {
   return info;
 }
 
+// Fire-and-forget helper — responds immediately, sends email in background
+function sendOtpBackground(email, otp, subject) {
+  console.log(`\n=========================================\n[DEV] OTP for ${email}: ${otp}\n=========================================\n`);
+  sendOtpEmail(email, otp, subject)
+    .then(info => {
+      if (!process.env.SMTP_EMAIL) {
+        console.log('[Email] Preview URL:', nodemailer.getTestMessageUrl(info));
+      }
+    })
+    .catch(err => console.error('[Email] Failed to send OTP:', err.message));
+}
+
 function signToken(id) {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
@@ -71,7 +83,11 @@ function signToken(id) {
 // ── POST /api/auth/register ──────────────────────────────────────────
 async function register(req, res, next) {
   try {
-    const { name, email, password, user_type, phone } = req.body;
+    const { 
+      name, email, password, user_type, phone, 
+      location, charityCategory, charityDescription, 
+      charityRegistrationNumber, charityLicenseDocument 
+    } = req.body;
 
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) throw new AppError('البريد الإلكتروني مسجل مسبقاً.', 409);
@@ -82,26 +98,29 @@ async function register(req, res, next) {
       password,
       user_type: user_type || 'donor',
       phone,
-      isVerified: false,
+      location,
+      charityCategory,
+      charityDescription,
+      charityRegistrationNumber,
+      charityLicenseDocument,
+      charityStatus: user_type === 'charity' ? 'pending' : null,
+      isVerified: user_type === 'charity', // Bypass OTP for charities for now
+      status: 'active'
     });
+
+    if (user.user_type === 'charity') {
+      const token = signToken(user._id);
+      return sendSuccess(res, { token, user, isPendingCharity: true, requiresOTP: false }, 'تم إنشاء الحساب بنجاح. بانتظار مراجعة الإدارة.', 201);
+    }
 
     const otp = generateOTP();
     user.otp = otp;
     user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save({ validateBeforeSave: false });
 
-    let previewUrl;
-    try {
-      const info = await sendOtpEmail(user.email, otp, 'تحقق من بريدك الإلكتروني');
-      if (!process.env.SMTP_EMAIL) {
-        previewUrl = nodemailer.getTestMessageUrl(info) || undefined;
-        console.log('[Email] Preview URL:', previewUrl);
-      }
-    } catch (emailErr) {
-      console.error('[Email] Failed to send OTP:', emailErr.message);
-    }
-
-    return sendSuccess(res, { requiresOTP: true, email: user.email, previewUrl }, 'تم إنشاء الحساب. تحقق من بريدك الإلكتروني.', 201);
+    // Respond immediately — OTP is in DB, email goes out in background
+    sendSuccess(res, { requiresOTP: true, email: user.email, devOtp: otp }, 'تم إنشاء الحساب. تحقق من بريدك الإلكتروني.', 201);
+    sendOtpBackground(user.email, otp, 'تحقق من بريدك الإلكتروني');
   } catch (err) {
     next(err);
   }
@@ -120,23 +139,19 @@ async function login(req, res, next) {
 
     if (user.status === 'banned') throw new AppError('لقد تم إيقاف حسابك.', 403);
 
+    if (user.user_type === 'charity') {
+      const token = signToken(user._id);
+      return sendSuccess(res, { token, user }, 'تم تسجيل الدخول بنجاح.');
+    }
+
     const otp = generateOTP();
     user.otp = otp;
     user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save({ validateBeforeSave: false });
 
-    let previewUrl;
-    try {
-      const info = await sendOtpEmail(user.email, otp, 'رمز تسجيل الدخول');
-      if (!process.env.SMTP_EMAIL) {
-        previewUrl = nodemailer.getTestMessageUrl(info) || undefined;
-        console.log('[Email] Preview URL:', previewUrl);
-      }
-    } catch (emailErr) {
-      console.error('[Email] Failed to send OTP:', emailErr.message);
-    }
-
-    return sendSuccess(res, { requiresOTP: true, email: user.email, previewUrl }, 'تم إرسال رمز التحقق إلى بريدك الإلكتروني.');
+    // Respond immediately — OTP is in DB, email goes out in background
+    sendSuccess(res, { requiresOTP: true, email: user.email, devOtp: otp }, 'تم إرسال رمز التحقق إلى بريدك الإلكتروني.');
+    sendOtpBackground(user.email, otp, 'رمز تسجيل الدخول');
   } catch (err) {
     next(err);
   }
@@ -180,18 +195,8 @@ async function resendOtp(req, res, next) {
     user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save({ validateBeforeSave: false });
 
-    let previewUrl;
-    try {
-      const info = await sendOtpEmail(user.email, otp, 'رمز التحقق الجديد');
-      if (!process.env.SMTP_EMAIL) {
-        previewUrl = nodemailer.getTestMessageUrl(info) || undefined;
-        console.log('[Email] Preview URL:', previewUrl);
-      }
-    } catch (emailErr) {
-      console.error('[Email] Failed to resend OTP:', emailErr.message);
-    }
-
-    return sendSuccess(res, { previewUrl }, 'تم إعادة إرسال رمز التحقق.');
+    sendOtpBackground(user.email, otp, 'رمز التحقق الجديد');
+    return sendSuccess(res, { message: 'تم إرسال رمز التحقق بنجاح.', devOtp: otp });
   } catch (err) {
     next(err);
   }
@@ -258,18 +263,26 @@ async function forgotPassword(req, res, next) {
     user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save({ validateBeforeSave: false });
 
-    let previewUrl;
-    try {
-      const info = await sendOtpEmail(user.email, otp, 'إعادة تعيين كلمة المرور');
-      if (!process.env.SMTP_EMAIL) {
-        previewUrl = nodemailer.getTestMessageUrl(info) || undefined;
-        console.log('[Email] Preview URL:', previewUrl);
-      }
-    } catch (emailErr) {
-      console.error('[Email] Failed to send forgot-password OTP:', emailErr.message);
-    }
+    // Respond immediately — OTP is in DB, email goes out in background
+    sendSuccess(res, { email: user.email }, 'تم إرسال رمز التحقق إلى بريدك الإلكتروني.');
+    sendOtpBackground(user.email, otp, 'إعادة تعيين كلمة المرور');
+  } catch (err) {
+    next(err);
+  }
+}
+// ── POST /api/auth/validate-reset-otp ───────────────────────────────
+async function validateResetOtp(req, res, next) {
+  try {
+    const { email, otp } = req.body;
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) throw new AppError('المستخدم غير موجود.', 404);
 
-    return sendSuccess(res, { email: user.email, previewUrl }, 'تم إرسال رمز التحقق إلى بريدك الإلكتروني.');
+    if (!user.otp || !user.otpExpires) throw new AppError('لم يتم طلب رمز إعادة التعيين.', 400);
+    if (user.otpExpires < new Date()) throw new AppError('انتهت صلاحية رمز التحقق.', 400);
+    if (user.otp !== otp) throw new AppError('رمز التحقق غير صحيح.', 400);
+
+    // We don't clear the OTP here because we need it for the final reset step
+    return sendSuccess(res, null, 'رمز التحقق صحيح.');
   } catch (err) {
     next(err);
   }
@@ -298,4 +311,4 @@ async function resetPassword(req, res, next) {
   }
 }
 
-module.exports = { register, login, logout, getMe, googleLogin, forgotPassword, resetPassword, verifyOtp, resendOtp };
+module.exports = { register, login, logout, getMe, googleLogin, forgotPassword, validateResetOtp, resetPassword, verifyOtp, resendOtp };

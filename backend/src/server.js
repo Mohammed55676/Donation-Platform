@@ -93,6 +93,7 @@ const authLimiter = rateLimit({
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
+
 // ── API routes ───────────────────────────────────────────────────────
 app.use('/api', apiRouter);
 

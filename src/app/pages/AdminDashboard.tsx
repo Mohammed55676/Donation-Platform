@@ -22,15 +22,28 @@ import {
   Trash2, Check, X, Eye, ShieldCheck, Search, Plus, Pencil,
   Users, Gift, CheckCircle, AlertTriangle, TrendingUp, Ban, Target, MapPin, Calendar
 } from 'lucide-react';
+import { toast } from 'sonner';
+
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Progress } from '../components/ui/progress';
-import { toast } from 'sonner';
+
 import { useDonations } from '../context/DonationContext';
+
 import { useCampaigns } from '../hooks/useCampaigns';
-import { useVolunteerOpportunities } from '../hooks/useVolunteerOpportunities';
 import type { Campaign } from '../hooks/useCampaigns';
+
+import { useVolunteerOpportunities } from '../hooks/useVolunteerOpportunities';
 import type { VolunteerOpportunity } from '../hooks/useVolunteerOpportunities';
+
+// ── FormGroup Component ────────────────────────────────────────
+const FormGroup = ({ label, children, error }: { label: React.ReactNode, children: React.ReactNode, error?: string }) => (
+  <div className="space-y-1">
+    <label className="text-sm font-medium">{label}</label>
+    {children}
+    {error && <p className="text-xs text-destructive">{error}</p>}
+  </div>
+);
 
 // ── Status maps ────────────────────────────────────────────────
 const DONATION_STATUS_BADGE: Record<string, string> = {
@@ -141,7 +154,10 @@ export function AdminDashboard() {
   const [charitiesLoading, setCharitiesLoading] = useState(false);
   const [charityFilter, setCharityFilter] = useState('pending');
 
-
+  // ── Reports (admin) state ───────────────────────────────────
+  const [adminReports, setAdminReports] = useState<any[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportFilter, setReportFilter] = useState('pending');
 
   const fetchAdminRequests = async () => {
     setAdminRequestsLoading(true);
@@ -161,8 +177,18 @@ export function AdminDashboard() {
     finally { setCharitiesLoading(false); }
   };
 
-  useEffect(() => { fetchAdminRequests(); fetchCharities(); }, []);
+  const fetchReports = async () => {
+    setReportsLoading(true);
+    try {
+      const res = await api.get(`/admin/reports?status=${reportFilter}`);
+      setAdminReports(Array.isArray(res.data.data) ? res.data.data : []);
+    } catch { setAdminReports([]); }
+    finally { setReportsLoading(false); }
+  };
+
+  useEffect(() => { fetchAdminRequests(); fetchCharities(); fetchReports(); }, []);
   useEffect(() => { fetchCharities(); }, [charityFilter]);
+  useEffect(() => { fetchReports(); }, [reportFilter]);
   useEffect(() => { if (activeTab === 'donations') fetchDonations(); }, [activeTab]);
 
   const displayedUsers = useMemo(
@@ -359,6 +385,7 @@ export function AdminDashboard() {
             <TabsTrigger value="charities" className="rounded-lg text-sm font-semibold">الجمعيات الخيرية</TabsTrigger>
             {/* <TabsTrigger value="verifications" className="rounded-lg text-sm font-semibold">التحقق من الهوية</TabsTrigger> */}
             <TabsTrigger value="donation-requests" className="rounded-lg text-sm font-semibold">طلبات التبرع</TabsTrigger>
+            <TabsTrigger value="reports" className="rounded-lg text-sm font-semibold">البلاغات</TabsTrigger>
             <TabsTrigger value="urgent" className="rounded-lg text-sm font-semibold">
               <span>الحالات العاجلة</span>
               <span className="me-1 text-red-500">🔥</span>
@@ -682,7 +709,17 @@ export function AdminDashboard() {
                           </div>
                           <p className="text-xs text-muted-foreground" dir="ltr">{ch.email}</p>
                           {ch.phone && <p className="text-xs text-muted-foreground" dir="ltr">{ch.phone}</p>}
-                          <p className="text-xs text-muted-foreground">
+                          {ch.location && <p className="text-xs text-muted-foreground mt-1">📍 {ch.location}</p>}
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {ch.charityCategory && <Badge variant="outline" className="text-xs">{ch.charityCategory}</Badge>}
+                            {ch.charityRegistrationNumber && <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">رقم الترخيص: {ch.charityRegistrationNumber}</span>}
+                          </div>
+                          {ch.charityLicenseDocument && (
+                            <a href={ch.charityLicenseDocument} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline mt-2 inline-block">
+                              📄 عرض مستند الترخيص
+                            </a>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-2">
                             تاريخ التسجيل: {new Date(ch.createdAt).toLocaleDateString('ar-SA')}
                           </p>
                         </div>
@@ -858,6 +895,98 @@ export function AdminDashboard() {
                         </Card>
                       );
                     })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* REPORTS */}
+          <TabsContent value="reports" className="mt-6">
+            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>إدارة البلاغات</CardTitle>
+                    <CardDescription>مراجعة بلاغات المستخدمين</CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    {['pending', 'reviewed', 'dismissed'].map(s => (
+                      <Button
+                        key={s}
+                        variant={reportFilter === s ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setReportFilter(s)}
+                        className="text-xs"
+                      >
+                        {s === 'pending' ? 'قيد الانتظار' : s === 'reviewed' ? 'تمت المراجعة' : 'مرفوض'}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {reportsLoading ? (
+                  <div className="text-center py-10 text-muted-foreground">جاري التحميل...</div>
+                ) : adminReports.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground">لا توجد بلاغات في هذه الفئة</div>
+                ) : (
+                  <div className="space-y-3">
+                    {adminReports.map((report: any) => (
+                      <div key={report.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border bg-background hover:bg-muted/40 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <Badge variant="outline" className="text-xs">المبلغ: {report.reporter_id?.name || 'مجهول'}</Badge>
+                            <Badge variant="destructive" className="text-xs">المبلغ عنه: {report.reported_user_id?.name || 'مجهول'}</Badge>
+                            <Badge className={
+                              report.status === 'pending' ? 'bg-amber-100 text-amber-700 text-xs' :
+                              report.status === 'reviewed' ? 'bg-emerald-100 text-emerald-700 text-xs' :
+                              'bg-gray-100 text-gray-600 text-xs'
+                            }>
+                              {report.status === 'pending' ? 'جديد' : report.status === 'reviewed' ? 'تمت المراجعة' : 'مرفوض'}
+                            </Badge>
+                          </div>
+                          <p className="text-sm font-semibold mt-2">السبب: {report.reason}</p>
+                          {report.details && <p className="text-xs text-muted-foreground mt-1">التفاصيل: {report.details}</p>}
+                          <p className="text-xs text-muted-foreground mt-2">تاريخ البلاغ: {new Date(report.createdAt).toLocaleDateString('ar-SA')}</p>
+                        </div>
+                        {report.status === 'pending' && (
+                          <div className="flex gap-2 flex-shrink-0">
+                            <Button
+                              size="sm"
+                              className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                              onClick={async () => {
+                                try {
+                                  await api.put(`/admin/reports/${report.id}/status`, { status: 'reviewed' });
+                                  toast.success('تم تحديد البلاغ كمراجع');
+                                  fetchReports();
+                                } catch (err: any) {
+                                  toast.error(err.response?.data?.error || 'حدث خطأ');
+                                }
+                              }}
+                            >
+                              <Check className="h-3.5 w-3.5" /> مراجعة
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-destructive hover:text-destructive gap-1"
+                              onClick={async () => {
+                                try {
+                                  await api.put(`/admin/reports/${report.id}/status`, { status: 'dismissed' });
+                                  toast.success('تم رفض البلاغ');
+                                  fetchReports();
+                                } catch (err: any) {
+                                  toast.error(err.response?.data?.error || 'حدث خطأ');
+                                }
+                              }}
+                            >
+                              <X className="h-3.5 w-3.5" /> رفض
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
@@ -1099,27 +1228,22 @@ export function AdminDashboard() {
             <DialogDescription>ستظهر هذه الفرصة في صفحة التطوع للجمهور</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">عنوان الفرصة *</label>
+            <FormGroup label="عنوان الفرصة *">
               <Input placeholder="مثال: توزيع الطرود الغذائية" value={oppForm.title} onChange={(e) => setOppForm((p) => ({ ...p, title: e.target.value }))} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">الوصف</label>
+            </FormGroup>
+            <FormGroup label="الوصف">
               <Textarea placeholder="وصف مختصر لفرصة التطوع" value={oppForm.description} onChange={(e) => setOppForm((p) => ({ ...p, description: e.target.value }))} rows={2} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">الموقع *</label>
+            </FormGroup>
+            <FormGroup label="الموقع *">
               <Input placeholder="مثال: عمّان - المقر الرئيسي" value={oppForm.location} onChange={(e) => setOppForm((p) => ({ ...p, location: e.target.value }))} />
-            </div>
+            </FormGroup>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">التاريخ</label>
+              <FormGroup label="التاريخ">
                 <Input type="date" dir="ltr" value={oppForm.date} onChange={(e) => setOppForm((p) => ({ ...p, date: e.target.value }))} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">أقصى عدد متطوعين</label>
+              </FormGroup>
+              <FormGroup label="أقصى عدد متطوعين">
                 <Input type="number" min={1} value={oppForm.maxVolunteers} onChange={(e) => setOppForm((p) => ({ ...p, maxVolunteers: Number(e.target.value) }))} />
-              </div>
+              </FormGroup>
             </div>
           </div>
           <DialogFooter>

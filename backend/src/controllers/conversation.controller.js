@@ -5,6 +5,7 @@ const Conversation = require('../models/Conversation.model');
 const Message = require('../models/Message.model');
 const Block = require('../models/Block.model');
 const CommunityRequest = require('../models/CommunityRequest.model');
+const User = require('../models/User.model');
 const { sendSuccess } = require('../utils/apiResponse');
 const { AppError } = require('../middleware/error.middleware');
 
@@ -74,11 +75,34 @@ async function createRequest(req, res, next) {
       throw new AppError('Cannot send request to yourself.', 400);
     }
 
+    const receiver = await User.findById(receiver_id);
+    if (!receiver) {
+      throw new AppError('Receiver not found.', 404);
+    }
+
+    if (req.user.role === 'admin' || receiver.role === 'admin') {
+      throw new AppError('Admins cannot participate in normal chat.', 403);
+    }
+
+    if (req.user.user_type === 'donor' && receiver.user_type === 'donor') {
+      throw new AppError('Donors cannot message other donors.', 403);
+    }
+
+    if (req.user.user_type === 'donor' && receiver.user_type === 'charity') {
+      if (receiver.charityStatus !== 'verified') {
+        throw new AppError('لا يمكنك بدء محادثة مع هذه الجمعية لأنها غير موثقة حتى الآن.', 403);
+      }
+    }
+
+    if (req.user.user_type === 'charity' && receiver.user_type === 'donor' && !post_id) {
+      throw new AppError('Charities can only contact donors through a donation or request context.', 403);
+    }
+
     if (await isBlocked(myId, receiver_id)) {
       throw new AppError('Cannot communicate with this user.', 403);
     }
 
-    // Check if pending or active exists
+    // Check if pending or active exists (prevents duplicate)
     const existing = await Conversation.findOne({
       $or: [
         { requester_id: myId, receiver_id: receiver_id, post_id: post_id || null },
@@ -88,7 +112,7 @@ async function createRequest(req, res, next) {
     });
 
     if (existing) {
-      throw new AppError('A conversation already exists.', 400);
+      return sendSuccess(res, existing, 'Returned existing conversation.', 200);
     }
 
     const conv = await Conversation.create({

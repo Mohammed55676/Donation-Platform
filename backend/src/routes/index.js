@@ -17,6 +17,9 @@ router.use('/donation-requests', require('./donationRequest.routes'));
 router.use('/contact',           require('./contact.routes'));
 router.use('/ratings',           require('./rating.routes'));
 router.use('/charity',           require('./charity.routes'));
+router.use('/ai',                require('./ai.routes'));
+router.use('/reports',           require('./report.routes'));
+router.use('/admin',             require('./admin.routes'));
 
 // Health-check endpoint
 router.get('/health', (req, res) => {

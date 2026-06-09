@@ -1,356 +1,138 @@
-# Donation Platform — منصة الخير
+# Donation Platform
 
-A full-stack donation platform connecting donors with beneficiaries. Built with React 18 + Vite (frontend) and Node.js + Express + MongoDB (backend), with Firebase Authentication for Google Sign-In and Socket.IO for real-time messaging.
+## Overview
+The Donation Platform is a comprehensive web application designed to connect generous donors with verified charities and individuals in need. It facilitates the donation of money, items (clothes, food, furniture, books, etc.), and volunteer time, while ensuring a secure and privacy-focused environment for all users. The system features a robust real-time messaging system, charity verification workflow, and an administration dashboard to oversee platform activity.
 
----
+## Problem Statement
+In many communities, individuals willing to donate items or money struggle to find verified, trustworthy charities or individuals who genuinely need help. Additionally, direct communication between donors and beneficiaries can sometimes lead to privacy concerns, harassment, or unverified claims. Charities also lack a centralized platform to manage donation requests, campaigns, and volunteers efficiently.
 
-## Tech Stack
+## Solution
+This platform solves these issues by acting as a secure intermediary. It enforces a strict charity verification process, ensuring donors only interact with legitimate organizations. It provides a structured way to list donations, create fundraising campaigns, request community help, and volunteer. The built-in privacy-first messaging system allows donors and verified charities to communicate securely without exposing personal contact information by default.
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 18, Vite 6, Tailwind CSS v4, React Router v7 |
-| Backend | Node.js ≥18, Express 4, Mongoose 8, Socket.IO 4 |
-| Auth | Firebase Authentication (Google) + JWT |
-| Database | MongoDB Atlas |
-| Email | Nodemailer + Gmail App Password |
-| Frontend Hosting | Netlify |
-| Backend Hosting | Render |
+## User Roles
+* **Donor (`user` role, `donor` type):** The primary user who can browse campaigns, make donations, offer items, volunteer, and chat with verified charities. Donors cannot directly message other donors or unverified users to protect privacy.
+* **Charity (`user` role, `charity` type):** Organizations that must undergo a verification process. Once verified by an admin, they can create campaigns, receive donations, and communicate with donors.
+* **Admin (`admin` role):** Platform moderators who manage users, approve or reject charity registrations, oversee reported content, and maintain the overall health of the platform through a dedicated dashboard.
 
----
+## Main Features
+* **Authentication & OTP:** Secure login and registration with email/password and Google OAuth, complemented by OTP verification.
+* **Charity Verification Flow:** A structured process for charities to submit licenses and await admin approval before gaining public visibility.
+* **Item & Monetary Donations:** Support for donating physical items with condition tracking, as well as monetary campaigns with progress bars.
+* **Volunteer Opportunities:** Charities can post volunteer roles, and users can apply to help.
+* **Community Requests:** A space for specific needs or requests from the community.
+* **Real-time Chat:** A Socket.IO powered messaging system that respects privacy rules and role-based restrictions.
+* **Admin Dashboard:** Comprehensive tools for managing users, charities, donations, and reports.
+* **Reports & Blocking:** Users can report malicious behavior or block others, enhancing community safety.
+
+## Tech Stack and Main Libraries
+The project utilizes a modern MERN-like stack (MongoDB, Express, React, Node).
+
+* **Frontend:** React 19, Vite, Tailwind CSS v4, Context API, React Router v7.
+* **Backend:** Node.js, Express.js, Socket.IO for real-time features.
+* **Database:** MongoDB with Mongoose ODM.
+* **Authentication:** JSON Web Tokens (JWT) and Firebase Authentication.
+
+> 📚 **Deep Dive:** For a full technical breakdown of the architecture, installed packages, and reasons behind these technical choices, please read the [Tech Stack & Packages](Project%20Explanation/TECH_STACK_AND_PACKAGES.md) and [Technical Decisions Rationale](Project%20Explanation/TECHNICAL_DECISIONS.md) documents.
 
 ## Project Structure
-
-```
-donation-platform/
-├── src/                        # Frontend source (React + Vite)
-│   ├── app/
-│   │   ├── components/         # Reusable UI components
-│   │   ├── context/            # React context (Auth, Donation, etc.)
-│   │   ├── hooks/              # Custom hooks
-│   │   ├── lib/                # firebase.ts, socket.ts
-│   │   ├── pages/              # Route-level page components
-│   │   ├── services/           # API service helpers
-│   │   └── utils/              # api.ts (Axios), validators
-│   └── main.tsx
-├── backend/                    # Backend source (Express + MongoDB)
+```text
+/ (root)
+├── backend/                # Express + MongoDB backend
 │   ├── src/
-│   │   ├── config/db.js        # MongoDB connection
-│   │   ├── controllers/        # Route handlers
-│   │   ├── middleware/         # Auth, roles, validation, errors
-│   │   ├── models/             # Mongoose schemas
-│   │   ├── routes/             # Express routers
-│   │   ├── utils/              # Response helpers, upload config
-│   │   └── server.js           # Entry point
-│   ├── uploads/                # Local file uploads (dev only)
-│   ├── .env.example
-│   └── package.json
-├── public/
-│   └── _redirects              # Netlify SPA fallback
-├── .env.example                # Frontend environment template
-├── netlify.toml                # Netlify build config
-├── render.yaml                 # Render backend config
-├── vite.config.ts
-└── package.json
+│   │   ├── controllers/    # Route logic
+│   │   ├── models/         # Mongoose schemas
+│   │   ├── routes/         # API endpoints
+│   │   ├── middleware/     # Auth and validation
+│   │   └── server.js       # App entry & Socket.IO config
+│   └── package.json        # Backend dependencies
+├── src/                    # React frontend
+│   ├── app/
+│   │   ├── components/     # Reusable UI components
+│   │   ├── context/        # Global state (Auth)
+│   │   ├── pages/          # Route views
+│   │   ├── services/       # API integration
+│   │   ├── utils/          # Helpers (Axios config)
+│   │   └── routes.tsx      # Application routing
+│   └── main.tsx            # React entry point
+└── package.json            # Frontend dependencies
 ```
 
----
+## Main User Flows
+* **Donor Flow:** A donor registers, verifies their email via OTP, browses active campaigns or verified charities, and either donates directly or starts a secure chat to arrange physical item handoffs.
+* **Charity Flow:** A charity registers and provides licensing documents. Their status is set to `pending`. Once an admin approves them, their status changes to `verified`. They can then create campaigns, receive items, and respond to donor messages.
+* **Admin Flow:** An admin logs into the secure dashboard to review pending charities, monitor platform statistics, handle user reports, and manage all platform content.
+* **Messaging Flow:** Users initiate conversations through specific contexts (e.g., a community request or finding a verified charity). The system checks role permissions before creating a Socket.IO chat room to prevent spam and unauthorized contact.
 
-## Prerequisites
+## Installation
+The project is split into two independent npm packages (frontend and backend).
 
-- **Node.js** v18 or higher — https://nodejs.org
-- **npm** v9+ (comes with Node 18)
-- **MongoDB Atlas** account — https://cloud.mongodb.com (free tier works)
-- **Firebase** project with Authentication enabled — https://console.firebase.google.com
-- **Gmail** account with 2FA and an App Password (for email features)
+1. Clone the repository.
+2. Install frontend dependencies:
+   ```bash
+   npm install
+   ```
+3. Install backend dependencies:
+   ```bash
+   cd backend
+   npm install
+   ```
 
----
+## Environment Variables
+Create `.env` files in both the root and `backend/` directories.
 
-## Quick Start — Fresh Machine
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/your-username/donation-platform.git
-cd donation-platform
-```
-
-### 2. Install frontend dependencies
-
-```bash
-npm install
-```
-
-### 3. Configure frontend environment
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and fill in your values (see [Frontend Environment Variables](#frontend-environment-variables)).
-
-### 4. Install backend dependencies
-
-```bash
-cd backend
-npm install
-cd ..
-```
-
-### 5. Configure backend environment
-
-```bash
-cp backend/.env.example backend/.env
-```
-
-Open `backend/.env` and fill in your values (see [Backend Environment Variables](#backend-environment-variables)).
-
-### 6. Seed the database (optional but recommended)
-
-```bash
-cd backend
-npm run seed
-cd ..
-```
-
-### 7. Start development servers
-
-Open two terminals:
-
-**Terminal 1 — Backend:**
-```bash
-cd backend
-npm run dev
-# Runs on http://localhost:5000
-```
-
-**Terminal 2 — Frontend:**
-```bash
-npm run dev
-# Runs on http://localhost:5173
-```
-
-Open http://localhost:5173 in your browser.
-
----
-
-## Frontend Environment Variables
-
-Create `.env` at the project root by copying `.env.example`:
-
+**Frontend (`/.env`):**
 ```env
-# Firebase — from Firebase Console → Project Settings → Your Apps → Web App
-VITE_FIREBASE_API_KEY=AIzaSy...
-VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project-id
-VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
-VITE_FIREBASE_APP_ID=1:123456789:web:abc123
-VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXX
-
-# Backend connection
-# Development:
 VITE_API_URL=http://localhost:5000/api
-VITE_SOCKET_URL=http://localhost:5000
-# Production (replace with your Render URL):
-# VITE_API_URL=https://donation-platform-backend.onrender.com/api
-# VITE_SOCKET_URL=https://donation-platform-backend.onrender.com
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+VITE_FIREBASE_PROJECT_ID=your_firebase_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_firebase_sender_id
+VITE_FIREBASE_APP_ID=your_firebase_app_id
 ```
 
-> All `VITE_` variables are embedded into the compiled JS bundle at build time. Never put secrets in them.
-
----
-
-## Backend Environment Variables
-
-Create `backend/.env` by copying `backend/.env.example`:
-
+**Backend (`/backend/.env`):**
 ```env
 PORT=5000
-NODE_ENV=development
-
-# MongoDB Atlas connection string
-MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/donation_platform?retryWrites=true&w=majority
-
-# JWT — use a long random string (64+ characters)
-JWT_SECRET=replace_with_a_very_long_random_string_at_least_64_characters
-JWT_EXPIRES_IN=7d
-
-# CORS — frontend origin
-# Development:
+MONGODB_URI=mongodb://localhost:27017/donation_platform
+JWT_SECRET=your_jwt_secret
 CLIENT_ORIGIN=http://localhost:5173
-# Production: CLIENT_ORIGIN=https://your-app.netlify.app
-
-# Email (Gmail App Password)
-# 1. Enable 2FA on your Google account
-# 2. Go to myaccount.google.com/apppasswords
-# 3. Create an App Password for "Mail"
-SMTP_EMAIL=your_gmail@gmail.com
-SMTP_PASSWORD=abcd efgh ijkl mnop   # 16-char app password
-
-# Contact form recipient
-ADMIN_EMAIL=your_admin_email@gmail.com
 ```
 
----
+## Running Locally
 
-## Firebase Setup
+1. Start the backend server (from the `backend/` directory):
+   ```bash
+   npm run dev
+   ```
+   *The backend will run on port 5000.*
 
-1. Go to https://console.firebase.google.com and create a project.
-2. Enable **Authentication** → **Sign-in methods** → enable **Google** and **Email/Password**.
-3. Add your domains to **Authorized domains**:
-   - `localhost`
-   - `your-app.netlify.app` (add after deploying)
-4. Go to **Project Settings** → **Your apps** → **Web app** → copy the config values into your `.env`.
+2. Start the frontend development server (from the root directory):
+   ```bash
+   npm run dev
+   ```
+   *The frontend will be accessible at http://localhost:5173.*
 
----
+## API Overview
+The backend provides a RESTful API grouped into several modules:
+* `/api/auth` - Login, registration, OTP, Google OAuth.
+* `/api/users` - Profile management, wishlist, contactable charities.
+* `/api/charity` - Public charity listings.
+* `/api/donations` - Physical item donation management.
+* `/api/campaigns` - Fundraising campaign management.
+* `/api/conversations` & `/api/messages` - Real-time chat integration.
+* `/api/admin` - Administrative controls.
+* *(See `Project Explanation/API_REFERENCE.md` for full details).*
 
-## MongoDB Atlas Setup
+## Security and Privacy
+The platform prioritizes user privacy. Donors cannot view other donors' contact information or initiate chats with them. Charities must be verified before they appear in public directories. Phone numbers and email addresses are hidden by default in chats unless explicitly shared by the user. Rate limiting is enforced globally and strictly on authentication endpoints to prevent abuse.
 
-1. Create a free cluster at https://cloud.mongodb.com.
-2. Create a database user with read/write access.
-3. Add your IP to the **Network Access** allowlist (or use `0.0.0.0/0` for all IPs in dev).
-4. Copy the connection string into `backend/.env` as `MONGODB_URI`.
+## Manual Testing
+For a comprehensive guide on how to test the platform's core flows, please refer to the [Manual Testing Guide](Project%20Explanation/MANUAL_TESTING_GUIDE.md).
 
----
-
-## Deployment
-
-### Frontend — Netlify
-
-1. Push your repository to GitHub.
-2. In the Netlify dashboard, click **Add new site → Import an existing project**.
-3. Connect your GitHub repo.
-4. Netlify will auto-detect settings from `netlify.toml`:
-   - Build command: `npm run build`
-   - Publish directory: `dist`
-5. Go to **Site settings → Environment variables** and add all `VITE_` variables with **production values** (point `VITE_API_URL` and `VITE_SOCKET_URL` to your Render URL).
-6. Deploy.
-
-### Backend — Render
-
-1. In the Render dashboard, click **New → Web Service**.
-2. Connect your GitHub repo.
-3. Render will detect `render.yaml` automatically.
-4. Set the following environment variables in the dashboard (marked `sync: false` in `render.yaml`):
-   - `MONGODB_URI`
-   - `CLIENT_ORIGIN` — your Netlify URL (e.g. `https://your-app.netlify.app`)
-   - `SMTP_EMAIL`
-   - `SMTP_PASSWORD`
-   - `ADMIN_EMAIL`
-5. Deploy.
-6. Copy the Render URL and update `VITE_API_URL` / `VITE_SOCKET_URL` in Netlify, then redeploy the frontend.
-
-> **Note:** Render's free tier uses **ephemeral storage**. Files uploaded via the platform (national IDs, proof documents) are stored on disk and **will be deleted on each redeploy**. For production, migrate file uploads to [Cloudinary](https://cloudinary.com) or [AWS S3](https://aws.amazon.com/s3/).
-
----
-
-## Available Scripts
-
-### Frontend (project root)
-
-| Command | Description |
-|---|---|
-| `npm run dev` | Start Vite dev server at `http://localhost:5173` |
-| `npm run build` | Build for production into `dist/` |
-| `npm run preview` | Serve the production build locally for testing |
-
-### Backend (`cd backend` first)
-
-| Command | Description |
-|---|---|
-| `npm run dev` | Start with nodemon (auto-restarts on changes) |
-| `npm start` | Start in production mode |
-| `npm run seed` | Seed MongoDB with sample data |
-
----
-
-## API Health Check
-
-```
-GET /api/health
-```
-
-Returns `{ "success": true, "message": "API is running", "timestamp": "..." }` — use this to verify the backend is running.
-
----
-
-## Troubleshooting
-
-### "Network Error" / API calls failing
-- Check that the backend is running (`cd backend && npm run dev`)
-- Verify `VITE_API_URL` in `.env` matches the backend port (`http://localhost:5000/api`)
-- Check the browser console for CORS errors
-
-### "Firebase: Error (auth/...)"
-- Ensure all `VITE_FIREBASE_*` variables are set in `.env`
-- For Google Sign-In popups blocked: check that `localhost` is in Firebase Authorized Domains
-
-### MongoDB connection refused
-- Verify `MONGODB_URI` in `backend/.env`
-- Check MongoDB Atlas Network Access: your IP must be whitelisted
-- Try adding `0.0.0.0/0` temporarily in Atlas for testing
-
-### Socket.IO not connecting in production
-- Ensure `CLIENT_ORIGIN` in `backend/.env` matches exactly the Netlify URL (no trailing slash)
-- Ensure `VITE_SOCKET_URL` in the frontend `.env` matches the Render URL
-
-### Emails not sending
-- Gmail requires an **App Password** (not your regular password)
-- Enable 2FA on Gmail first, then create an App Password at `myaccount.google.com/apppasswords`
-- If no SMTP credentials are set, the app uses Ethereal Email (fake SMTP for testing) — check the backend console for a preview URL
-
-### Netlify: page refreshes show 404
-- Verify `public/_redirects` contains `/* /index.html 200`
-- Or verify `netlify.toml` has the `[[redirects]]` rule — both are present in this repo
-
----
-
-## Security Notes
-
-- **Never commit `.env` files.** They are in `.gitignore`. Use `.env.example` as the template.
-- **Rotate credentials** if `backend/.env` was ever accidentally committed (`git log --all -- backend/.env`).
-- The Google login endpoint (`POST /api/auth/google`) currently trusts the email sent from the frontend without server-side token verification. For production, implement Firebase Admin SDK token verification.
-- JWT tokens are stored in `localStorage`. For higher security, consider `httpOnly` cookies.
-
----
-
-## Fresh Machine Test Plan
-
-Use this checklist to verify the project works on a completely new computer:
-
-```
-SETUP
-[ ] Node.js v18+ installed (node --version)
-[ ] Repository cloned fresh (not copied from another machine)
-[ ] npm install completed without errors in project root
-[ ] npm install completed without errors in backend/
-[ ] .env created from .env.example with real values
-[ ] backend/.env created from backend/.env.example with real values
-
-BACKEND
-[ ] cd backend && npm run dev — server starts on port 5000
-[ ] GET http://localhost:5000/api/health returns { success: true }
-[ ] MongoDB connected log appears (no ECONNREFUSED)
-
-FRONTEND
-[ ] npm run dev — Vite starts on port 5173
-[ ] http://localhost:5173 loads without white screen
-[ ] Browser console has no uncaught errors
-
-AUTH FLOWS
-[ ] Register new account (email + password)
-[ ] Login with that account
-[ ] Google Sign-In popup works and creates/logs in account
-[ ] Logout clears session
-
-CORE FEATURES
-[ ] Donations list loads from API (not empty/error)
-[ ] Create a donation (requires login)
-[ ] Messages page loads, Socket.IO connects (no WebSocket errors in console)
-[ ] Contact form submits (check backend console for email preview URL if no SMTP)
-
-PRODUCTION BUILD
-[ ] npm run build completes without errors
-[ ] npm run preview — production build works at http://localhost:4173
-[ ] No broken routes on page refresh (SPA routing works)
-```
+## Future Improvements
+* Integration with a real payment gateway (e.g., Stripe, PayPal) for monetary campaigns.
+* Enhanced AI-based matching between donor items and community requests.
+* Mobile application development (React Native).
+* Automated verification checks against public charity registries.
+* Advanced analytics and reporting exports for charities.

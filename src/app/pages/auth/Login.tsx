@@ -8,7 +8,6 @@ import { Label } from '../../components/ui/label';
 import { Eye, EyeOff, Mail, Lock, Heart, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { isValidEmail } from '../../utils/validators';
-import { UserTypeModal } from '../../components/auth/UserTypeModal';
 
 type Errors = { email?: string; password?: string };
 
@@ -19,8 +18,6 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
-  const [showTypeModal, setShowTypeModal] = useState(false);
-  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
   const { login, loginWithGoogle } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -52,7 +49,7 @@ export function Login() {
     setLoading(false);
     if (result.success) {
       if (result.requiresOTP) {
-        navigate('/verify-otp', { state: { email: result.email, previewUrl: result.previewUrl } });
+        navigate('/verify-otp', { state: { email: result.email, previewUrl: result.previewUrl, devOtp: result.devOtp } });
         return;
       }
       toast.success(t('auth.welcome'));
@@ -73,9 +70,8 @@ export function Login() {
       const redirect = from || (user?.role === 'admin' ? '/dashboard/admin' : user?.user_type === 'charity' ? '/dashboard/charity' : '/dashboard');
 
       if (result.isNewUser) {
-        // New Google user — ask them to pick donor/charity before redirecting
-        setPendingRedirect(redirect);
-        setShowTypeModal(true);
+        toast.success(t('auth.welcome'));
+        navigate(redirect, { replace: true });
       } else {
         toast.success(t('auth.welcome'));
         navigate(redirect, { replace: true });
@@ -85,16 +81,8 @@ export function Login() {
     }
   };
 
-  const handleTypeModalClose = (selectedType: 'donor' | 'charity') => {
-    setShowTypeModal(false);
-    toast.success(t('auth.welcome'));
-    navigate(pendingRedirect || '/dashboard', { replace: true });
-  };
-
   return (
     <div>
-      {/* User type selection modal for new Google signups */}
-      <UserTypeModal open={showTypeModal} onClose={handleTypeModalClose} />
       {/* Header */}
       <div className="text-center mb-8">
         <div className="hidden lg:flex justify-center mb-4">

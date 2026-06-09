@@ -7,9 +7,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { Textarea } from '../../components/ui/textarea';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/api';
 import { toast } from 'sonner';
+import { MoreVertical, Flag, Ban } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -28,6 +32,11 @@ export function ConversationChat() {
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+
+  // Report state
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const myId = String(user?.id ?? user?._id ?? '');
@@ -114,6 +123,36 @@ export function ConversationChat() {
     }
   };
 
+  const handleBlock = async () => {
+    if (!window.confirm('هل أنت متأكد من رغبتك بحظر هذا المستخدم؟')) return;
+    try {
+      await api.put(`/conversations/${conversationId}/block`);
+      toast.success('تم حظر المستخدم.');
+      fetchChat();
+    } catch (err) {
+      toast.error('تعذر حظر المستخدم.');
+    }
+  };
+
+  const handleReport = async () => {
+    if (!reportReason.trim()) return;
+    setSubmittingReport(true);
+    try {
+      await api.post('/reports', {
+        reported_user_id: otherUser?._id ?? otherUser?.id,
+        conversation_id: conversationId,
+        reason: reportReason.trim()
+      });
+      toast.success('تم إرسال البلاغ بنجاح للإدارة.');
+      setReportOpen(false);
+      setReportReason('');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'حدث خطأ أثناء الإبلاغ.');
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
+
   if (loading) {
     return <div className="min-h-screen flex justify-center items-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
@@ -159,6 +198,22 @@ export function ConversationChat() {
             {conv.post_id && <p className="text-xs text-muted-foreground">بخصوص: {conv.post_id.title}</p>}
           </div>
         </div>
+        
+        <DropdownMenu dir="rtl">
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreVertical className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => setReportOpen(true)} className="text-amber-600 gap-2 cursor-pointer">
+              <Flag className="h-4 w-4" /> إبلاغ
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleBlock} className="text-red-600 focus:bg-red-50 focus:text-red-700 gap-2 cursor-pointer">
+              <Ban className="h-4 w-4" /> حظر
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* ── Status Banner ── */}
@@ -287,6 +342,35 @@ export function ConversationChat() {
           </Button>
         </form>
       </div>
+
+      {/* Report Modal */}
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>إبلاغ عن {otherUser.name}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-3">
+              يرجى توضيح سبب الإبلاغ. سيتم مراجعة بلاغك من قبل الإدارة.
+            </p>
+            <Textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              placeholder="اكتب سبب الإبلاغ هنا..."
+              className="min-h-[100px]"
+            />
+          </div>
+          <DialogFooter className="flex flex-row gap-2 sm:justify-start">
+            <Button onClick={handleReport} disabled={submittingReport || !reportReason.trim()}>
+              {submittingReport && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
+              إرسال البلاغ
+            </Button>
+            <Button variant="outline" onClick={() => setReportOpen(false)} disabled={submittingReport}>
+              إلغاء
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
