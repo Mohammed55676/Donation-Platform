@@ -1,0 +1,140 @@
+import { useState, useRef } from 'react';
+import { motion } from 'motion/react';
+import { Mail, Phone, MapPin, Send, Loader2 } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Card, CardContent } from '../components/ui/card';
+import { toast } from 'sonner';
+import api from '../utils/api';
+
+const infos = [
+  {
+    id: 'phone',
+    icon: Phone,
+    title: 'رقم الهاتف',
+    value: '+962 77 653 2286',
+    color: 'text-blue-500 bg-blue-100 dark:bg-blue-900/30',
+    action: () => window.open('https://wa.me/962776532286', '_blank'),
+  },
+  {
+    id: 'email',
+    icon: Mail,
+    title: 'البريد الإلكتروني',
+    value: 'contact@donation.org',
+    color: 'text-primary bg-primary/10',
+    action: () => { window.location.href = 'mailto:contact@donation.org'; },
+  },
+  {
+    id: 'location',
+    icon: MapPin,
+    title: 'العنوان الرئيس',
+    value: 'مجمع الملك حسين للأعمال، عمّان',
+    color: 'text-emerald-500 bg-emerald-100 dark:bg-emerald-900/30',
+    action: () => window.open('https://maps.google.com/?q=King+Hussein+Business+Park,+Amman', '_blank'),
+  },
+];
+
+export function Contact() {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formRef.current) return;
+
+    setIsLoading(true);
+    try {
+      const formData = new FormData(formRef.current);
+      const data = Object.fromEntries(formData.entries());
+      
+      await api.post('/contact', data);
+      
+      toast.success('تم إرسال رسالتك بنجاح! سنتواصل معك قريباً.');
+      formRef.current.reset();
+    } catch (error: any) {
+      console.error('Contact API error:', error);
+      toast.error(error.response?.data?.error || error.response?.data?.message || 'حدث خطأ أثناء إرسال الرسالة، يرجى المحاولة مرة أخرى.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background py-16 md:py-24">
+      <div className="container mx-auto px-4 max-w-6xl">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-16">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-4">اتصل بنا</h1>
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+            نحن هنا للإجابة على استفساراتكم ومساعدتكم. لا تترددوا في التواصل معنا في أي وقت.
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+          {/* Info cards */}
+          <div className="space-y-4">
+            {infos.map((info, i) => {
+              const Icon = info.icon;
+              return (
+                <motion.div key={info.title} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}>
+                  <Card 
+                    className="border-none card-shadow rounded-3xl hover:shadow-md transition-all cursor-pointer hover:-translate-y-1"
+                    onClick={info.action}
+                  >
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${info.color}`}>
+                        <Icon className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm text-muted-foreground mb-0.5">{info.title}</p>
+                        <p className="font-medium">{info.value}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )
+            })}
+          </div>
+
+          {/* Form */}
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="lg:col-span-2">
+            <Card className="border-none card-shadow rounded-3xl shadow-lg">
+              <CardContent className="p-8">
+                <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label>الاسم الكامل</Label>
+                      <Input name="user_name" placeholder="أحمد محمد" required className="bg-muted/50 rounded-xl border-none h-12" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>البريد الإلكتروني</Label>
+                      <Input name="user_email" type="email" placeholder="email@example.com" required className="bg-muted/50 rounded-xl border-none h-12" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>موضوع الرسالة</Label>
+                    <Input name="subject" placeholder="استفسار عن التبرع" required className="bg-muted/50 rounded-xl border-none h-12" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>الرسالة</Label>
+                    <textarea 
+                      name="message"
+                      className="w-full flex min-h-[120px] rounded-xl border-none bg-muted/50 px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+                      placeholder="اكتب رسالتك هنا..."
+                      required
+                    ></textarea>
+                  </div>
+                  <Button type="submit" disabled={isLoading} className="w-full sm:w-auto h-12 px-8 rounded-xl bg-gradient-to-r from-primary to-secondary">
+                    {isLoading ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <Send className="me-2 h-4 w-4" />}
+                    {isLoading ? 'جاري الإرسال...' : 'إرسال الرسالة'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
