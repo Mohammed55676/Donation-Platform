@@ -51,7 +51,7 @@ export function JoinCharity() {
       const res = await api.post(`/charity/join/${charityId}`, { note });
       toast.success('تم إرسال طلب الانضمام بنجاح!');
       setMyStatus({
-        beneficiaryStatus: 'pending_admin',
+        status: 'pending_admin',
         charityId: charityId,
       });
       // Refresh user data
@@ -80,7 +80,7 @@ export function JoinCharity() {
     );
   }
 
-  const currentStatus = myStatus?.beneficiaryStatus || user?.beneficiaryStatus || 'not_submitted';
+  const currentStatus = myStatus?.status || user?.charityStatus || 'not_submitted';
   const statusInfo = statusConfig[currentStatus] || statusConfig.not_submitted;
   const StatusIcon = statusInfo.icon;
   const canJoin = currentStatus === 'not_submitted' || currentStatus === 'rejected';
@@ -107,8 +107,8 @@ export function JoinCharity() {
           <div>
             <h3 className="font-semibold text-slate-900 dark:text-white">حالة التحقق</h3>
             <p className={`text-sm ${statusInfo.color}`}>{statusInfo.text}</p>
-            {currentStatus === 'rejected' && myStatus?.beneficiaryVerificationNote && (
-              <p className="text-xs text-red-500 mt-1">السبب: {myStatus.beneficiaryVerificationNote}</p>
+            {currentStatus === 'rejected' && myStatus?.note && (
+              <p className="text-xs text-red-500 mt-1">السبب: {myStatus.note}</p>
             )}
           </div>
         </div>

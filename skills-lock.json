@@ -5,6 +5,12 @@
       "source": "google-labs-code/stitch-skills",
       "sourceType": "github",
       "computedHash": "44af3e6e89a42a765d9cebf943f1e2ff3cdf43d1958341eb43fb7b74116f6691"
+    },
+    "fallow": {
+      "source": "fallow-rs/fallow-skills",
+      "sourceType": "github",
+      "skillPath": "fallow/skills/fallow/SKILL.md",
+      "computedHash": "b422e175a4092588f6a2142b7e719b9b94da05c446bf057ed1ef076e801e4b81"
     }
   }
 }

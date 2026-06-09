@@ -41,7 +41,7 @@ const goals = [
   {
     icon: Shield,
     title: 'ضمان الشفافية والأمان',
-    desc: 'نلتزم بأعلى معايير الأمان وحماية البيانات، مع شفافية تامة في كل عملية تبرع وتتبع دقيق يطمئن المانح والمستفيد.',
+    desc: 'نلتزم بأعلى معايير الأمان وحماية البيانات، مع شفافية تامة في كل عملية تبرع وتتبع دقيق يطمئن المانح والجمعية الشريكة.',
     color: 'from-violet-500 to-purple-600',
     bg: 'bg-violet-50 dark:bg-violet-950/30',
     img: 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600&q=80',
@@ -57,7 +57,7 @@ const goals = [
   {
     icon: Star,
     title: 'جودة الخدمة والمتابعة',
-    desc: 'نقيس نجاحنا بابتسامة المستفيد ورضا المتبرع. نتابع كل حالة ونسعى دوماً للارتقاء بتجربة جميع مستخدمي المنصة.',
+    desc: 'نقيس نجاحنا برضا الجمعيات الشريكة وثقة المتبرعين. نتابع كل حالة ونسعى دوماً للارتقاء بتجربة جميع مستخدمي المنصة.',
     color: 'from-teal-400 to-cyan-500',
     bg: 'bg-teal-50 dark:bg-teal-950/30',
     img: 'https://images.unsplash.com/photo-1755202321667-e455e8000df2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=600&q=80',
@@ -110,7 +110,7 @@ const team = [
 const heroStats = [
   { value: '٢٣٤٠+', label: 'تبرع مُكتمل' },
   { value: '١٥٦', label: 'متطوع نشط' },
-  { value: '٨٩٢', label: 'أسرة مستفيدة' },
+  { value: '٨٩٢', label: 'جمعية شريكة' },
   { value: '١٢', label: 'محافظة أردنية' },
 ];
 
@@ -228,7 +228,7 @@ export function About() {
               <div className="grid grid-cols-2 gap-4 pt-4">
                 <div className="bg-white dark:bg-[#1A2332]/60 border border-border/50 rounded-2xl p-4 shadow text-center">
                   <p className="text-2xl font-bold text-primary font-display">٩٨٪</p>
-                  <p className="text-sm text-muted-foreground mt-1">رضا المستفيدين</p>
+                  <p className="text-sm text-muted-foreground mt-1">رضا الجمعيات الشريكة</p>
                 </div>
                 <div className="bg-white dark:bg-[#1A2332]/60 border border-border/50 rounded-2xl p-4 shadow text-center">
                   <p className="text-2xl font-bold text-secondary font-display">٤٨ ساعة</p>
@@ -352,8 +352,8 @@ export function About() {
               },
               {
                 name: "سارة عبدالرحمن",
-                role: "مستفيد",
-                quote: "شكراً لكل من ساهم في دعمنا. المنصة قدمت لنا مساعدة في وقت كنا بأمس الحاجة إليها بطريقة تحفظ كرامتنا.",
+                role: "جمعية خيرية",
+                quote: "المنصة مكّنتنا من الوصول إلى المتبرعين بسهولة وسرعة. أداة لا غنى عنها لكل جمعية تسعى لتوسيع أثرها.",
                 rating: 5,
               },
               {

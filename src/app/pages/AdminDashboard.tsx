@@ -128,11 +128,7 @@ export function AdminDashboard() {
   // ── Helpers ──────────────────────────────────────────────────
   const setTab = (tab: string) => setSearchParams(tab === 'analytics' ? {} : { tab });
 
-  // ── Beneficiary Verifications state ──────────────────────────
-  const [verifications, setVerifications] = useState<any[]>([]);
-  const [verificationsLoading, setVerificationsLoading] = useState(false);
-  const [rejectDialog, setRejectDialog] = useState<{ open: boolean; profileId: string } | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
+
 
   // ── Donation Requests (admin) state ──────────────────────────
   const [adminRequests, setAdminRequests] = useState<any[]>([]);
@@ -145,14 +141,7 @@ export function AdminDashboard() {
   const [charitiesLoading, setCharitiesLoading] = useState(false);
   const [charityFilter, setCharityFilter] = useState('pending');
 
-  const fetchVerifications = async () => {
-    setVerificationsLoading(true);
-    try {
-      const res = await api.get('/beneficiary/admin/profiles');
-      setVerifications(Array.isArray(res.data.data) ? res.data.data : []);
-    } catch { setVerifications([]); }
-    finally { setVerificationsLoading(false); }
-  };
+
 
   const fetchAdminRequests = async () => {
     setAdminRequestsLoading(true);
@@ -172,7 +161,7 @@ export function AdminDashboard() {
     finally { setCharitiesLoading(false); }
   };
 
-  useEffect(() => { fetchVerifications(); fetchAdminRequests(); fetchCharities(); }, []);
+  useEffect(() => { fetchAdminRequests(); fetchCharities(); }, []);
   useEffect(() => { fetchCharities(); }, [charityFilter]);
   useEffect(() => { if (activeTab === 'donations') fetchDonations(); }, [activeTab]);
 
@@ -368,12 +357,11 @@ export function AdminDashboard() {
             <TabsTrigger value="campaigns" className="rounded-lg text-sm font-semibold">الحملات</TabsTrigger>
             <TabsTrigger value="volunteer" className="rounded-lg text-sm font-semibold">فرص التطوع</TabsTrigger>
             <TabsTrigger value="charities" className="rounded-lg text-sm font-semibold">الجمعيات الخيرية</TabsTrigger>
-            <TabsTrigger value="requests" className="rounded-lg text-sm font-semibold">الطلبات</TabsTrigger>
-            <TabsTrigger value="verifications" className="rounded-lg text-sm font-semibold">التحقق من الهوية</TabsTrigger>
+            {/* <TabsTrigger value="verifications" className="rounded-lg text-sm font-semibold">التحقق من الهوية</TabsTrigger> */}
             <TabsTrigger value="donation-requests" className="rounded-lg text-sm font-semibold">طلبات التبرع</TabsTrigger>
             <TabsTrigger value="urgent" className="rounded-lg text-sm font-semibold">
               <span>الحالات العاجلة</span>
-              <span className="me- text-red-500">🔥</span>
+              <span className="me-1 text-red-500">🔥</span>
             </TabsTrigger>
           </TabsList>
 
@@ -435,9 +423,9 @@ export function AdminDashboard() {
               <CardContent>
                 <div className="mb-4 relative">
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="ابحث بالاسم أو البريد..." 
-                    className="pe-"
+                  <Input
+                    placeholder="ابحث بالاسم أو البريد..."
+                    className="ps-10"
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
                   />
@@ -811,153 +799,6 @@ export function AdminDashboard() {
             </div>
           </TabsContent>
 
-          {/* ══ VERIFICATIONS TAB ═══════════════════════════════════════ */}
-          <TabsContent value="verifications" className="mt-6">
-            <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>التحقق من الهوية</CardTitle>
-                    <CardDescription>مراجعة طلبات التحقق من هوية المستفيدين</CardDescription>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={fetchVerifications}>تحديث</Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {verificationsLoading ? (
-                  <div className="text-center py-10 text-muted-foreground">جاري التحميل...</div>
-                ) : verifications.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground">لا توجد طلبات تحقق حتى الآن</div>
-                ) : (
-                  <div className="space-y-4">
-                    {verifications.map((v: any) => {
-                      const statusColors: Record<string, string> = {
-                        not_verified: 'bg-gray-100 text-gray-600',
-                        pending_review: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30',
-                        trusted: 'bg-green-100 text-green-700 dark:bg-green-900/30',
-                        rejected: 'bg-red-100 text-red-600 dark:bg-red-900/30',
-                        blocked: 'bg-red-200 text-red-800 dark:bg-red-900/50',
-                      };
-                      const statusLabels: Record<string, string> = {
-                        not_verified: 'غير محقق', pending_review: 'قيد المراجعة',
-                        trusted: 'موثوق', rejected: 'مرفوض', blocked: 'محظور',
-                      };
-                      return (
-                        <Card key={v.id} className="border-none card-shadow rounded-2xl">
-                          <CardContent className="p-4 space-y-3">
-                            <div className="flex items-start justify-between gap-3 flex-wrap">
-                              <div>
-                                <p className="font-semibold">{v.user_id?.name || '—'}</p>
-                                <p className="text-sm text-muted-foreground">{v.user_id?.email}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">رقم الهوية: <span dir="ltr">{v.national_id_number}</span></p>
-                                <p className="text-xs text-muted-foreground">
-                                  تاريخ التقديم: {new Date(v.createdAt).toLocaleDateString('ar-SA')}
-                                </p>
-                              </div>
-                              <Badge className={statusColors[v.verification_status] || ''}>{statusLabels[v.verification_status] || v.verification_status}</Badge>
-                            </div>
-
-                            {/* Extended profile details — admin only */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs bg-muted/40 rounded-xl p-3">
-                              {v.phone && <div><span className="text-muted-foreground">الهاتف:</span> <span dir="ltr">{v.phone}</span></div>}
-                              {v.city && <div><span className="text-muted-foreground">المدينة:</span> {v.city}</div>}
-                              {v.address && <div><span className="text-muted-foreground">العنوان:</span> {v.address}</div>}
-                              {v.family_members && <div><span className="text-muted-foreground">أفراد الأسرة:</span> {v.family_members}</div>}
-                              {v.employment_status && <div><span className="text-muted-foreground">الوظيفة:</span> {v.employment_status}</div>}
-                              {v.monthly_income_range && <div><span className="text-muted-foreground">الدخل:</span> {v.monthly_income_range}</div>}
-                              {v.housing_status && <div><span className="text-muted-foreground">السكن:</span> {v.housing_status}</div>}
-                              {v.monthly_rent_range && <div><span className="text-muted-foreground">الإيجار:</span> {v.monthly_rent_range}</div>}
-                              {v.social_security_status && <div><span className="text-muted-foreground">الضمان:</span> {v.social_security_status}</div>}
-                              {v.naf_support_status && <div><span className="text-muted-foreground">صندوق المعونة:</span> {v.naf_support_status}</div>}
-                              {v.delivery_ability && <div><span className="text-muted-foreground">الاستلام:</span> {v.delivery_ability}</div>}
-                            </div>
-                            {v.situation_explanation && (
-                              <div className="text-xs bg-muted/40 rounded-xl p-3">
-                                <span className="text-muted-foreground font-medium">شرح الوضع:</span>
-                                <p className="mt-1">{v.situation_explanation}</p>
-                              </div>
-                            )}
-                            {v.needs_categories?.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {v.needs_categories.map((n: string) => (
-                                  <Badge key={n} variant="outline" className="text-xs">{n}</Badge>
-                                ))}
-                              </div>
-                            )}
-
-                            {v.verification_rejection_reason && (
-                              <div className="text-xs text-red-600 bg-red-50 dark:bg-red-950/30 p-2 rounded">
-                                سبب الرفض: {v.verification_rejection_reason}
-                              </div>
-                            )}
-                            <div className="flex flex-wrap gap-2">
-                              {/* View national ID document */}
-                              <a
-                                href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/beneficiary/admin/profiles/${v.id}/document`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <Button variant="outline" size="sm" className="gap-1">
-                                  <Eye className="h-3.5 w-3.5" /> عرض الوثيقة
-                                </Button>
-                              </a>
-                              {/* View proof documents */}
-                              {v.proof_documents?.map((_: string, idx: number) => (
-                                <a
-                                  key={idx}
-                                  href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/beneficiary/admin/profiles/${v.id}/proof/${idx}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <Button variant="outline" size="sm" className="gap-1 text-xs">
-                                    <Eye className="h-3 w-3" /> إثبات {idx + 1}
-                                  </Button>
-                                </a>
-                              ))}
-                              {/* Approve */}
-                              {v.verification_status !== 'trusted' && (
-                                <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white gap-1" onClick={async () => {
-                                  try {
-                                    await api.put(`/beneficiary/admin/profiles/${v.id}/status`, { verification_status: 'trusted' });
-                                    toast.success('تم قبول الطلب وتوثيق المستفيد');
-                                    fetchVerifications();
-                                  } catch (e: any) { toast.error(e.response?.data?.error || 'حدث خطأ'); }
-                                }}>
-                                  <Check className="h-3.5 w-3.5" /> قبول
-                                </Button>
-                              )}
-                              {/* Reject */}
-                              {v.verification_status !== 'rejected' && (
-                                <Button size="sm" variant="outline" className="text-orange-600 border-orange-300 gap-1" onClick={() => {
-                                  setRejectReason('');
-                                  setRejectDialog({ open: true, profileId: v.id });
-                                }}>
-                                  <X className="h-3.5 w-3.5" /> رفض
-                                </Button>
-                              )}
-                              {/* Block */}
-                              {v.verification_status !== 'blocked' && (
-                                <Button size="sm" variant="outline" className="text-destructive border-destructive/40 gap-1" onClick={async () => {
-                                  try {
-                                    await api.put(`/beneficiary/admin/profiles/${v.id}/status`, { verification_status: 'blocked' });
-                                    toast.success('تم حظر المستفيد');
-                                    fetchVerifications();
-                                  } catch (e: any) { toast.error(e.response?.data?.error || 'حدث خطأ'); }
-                                }}>
-                                  <Ban className="h-3.5 w-3.5" /> حظر
-                                </Button>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           {/* ══ DONATION REQUESTS TAB ═══════════════════════════════════ */}
           <TabsContent value="donation-requests" className="mt-6">
             <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
@@ -978,8 +819,6 @@ export function AdminDashboard() {
                 ) : (
                   <div className="space-y-4">
                     {adminRequests.map((r: any) => {
-                      const don = r.donation_id;
-                      const ben = r.beneficiary_id;
                       const reqStatusColors: Record<string, string> = {
                         pending_review: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30',
                         accepted: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30',
@@ -996,8 +835,8 @@ export function AdminDashboard() {
                           <CardContent className="p-4 space-y-3">
                             <div className="flex items-start justify-between gap-3 flex-wrap">
                               <div>
-                                <p className="font-semibold">{don?.title || 'تبرع'}</p>
-                                <p className="text-sm text-muted-foreground">المستفيد: {ben?.name} — {ben?.email}</p>
+                                <p className="font-semibold">{r.donation_id?.title || 'تبرع'}</p>
+                                <p className="text-sm text-muted-foreground">مقدم الطلب: {r.charity?.charityName || r.charity?.name || 'غير معروف'} — {r.charity?.email || 'لا يوجد إيميل'}</p>
                                 <p className="text-xs text-muted-foreground">رقم الهوية: <span dir="ltr">{r.national_id_number}</span></p>
                                 <p className="text-xs text-muted-foreground">تاريخ الطلب: {new Date(r.createdAt).toLocaleDateString('ar-SA')}</p>
                                 {r.emergency_exception && (
@@ -1306,86 +1145,7 @@ export function AdminDashboard() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Reject Verification Dialog ─────────────────────────── */}
-      <Dialog open={!!rejectDialog?.open} onOpenChange={() => setRejectDialog(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>رفض طلب التحقق</DialogTitle>
-            <DialogDescription>يجب إدخال سبب الرفض ليتمكن المستفيد من التصحيح</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 py-2">
-            <Textarea
-              placeholder="سبب رفض طلب التحقق..."
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              rows={3}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectDialog(null)}>إلغاء</Button>
-            <Button
-              className="bg-red-600 hover:bg-red-700 text-white"
-              disabled={!rejectReason.trim()}
-              onClick={async () => {
-                if (!rejectDialog) return;
-                try {
-                  await api.put(`/beneficiary/admin/profiles/${rejectDialog.profileId}/status`, {
-                    verification_status: 'rejected',
-                    verification_rejection_reason: rejectReason.trim(),
-                  });
-                  toast.success('تم رفض الطلب');
-                  fetchVerifications();
-                  setRejectDialog(null);
-                } catch (e: any) { toast.error(e.response?.data?.error || 'حدث خطأ'); }
-              }}
-            >
-              تأكيد الرفض
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      {/* ── Emergency Exception Dialog ─────────────────────────── */}
-      <Dialog open={!!emergencyDialog?.open} onOpenChange={() => setEmergencyDialog(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>⚡ استثناء طارئ</DialogTitle>
-            <DialogDescription>
-              هذا المستفيد تلقى تبرعاً خلال الـ 14 يوماً الماضية. لقبول هذا الطلب يجب إدخال سبب الاستثناء.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 py-2">
-            <Textarea
-              placeholder="سبب الاستثناء الطارئ..."
-              value={emergencyReason}
-              onChange={(e) => setEmergencyReason(e.target.value)}
-              rows={3}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEmergencyDialog(null)}>إلغاء</Button>
-            <Button
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-              disabled={!emergencyReason.trim()}
-              onClick={async () => {
-                if (!emergencyDialog) return;
-                try {
-                  await api.put(`/donation-requests/${emergencyDialog.requestId}/review`, {
-                    action: 'accept',
-                    emergency_exception: true,
-                    emergency_reason: emergencyReason.trim(),
-                  });
-                  toast.success('تم قبول الطلب بموجب الاستثناء الطارئ');
-                  fetchAdminRequests();
-                  setEmergencyDialog(null);
-                } catch (e: any) { toast.error(e.response?.data?.error || 'حدث خطأ'); }
-              }}
-            >
-              تأكيد الاستثناء الطارئ
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
     </DashboardLayout>
   );

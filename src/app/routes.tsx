@@ -16,6 +16,7 @@ import { Login } from './pages/auth/Login';
 import { Signup } from './pages/auth/Signup';
 import { ForgotPassword } from './pages/auth/ForgotPassword';
 import { ResetPassword } from './pages/auth/ResetPassword';
+import { VerifyOtp } from './pages/auth/VerifyOtp';
 
 import { Dashboard } from './pages/Dashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -30,10 +31,7 @@ import { Details } from './pages/community/Details';
 import { Messages } from './pages/messages/Messages';
 import { ConversationChat } from './pages/messages/ConversationChat';
 
-import { BeneficiaryVerification } from './pages/BeneficiaryVerification';
-
 // Charity system
-import { JoinCharity } from './pages/JoinCharity';
 import { CharityDashboard } from './pages/CharityDashboard';
 
 import { Notifications } from './pages/Notifications';
@@ -49,14 +47,15 @@ export const router = createBrowserRouter([
       { path: '/login', Component: Login },
       { path: '/signup', Component: Signup },
       { path: '/forgot-password', Component: ForgotPassword },
-      { path: '/reset-password/:token', Component: ResetPassword },
+      { path: '/reset-password', Component: ResetPassword },
+      { path: '/verify-otp', Component: VerifyOtp },
     ],
   },
 
   {
     path: '/dashboard',
     element: (
-      <ProtectedRoute allowedRole={['user', 'volunteer']} allowedUserType={['donor', 'beneficiary']}>
+      <ProtectedRoute allowedRole={['user']} allowedUserType={['donor']}>
         <Dashboard />
       </ProtectedRoute>
     ),
@@ -98,8 +97,6 @@ export const router = createBrowserRouter([
       { path: 'messages/:conversationId', element: <ProtectedRoute><ConversationChat /></ProtectedRoute> },
       { path: 'notifications', element: <ProtectedRoute><Notifications /></ProtectedRoute> },
       { path: 'payment-success', Component: PaymentSuccess },
-      { path: 'verify-beneficiary', element: <ProtectedRoute allowedRole="user" allowedUserType="beneficiary"><BeneficiaryVerification /></ProtectedRoute> },
-      { path: 'join-charity', element: <ProtectedRoute allowedRole="user" allowedUserType="beneficiary"><JoinCharity /></ProtectedRoute> },
       { path: '*', Component: NotFound },
     ],
   },

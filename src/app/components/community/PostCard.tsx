@@ -28,12 +28,11 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { EditPostModal } from "./EditPostModal";
-import { BeneficiaryProfileModal } from "./BeneficiaryProfileModal";
+
 
 type PostCardProps = {
   post: Post;
   currentUserId?: string | null;
-  allPosts?: Post[];           // for profile modal post history
   onLike: () => void;
   onComment: () => void;
   onHelp: () => void;
@@ -53,17 +52,12 @@ function getUser(post: Post): CommunityUser {
     avatar: u.avatar || u.avatarUrl || undefined,
     email: u.email,
     role: u.role || "user",
-    verification_status: u.verification_status,
-    average_rating: u.average_rating,
-    completed_donations_count: u.completed_donations_count,
-    rating_count: u.rating_count,
   };
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
   post,
   currentUserId,
-  allPosts = [],
   onLike,
   onComment,
   onHelp,
@@ -78,18 +72,6 @@ export const PostCard: React.FC<PostCardProps> = ({
   const isOwner = !!currentUserId && currentUserId === author.id;
 
   const [showEdit, setShowEdit] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [openMessage, setOpenMessage] = useState(false);
-
-  // Posts by this author (for profile modal)
-  const authorPosts = allPosts.filter(
-    (p) => (p.requestedBy as any)?.id === author.id || (p.requestedBy as any)?._id === author.id
-  );
-
-  const handleProfileClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowProfile(true);
-  };
 
   return (
     <>
@@ -110,10 +92,9 @@ export const PostCard: React.FC<PostCardProps> = ({
             <div className="p-5 pb-3">
               <div className="flex justify-between items-start mb-4">
                 {/* Author */}
-                <button
-                  type="button"
-                  className="flex items-center gap-3 hover:opacity-80 transition-opacity text-right"
-                  onClick={handleProfileClick}
+                <div
+                  className="flex items-center gap-3 text-right"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <Avatar className="h-10 w-10 shrink-0">
                     <AvatarImage src={author.avatar} alt={author.name} />
@@ -148,7 +129,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                       </div>
                     )}
                   </div>
-                </button>
+                </div>
 
                 {/* Status badge + owner menu */}
                 <div className="flex items-center gap-2 shrink-0">
@@ -282,7 +263,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleProfileClick}
+                  onClick={(e) => { e.stopPropagation(); onHelp(); }}
                   className="gap-1.5 text-xs"
                 >
                   <Hand className="w-3.5 h-3.5" />
@@ -294,8 +275,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setOpenMessage(true);
-                    setShowProfile(true);
+                    onChat?.();
                   }}
                   disabled={post.status === "تم التسليم" || post.status === "ملغي" || isOwner}
                   className="gap-1.5 text-xs"
@@ -319,18 +299,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         />
       )}
 
-      {/* Profile modal */}
-      <BeneficiaryProfileModal
-        open={showProfile}
-        onClose={() => {
-          setShowProfile(false);
-          setOpenMessage(false);
-        }}
-        user={author}
-        posts={authorPosts}
-        initialShowMsgInput={openMessage}
-        contextPostId={post.id}
-      />
+
     </>
   );
 };

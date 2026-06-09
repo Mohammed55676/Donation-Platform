@@ -2,7 +2,7 @@
  * src/models/Rating.model.js
  *
  * Mutual rating after a completed donation.
- * Both the donor and the beneficiary can rate each other once per donation.
+ * Both the donor and the charity can rate each other once per donation.
  * Unique constraint: one rating per (donation, rater) pair.
  */
 const mongoose = require('mongoose');

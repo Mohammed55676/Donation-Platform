@@ -61,5 +61,5 @@ export function useVolunteerOpportunities() {
     }
   };
 
-  return { opportunities, loading, addOpportunity, updateOpportunity, deleteOpportunity, fetchOpportunities, setOpportunities };
+  return { opportunities, loading, addOpportunity, updateOpportunity, deleteOpportunity, fetchOpportunities };
 }

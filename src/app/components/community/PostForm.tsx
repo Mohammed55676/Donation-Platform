@@ -188,7 +188,7 @@ export const PostForm: React.FC<PostFormProps> = ({
       <Button type="submit" className="w-full h-12 text-base" disabled={isSubmitting}>
         {isSubmitting ? (
           <>
-            <Loader2 className="ms- h-5 w-5 animate-spin" />
+            <Loader2 className="me-2 h-5 w-5 animate-spin" />
             جاري النشر...
           </>
         ) : (

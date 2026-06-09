@@ -3,6 +3,7 @@
  * Mongoose schema for platform users.
  */
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 
 
 const userSchema = new mongoose.Schema(
@@ -27,12 +28,11 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Password is required'],
       validate: {
         validator: function(v) {
-          // At least 8 characters, 1 uppercase, 1 number, 1 special character
           return /(?=.*[A-Z])/.test(v) && /(?=.*\d)/.test(v) && /(?=.*[!@#$%^&*(),.?":{}|<>_])/.test(v) && v.length >= 8;
         },
         message: 'Password must be at least 8 characters long, contain an uppercase letter, a number, and a special character.'
       },
-      select: false, // never returned by default
+      select: false,
     },
     role: {
       type: String,
@@ -52,31 +52,17 @@ const userSchema = new mongoose.Schema(
       enum: ['active', 'banned'],
       default: 'active',
     },
-    // Distinguishes public user types — separate from the role field (admin/user)
     user_type: {
       type: String,
-      enum: ['donor', 'beneficiary', 'charity'],
+      enum: ['donor', 'charity'],
       default: 'donor',
     },
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Donation' }],
 
-    // ── Beneficiary verification (admin-based) ──────────────────────────
-    beneficiaryStatus: {
-      type: String,
-      enum: ['not_submitted', 'pending_admin', 'verified', 'rejected'],
-      default: 'not_submitted',
-    },
-    verifiedBy: {
-      type: String,
-      enum: ['admin', 'charity', null],
-      default: null,
-    },
-    charityId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      default: null,
-    },
-    beneficiaryVerificationNote: { type: String, default: null },
+    // ── OTP verification ────────────────────────────────────────────────
+    otp: { type: String, default: null },
+    otpExpires: { type: Date, default: null },
+    isVerified: { type: Boolean, default: false },
 
     // ── Charity-specific fields ─────────────────────────────────────────
     charityStatus: {
@@ -97,25 +83,42 @@ const userSchema = new mongoose.Schema(
     completed_donations_count: { type: Number, default: 0 },
     average_rating: { type: Number, default: 0 },
     rating_count: { type: Number, default: 0 },
-    resetPasswordToken: String,
-    resetPasswordExpires: Date,
   },
   { timestamps: true }
 );
 
+// ── Pre-save hook: Hash password ─────────────────────────────────────
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // ── Instance method: compare password ───────────────────────────────
-userSchema.methods.comparePassword = function (plain) {
-  // Plain text comparison (NOT SECURE - Done based on user request)
-  return Promise.resolve(plain === this.password);
+userSchema.methods.comparePassword = async function (plain) {
+  const isHashed = this.password && (this.password.startsWith('$2b$') || this.password.startsWith('$2a$'));
+
+  if (isHashed) {
+    return await bcrypt.compare(plain, this.password);
+  } else {
+    return plain === this.password;
+  }
 };
 
 // ── Remove sensitive fields from JSON output ─────────────────────────
 userSchema.set('toJSON', {
   transform(doc, ret) {
     delete ret.password;
+    delete ret.otp;
+    delete ret.otpExpires;
     ret.id = ret._id.toString();
-    
-    // Calculate profile completeness
+
     let completeness = 40;
     if (ret.phone) completeness += 20;
     if (ret.location) completeness += 20;

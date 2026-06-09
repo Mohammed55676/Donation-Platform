@@ -1,9 +1,14 @@
 /// <reference types="vite/client" />
 import axios from 'axios';
 
+const _baseURL = import.meta.env.VITE_API_URL || (() => {
+  console.warn('[api] VITE_API_URL is not set — falling back to http://localhost:5000/api');
+  return 'http://localhost:5000/api';
+})();
+
 // Create an Axios instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: _baseURL,
   headers: {
     'Content-Type': 'application/json',
   },

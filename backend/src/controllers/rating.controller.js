@@ -35,7 +35,7 @@ async function submitRating(req, res, next) {
       throw new AppError('لا يمكنك التقييم إلا بعد اكتمال التبرع.', 400);
     }
 
-    // Verify the rater is either the donor or the claimed beneficiary
+    // Verify the rater is either the donor or the claimed charity
     const donorId   = donation.donor.toString();
     const claimedBy = donation.claimedBy?.toString();
     if (raterId !== donorId && raterId !== claimedBy) {

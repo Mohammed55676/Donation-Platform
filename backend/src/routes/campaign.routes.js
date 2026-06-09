@@ -12,7 +12,7 @@ const Joi     = require('joi');
 const router  = express.Router();
 
 const {
-  listCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign, donateToCampaign,
+  listCampaigns, getMyCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign, donateToCampaign,
 } = require('../controllers/campaign.controller');
 const { protect }     = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/role.middleware');
@@ -35,9 +35,10 @@ const donateSchema = Joi.object({
 });
 
 router.get('/',            listCampaigns);
+router.get('/my',          protect, getMyCampaigns);
 router.get('/:id',         getCampaign);
 router.post('/',           protect, validate(campaignSchema), createCampaign);
-router.post('/:id/donate', validate(donateSchema), donateToCampaign);
+router.post('/:id/donate', protect, validate(donateSchema), donateToCampaign);
 router.put('/:id',         protect, requireRole('admin'), updateCampaign);
 router.delete('/:id',      protect, requireRole('admin'), deleteCampaign);
 

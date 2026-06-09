@@ -1,7 +1,7 @@
 /**
  * src/models/DonationRequest.model.js
  *
- * A beneficiary's request for a specific donation item.
+ * A charity's request for a specific donation item.
  * The 14-day restriction is enforced using national_id_number,
  * not just user account ID, to prevent bypass via multiple accounts.
  */
@@ -14,15 +14,15 @@ const donationRequestSchema = new mongoose.Schema(
       ref: 'Donation',
       required: true,
     },
-    beneficiary_id: {
+    charity_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false,
     },
-    // Snapshot of the national_id at request time — used for 14-day cross-account checks
+    // Snapshot of the national_id at request time — used for 14-day cross-account checks (legacy)
     national_id_number: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
     },
     status: {
@@ -41,14 +41,14 @@ const donationRequestSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Prevent the same beneficiary from submitting two requests for the same donation
+// Prevent the same user from submitting two requests
 donationRequestSchema.index(
-  { donation_id: 1, beneficiary_id: 1 },
-  { unique: true, name: 'unique_beneficiary_donation_request' }
+  { donation_id: 1, charity_id: 1 },
+  { unique: true, partialFilterExpression: { charity_id: { $exists: true } } }
 );
 
 // Fast lookups
-donationRequestSchema.index({ beneficiary_id: 1 });
+donationRequestSchema.index({ charity_id: 1 });
 donationRequestSchema.index({ donation_id: 1 });
 donationRequestSchema.index({ status: 1 });
 donationRequestSchema.index({ national_id_number: 1 });

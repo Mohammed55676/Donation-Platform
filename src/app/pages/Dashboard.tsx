@@ -97,32 +97,21 @@ export function Dashboard() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
-  // Real donation requests — fetched from API for beneficiary users
-  const [myBeneficiaryRequests, setMyBeneficiaryRequests] = useState<any[]>([]);
-  const [requestsLoading, setRequestsLoading] = useState(false);
 
+
+  // For donor users: fetch real requests for their donations
+  const [myDonorRequests, setMyDonorRequests] = useState<any[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
   useEffect(() => {
-    if (user?.user_type !== 'beneficiary') return;
+    if (user?.user_type !== 'donor') return;
     setRequestsLoading(true);
-    api.get('/donation-requests/my')
-      .then(res => setMyBeneficiaryRequests(res.data.data || []))
-      .catch(() => setMyBeneficiaryRequests([]))
+    api.get('/donation-requests/for-donor')
+      .then(res => setMyDonorRequests(res.data.data || []))
+      .catch(() => setMyDonorRequests([]))
       .finally(() => setRequestsLoading(false));
   }, [user?.id, user?.user_type]);
 
-  // For donor users: show donations they reserved/received (backwards compat)
-  const myDonorRequests = donations
-    .filter(d => ['محجوز', 'تم التسليم'].includes(d.status) && d.donor.name !== user?.name)
-    .map(d => ({
-      id: d.id,
-      donation: d,
-      status: d.status === 'تم التسليم' ? 'تم التسليم' : 'قيد المراجعة',
-      requestDate: d.createdAt
-    }));
-
-  // Unify: beneficiaries use real API data, others use legacy filter
-  const isBeneficiary = user?.user_type === 'beneficiary';
-  const requestsCount = isBeneficiary ? myBeneficiaryRequests.length : myDonorRequests.length;
+  const requestsCount = myDonorRequests.length;
 
   const [showRating, setShowRating] = useState(false);
   const [ratingTarget, setRatingTarget] = useState<{ donationId: string; rateeId: string; rateeName: string } | null>(null);
@@ -349,104 +338,76 @@ export function Dashboard() {
           <TabsContent value="requests" className="mt-6">
             <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader>
-                <CardTitle>{t('dashboard.my_requests')}</CardTitle>
-                <CardDescription>{t('dashboard.my_requests_desc')}</CardDescription>
+                <CardTitle>طلبات التبرع</CardTitle>
+                <CardDescription>الطلبات المقدمة على تبرعاتك</CardDescription>
               </CardHeader>
               <CardContent>
-                {/* ── Beneficiary view: real API requests ── */}
-                {isBeneficiary ? (
-                  requestsLoading ? (
-                    <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
-                  ) : myBeneficiaryRequests.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
-                      <p className="text-muted-foreground">{t('dashboard.no_requests')}</p>
-                      <Link to="/donations"><Button variant="outline" className="mt-4">{t('dashboard.browse_donations_btn')}</Button></Link>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {myBeneficiaryRequests.map((request: any) => {
-                        const don = request.donation_id;
-                        const statusLabel = REQUEST_STATUS_LABELS[request.status] || request.status;
-                        const statusColor = REQUEST_STATUS_COLORS[request.status] || '';
-                        return (
-                          <Card key={request.id} className="overflow-hidden border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 transition-all">
-                            <div className="flex flex-col sm:flex-row gap-4 p-4">
-                              {don?.image && <img src={don.image} alt={don.title} className="w-full sm:w-28 h-28 object-cover rounded-xl flex-shrink-0" />}
-                              <div className="flex-1 space-y-2">
-                                <div className="flex items-start justify-between gap-2">
-                                  <h3 className="font-semibold">{don?.title || 'تبرع'}</h3>
-                                  <Badge className={statusColor}>{statusLabel}</Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground line-clamp-2">{don?.description}</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {don?.category && <Badge variant="outline">{don.category}</Badge>}
-                                  <Badge variant="outline">📅 {new Date(request.createdAt).toLocaleDateString('ar-SA')}</Badge>
-                                </div>
-                                {request.admin_notes && (
-                                  <p className="text-xs text-muted-foreground bg-muted rounded p-2">
-                                    ملاحظة الإدارة: {request.admin_notes}
-                                  </p>
-                                )}
-                                <div className="flex items-center gap-2 pt-1">
-                                  {don?.id && <Link to={`/donations/${don.id}`}><Button variant="outline" size="sm"><Eye className="me-2 h-4 w-4" />عرض</Button></Link>}
-                                  {request.status === 'received' && (
-                                     <Button variant="outline" size="sm" onClick={() => {
-                                       const donId = don?.id || don?._id;
-                                       const donorId = don?.donor;
-                                       if (donId && donorId) {
-                                         setRatingTarget({ donationId: donId, rateeId: donorId, rateeName: 'المتبرع' });
-                                         setShowRating(true);
-                                       }
-                                     }}><Star className="me-2 h-4 w-4" />تقييم</Button>
-                                   )}
-                                </div>
-                              </div>
-                            </div>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  )
+                {myDonorRequests.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+                    <p className="text-muted-foreground">{t('dashboard.no_requests')}</p>
+                    <Link to="/donations"><Button variant="outline" className="mt-4">{t('dashboard.browse_donations_btn')}</Button></Link>
+                  </div>
                 ) : (
-                  /* ── Donor/legacy view ── */
-                  myDonorRequests.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
-                      <p className="text-muted-foreground">{t('dashboard.no_requests')}</p>
-                      <Link to="/donations"><Button variant="outline" className="mt-4">{t('dashboard.browse_donations_btn')}</Button></Link>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {myDonorRequests.map((request) => (
-                        <Card key={request.id} className="overflow-hidden border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 transition-all">
-                          <div className="flex flex-col sm:flex-row gap-4 p-4">
-                            <img src={request.donation.image} alt={request.donation.title} className="w-full sm:w-28 h-28 object-cover rounded-xl flex-shrink-0" />
-                            <div className="flex-1 space-y-2">
-                              <div className="flex items-start justify-between gap-2">
-                                <h3 className="font-semibold">{request.donation.title}</h3>
-                                <Badge className={getStatusColor(request.status)}>{request.status}</Badge>
+                  <div className="space-y-4">
+                    {myDonorRequests.map((request) => {
+                      const don = request.donation_id;
+                      const requester = request.charity;
+                      const statusLabel = REQUEST_STATUS_LABELS[request.status] || request.status;
+                      const statusColor = REQUEST_STATUS_COLORS[request.status] || '';
+                      return (
+                      <Card key={request.id} className="overflow-hidden border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 transition-all">
+                        <div className="flex flex-col sm:flex-row gap-4 p-4">
+                          {don?.image && <img src={don.image} alt={don?.title} className="w-full sm:w-28 h-28 object-cover rounded-xl flex-shrink-0" />}
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <h3 className="font-semibold">{don?.title}</h3>
+                                <p className="text-sm font-medium text-primary">الجمعية: {requester?.charityName || requester?.name || requester?.anonymousCode}</p>
                               </div>
-                              <p className="text-sm text-muted-foreground line-clamp-2">{request.donation.description}</p>
-                              <div className="flex flex-wrap gap-2">
-                                <Badge variant="outline">{request.donation.category}</Badge>
-                                <Badge variant="outline">📅 {new Date(request.requestDate).toLocaleDateString('ar-SA')}</Badge>
-                              </div>
-                              <div className="flex items-center gap-2 pt-1">
-                                <Link to={`/donations/${request.donation.id}`}><Button variant="outline" size="sm"><Eye className="me-2 h-4 w-4" />عرض</Button></Link>
-                                {request.status === 'تم التسليم' && (
-                                  <Button variant="outline" size="sm" onClick={() => {
-                                    setRatingTarget({ donationId: request.donation.id, rateeId: '', rateeName: 'المستفيد' });
-                                    setShowRating(true);
-                                  }}><Star className="me-2 h-4 w-4" />تقييم</Button>
-                                )}
-                              </div>
+                              <Badge className={statusColor}>{statusLabel}</Badge>
+                            </div>
+                            {requester?.situation_explanation && <p className="text-sm text-muted-foreground line-clamp-2">ملاحظات: {requester.situation_explanation}</p>}
+                            <div className="flex flex-wrap gap-2">
+                              {don?.category && <Badge variant="outline">{don.category}</Badge>}
+                              <Badge variant="outline">📅 {new Date(request.createdAt).toLocaleDateString('ar-SA')}</Badge>
+                            </div>
+                            <div className="flex items-center gap-2 pt-1">
+                              {don?.id && <Link to={`/donations/${don.id}`}><Button variant="outline" size="sm"><Eye className="me-2 h-4 w-4" />عرض</Button></Link>}
+                              {request.status === 'pending_review' && (
+                                <>
+                                  <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
+                                    try {
+                                      await api.put(`/donation-requests/${request.id}/donor-review`, { action: 'accept' });
+                                      toast.success('تم قبول الطلب!');
+                                      setMyDonorRequests(prev => prev.map(r => r.id === request.id ? { ...r, status: 'accepted' } : r));
+                                    } catch (e: any) {
+                                      toast.error(e.response?.data?.error || 'حدث خطأ');
+                                    }
+                                  }}><CheckCircle className="me-1 h-3.5 w-3.5"/> قبول</Button>
+                                  <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200" onClick={async () => {
+                                    try {
+                                      await api.put(`/donation-requests/${request.id}/donor-review`, { action: 'reject' });
+                                      toast.success('تم رفض الطلب');
+                                      setMyDonorRequests(prev => prev.map(r => r.id === request.id ? { ...r, status: 'rejected' } : r));
+                                    } catch (e: any) {
+                                      toast.error(e.response?.data?.error || 'حدث خطأ');
+                                    }
+                                  }}><XCircle className="me-1 h-3.5 w-3.5"/> رفض</Button>
+                                </>
+                              )}
+                              {request.status === 'received' && don?.id && (
+                                <Button variant="outline" size="sm" onClick={() => {
+                                  setRatingTarget({ donationId: don.id, rateeId: '', rateeName: 'الجمعية' });
+                                  setShowRating(true);
+                                }}><Star className="me-2 h-4 w-4" />تقييم</Button>
+                              )}
                             </div>
                           </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )
+                        </div>
+                      </Card>
+                    );})}
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -566,7 +527,7 @@ export function Dashboard() {
                       <h3 className="text-xl font-bold">{user?.name}</h3>
                       <p className="text-muted-foreground">{user?.email}</p>
                       <Badge className="mt-1 bg-primary/10 text-primary">
-                        {user?.user_type === 'beneficiary' ? 'مستفيد' : 'متبرع'}
+                        {user?.role === 'admin' ? 'مدير' : user?.user_type === 'charity' ? 'جمعية' : 'متبرع'}
                       </Badge>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -584,22 +545,7 @@ export function Dashboard() {
                           )}
                         </div>
                       )}
-                      {/* Verification status for beneficiaries */}
-                      {user?.user_type === 'beneficiary' && (
-                        <div className="mt-2">
-                          {user.verification_status === 'trusted' ? (
-                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30">✅ موثق كمستفيد</Badge>
-                          ) : user.verification_status === 'pending_review' ? (
-                            <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30">⏳ قيد المراجعة</Badge>
-                          ) : user.verification_status === 'rejected' ? (
-                            <Badge className="bg-red-100 text-red-600 dark:bg-red-900/30">❌ مرفوض — <button className="underline" onClick={() => navigate('/verify-beneficiary')}>إعادة التقديم</button></Badge>
-                          ) : user.verification_status === 'blocked' ? (
-                            <Badge className="bg-red-200 text-red-800 dark:bg-red-900/50">🚫 موقوف</Badge>
-                          ) : (
-                            <Badge variant="outline" className="cursor-pointer" onClick={() => navigate('/verify-beneficiary')}>غير موثق — أكمل التحقق</Badge>
-                          )}
-                        </div>
-                      )}
+
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
@@ -803,10 +749,7 @@ export function Dashboard() {
         rateeId={ratingTarget?.rateeId || ''}
         onRated={() => {
           setRatingTarget(null);
-          // Re-fetch requests to update UI
-          if (user?.user_type === 'beneficiary') {
-            api.get('/donation-requests/my').then(res => setMyBeneficiaryRequests(res.data.data || []));
-          }
+
         }}
       />
     </DashboardLayout>

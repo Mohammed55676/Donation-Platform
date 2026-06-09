@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -22,19 +22,9 @@ import {
 import { useDonations } from '../context/DonationContext';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
-import { BeneficiaryVerificationModal } from '../components/BeneficiaryVerificationModal';
-import { BeneficiaryProfileModal } from '../components/community/BeneficiaryProfileModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { Textarea } from '../components/ui/textarea';
 import api from '../utils/api';
-
-// Types for beneficiary profile
-interface BeneficiaryProfile {
-  id: string;
-  verification_status: 'not_verified' | 'pending_review' | 'trusted' | 'rejected' | 'blocked';
-  verification_rejection_reason?: string | null;
-  national_id_number?: string;
-}
 
 const HIGH_VALUE_CATEGORIES = ['أثاث', 'مستلزمات طبية', 'أجهزة', 'أجهزة كهربائية', 'إلكترونيات'];
 
@@ -45,13 +35,7 @@ export function DonationDetails() {
   const donation = donations.find(d => d.id === id);
   const { user, toggleWishlist } = useAuth();
 
-  // Verification modal state
-  const [verificationModalOpen, setVerificationModalOpen] = useState(false);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [beneficiaryProfile, setBeneficiaryProfile] = useState<BeneficiaryProfile | null | undefined>(undefined);
-  const [profileLoading, setProfileLoading] = useState(false);
-
-  // Donation request state (beneficiary side)
+  // Donation request state (charity side)
   const [isRequesting, setIsRequesting] = useState(false);
   const [requestDone, setRequestDone] = useState(false);
 
@@ -65,24 +49,6 @@ export function DonationDetails() {
   const [messageText, setMessageText] = useState('');
   const [isSendingMessage, setIsSendingMessage] = useState(false);
 
-  // Fetch beneficiary profile when a beneficiary user views this page
-  const fetchProfile = useCallback(async () => {
-    if (!user || user.user_type !== 'beneficiary') return;
-    setProfileLoading(true);
-    try {
-      const res = await api.get('/beneficiary/profile');
-      setBeneficiaryProfile(res.data.data); // null if no profile
-    } catch {
-      setBeneficiaryProfile(null);
-    } finally {
-      setProfileLoading(false);
-    }
-  }, [user?.id, user?.user_type]);
-
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
-
   // Fetch requests for donor view — only when user owns this donation
   const isDonationOwner = user && donation &&
     ((donation.donor as any)?.id === user.id || (donation.donor as any)?._id === user.id);
@@ -90,7 +56,7 @@ export function DonationDetails() {
   useEffect(() => {
     if (!isDonationOwner) return;
     setDonorRequestsLoading(true);
-    api.get('/donation-requests/for-my-donations')
+    api.get('/donation-requests/for-donor')
       .then(res => {
         const all: any[] = res.data.data || [];
         setDonorRequests(all.filter(r => r.donation_id?.id === id || r.donation_id?._id === id));
@@ -127,19 +93,18 @@ export function DonationDetails() {
       return;
     }
 
-    // 2. Not a beneficiary
-    if (user.user_type !== 'beneficiary') {
-      toast.error('هذه الميزة للمستفيدين فقط');
+    // 2. Not a charity
+    if (user.user_type !== 'charity') {
+      toast.error('هذه الميزة للجمعيات الخيرية فقط');
       return;
     }
 
     // 3. Check admin-based verification
-    if (user.beneficiaryStatus !== 'verified') {
-      if (user.beneficiaryStatus === 'pending_admin') {
+    if (user.charityStatus !== 'verified') {
+      if (user.charityStatus === 'pending') {
         toast.info('طلبك قيد مراجعة الإدارة. يرجى الانتظار.');
       } else {
-        toast.info('يجب إكمال التحقق من الهوية أولاً.');
-        navigate('/verify-beneficiary');
+        toast.info('يجب إكمال التحقق من الجمعية أولاً.');
       }
       return;
     }
@@ -179,38 +144,28 @@ export function DonationDetails() {
     }
   };
 
-  // Status UI for beneficiary sidebar card — uses new charity verification
-  const renderBeneficiaryStatus = () => {
-    if (!user || user.user_type !== 'beneficiary') return null;
+  // Status UI for charity sidebar card
+  const renderCharityStatus = () => {
+    if (!user || user.user_type !== 'charity') return null;
 
-    const status = user.beneficiaryStatus || 'not_submitted';
+    const status = user.charityStatus || 'pending';
 
-    if (status === 'not_submitted') return (
-      <div className="flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400">
-        <AlertCircle className="h-4 w-4 flex-shrink-0" />
-        <Link to="/verify-beneficiary" className="hover:underline">
-          يجب رفع مستنداتك للمراجعة — انقر هنا
-        </Link>
-      </div>
-    );
-    if (status === 'pending_admin') return (
+    if (status === 'pending') return (
       <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
         <Clock className="h-4 w-4 flex-shrink-0" />
-        <span>طلبك قيد مراجعة الإدارة</span>
+        <span>حساب الجمعية قيد مراجعة الإدارة</span>
       </div>
     );
     if (status === 'rejected') return (
       <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
         <XCircle className="h-4 w-4 flex-shrink-0" />
-        <Link to="/verify-beneficiary" className="hover:underline">
-          تم رفض طلبك — انقر لإعادة التقديم
-        </Link>
+        <span>تم رفض توثيق الجمعية</span>
       </div>
     );
     if (status === 'verified') return (
       <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
         <CheckCircle className="h-4 w-4 flex-shrink-0" />
-        <span>موثق من الإدارة — يمكنك طلب التبرعات</span>
+        <span>جمعية موثقة — يمكنك طلب التبرعات</span>
       </div>
     );
     return null;
@@ -236,7 +191,7 @@ export function DonationDetails() {
           <Link to="/donations">
             <Button variant="outline">
               العودة إلى التبرعات
-              <ArrowRight className="me- h-4 w-4" />
+              <ArrowRight className="me-2 h-4 w-4" />
             </Button>
           </Link>
         </div>
@@ -378,7 +333,7 @@ export function DonationDetails() {
                     <CardTitle>طلبات الحصول على هذا التبرع</CardTitle>
                     <Badge variant="outline">{donorRequests.filter(r => r.status === 'pending_review').length} معلق</Badge>
                   </div>
-                  <CardDescription>الهويات مخفية لحماية خصوصية المستفيدين</CardDescription>
+                  <CardDescription>الجمعيات الخيرية الموثقة التي طلبت التبرع</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {donorRequestsLoading ? (
@@ -388,12 +343,14 @@ export function DonationDetails() {
                   ) : (
                     <div className="space-y-3">
                       {donorRequests.map(r => {
-                        const b = r.beneficiary;
+                        const charity = r.charity;
                         const isPending = r.status === 'pending_review';
                         return (
                           <div key={r.id} className={`p-4 rounded-xl border text-sm space-y-2 ${isPending ? 'bg-background' : 'bg-muted/40 opacity-70'}`}>
                             <div className="flex items-center justify-between flex-wrap gap-2">
-                              <span className="font-semibold text-primary">{b?.anonymousCode}</span>
+                              <span className="font-semibold text-primary">
+                                {charity?.charityName || charity?.name || charity?.anonymousCode || 'مستخدم غير معروف'}
+                              </span>
                               <Badge className={
                                 r.status === 'accepted' ? 'bg-green-100 text-green-700 dark:bg-green-900/30' :
                                 r.status === 'rejected' ? 'bg-red-100 text-red-600 dark:bg-red-900/30' :
@@ -403,13 +360,8 @@ export function DonationDetails() {
                               </Badge>
                             </div>
                             <div className="flex flex-wrap gap-3 text-muted-foreground text-xs">
-                              {b?.city && <span>📍 {b.city}</span>}
-                              {b?.family_members && <span>👨‍👩‍👧 {b.family_members} أفراد</span>}
-                              {b?.needs_categories?.length > 0 && <span>📦 {b.needs_categories.join('، ')}</span>}
+                              {charity?.city && <span>📍 {charity.city}</span>}
                             </div>
-                            {b?.situation_explanation && (
-                              <p className="text-muted-foreground line-clamp-2">{b.situation_explanation}</p>
-                            )}
                             {isPending && (
                               <div className="flex gap-2 pt-1">
                                 <Button size="sm" className="h-8 bg-green-600 hover:bg-green-700 text-white gap-1"
@@ -466,17 +418,14 @@ export function DonationDetails() {
                 <CardTitle>معلومات المتبرع</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div 
-                  className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded-xl cursor-pointer transition-colors"
-                  onClick={() => setProfileModalOpen(true)}
-                >
+                <div className="flex items-center gap-3 p-2 rounded-xl">
                   <img
                     src={donation.donor.avatar}
                     alt={donation.donor.name}
                     className="w-16 h-16 rounded-full object-cover"
                   />
                   <div>
-                    <p className="font-semibold text-lg hover:underline">{donation.donor.name}</p>
+                    <p className="font-semibold text-lg">{donation.donor.name}</p>
                     <p className="text-sm text-muted-foreground">متبرع نشط</p>
                   </div>
                 </div>
@@ -488,7 +437,7 @@ export function DonationDetails() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-secondary">8</p>
-                    <p className="text-xs text-muted-foreground">مستفيد</p>
+                    <p className="text-xs text-muted-foreground">جمعية شريكة</p>
                   </div>
                 </div>
               </CardContent>
@@ -500,8 +449,8 @@ export function DonationDetails() {
                 <CardTitle>إجراءات</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {/* Beneficiary verification status indicator */}
-                {renderBeneficiaryStatus()}
+                {/* Charity verification status indicator */}
+                {renderCharityStatus()}
 
                 {donation.status === 'متاح' ? (
                   requestDone ? (
@@ -515,7 +464,7 @@ export function DonationDetails() {
                         className="w-full bg-primary hover:bg-primary/90 text-white cursor-pointer"
                         size="lg"
                         onClick={handleRequestDonation}
-                        disabled={isRequesting || profileLoading}
+                        disabled={isRequesting}
                       >
                         {isRequesting
                           ? <><Loader2 className="me-2 h-5 w-5 animate-spin" /> جاري التقديم...</>
@@ -584,32 +533,6 @@ export function DonationDetails() {
         </div>
       </div>
     </div>
-
-      {/* Beneficiary Verification Modal */}
-      <BeneficiaryVerificationModal
-        open={verificationModalOpen}
-        onOpenChange={setVerificationModalOpen}
-        rejectionReason={beneficiaryProfile?.verification_rejection_reason}
-        onSuccess={() => {
-          fetchProfile(); // Refresh profile after successful submission
-        }}
-      />
-
-      {/* Donor Profile Modal */}
-      {donation && (
-        <BeneficiaryProfileModal
-          open={profileModalOpen}
-          onClose={() => setProfileModalOpen(false)}
-          user={{
-            id: (donation.donor as any).id || (donation.donor as any)._id || '1',
-            name: donation.donor.name,
-            avatar: donation.donor.avatar,
-            role: 'user'
-          }}
-          initialShowMsgInput={false}
-          contextPostId={donation.id}
-        />
-      )}
 
       {/* Message Modal */}
       <Dialog open={messageModalOpen} onOpenChange={setMessageModalOpen}>

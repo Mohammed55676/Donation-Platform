@@ -1,4 +1,4 @@
-import { Bell, Check, Package, Heart, MessageSquare, Star, X, ArrowLeft } from 'lucide-react';
+import { Bell, Check, Package, Heart, MessageSquare, Star, X, ArrowLeft, Clock, Settings } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -19,7 +19,7 @@ function getIcon(type: string) {
     case 'message':   return <MessageSquare className="h-4 w-4" />;
     case 'rating':    return <Star className="h-4 w-4" />;
     case 'delivered': return <Heart className="h-4 w-4" />;
-    case 'reminder':  return <ReminderIcon className="h-4 w-4" />;
+    case 'reminder':  return <Clock className="h-4 w-4" />;
     case 'system':    return <Settings className="h-4 w-4" />;
     default:          return <Bell className="h-4 w-4" />;
   }

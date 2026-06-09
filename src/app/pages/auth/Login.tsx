@@ -27,11 +27,6 @@ export function Login() {
   const location = useLocation();
   const from = (location.state as any)?.from?.pathname;
 
-  const roleRedirectMap: Record<string, string> = {
-    user: '/dashboard',
-    admin: '/dashboard/admin',
-  };
-
   const validate = (): Errors => {
     const e: Errors = {};
     if (!email.trim()) {
@@ -56,9 +51,13 @@ export function Login() {
     const result = await login(email, password);
     setLoading(false);
     if (result.success) {
+      if (result.requiresOTP) {
+        navigate('/verify-otp', { state: { email: result.email, previewUrl: result.previewUrl } });
+        return;
+      }
       toast.success(t('auth.welcome'));
       const user = result.user;
-      const redirect = from || (user?.role === 'admin' ? '/dashboard/admin' : user?.user_type === 'charity' ? '/dashboard/charity' : '/');
+      const redirect = from || (user?.role === 'admin' ? '/dashboard/admin' : user?.user_type === 'charity' ? '/dashboard/charity' : '/dashboard');
       navigate(redirect, { replace: true });
     } else {
       toast.error(result.error || t('auth.error_generic'));
@@ -74,7 +73,7 @@ export function Login() {
       const redirect = from || (user?.role === 'admin' ? '/dashboard/admin' : user?.user_type === 'charity' ? '/dashboard/charity' : '/dashboard');
 
       if (result.isNewUser) {
-        // New Google user — ask them to pick donor/beneficiary before redirecting
+        // New Google user — ask them to pick donor/charity before redirecting
         setPendingRedirect(redirect);
         setShowTypeModal(true);
       } else {
@@ -86,7 +85,7 @@ export function Login() {
     }
   };
 
-  const handleTypeModalClose = (selectedType: 'donor' | 'beneficiary') => {
+  const handleTypeModalClose = (selectedType: 'donor' | 'charity') => {
     setShowTypeModal(false);
     toast.success(t('auth.welcome'));
     navigate(pendingRedirect || '/dashboard', { replace: true });

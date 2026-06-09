@@ -9,7 +9,7 @@ import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { ArrowRight, Send, MessageSquare } from "lucide-react";
 import { Card, CardContent } from "../../components/ui/card";
-import { BeneficiaryProfileModal } from "../../components/community/BeneficiaryProfileModal";
+
 import { toast } from "sonner";
 
 export const Details: React.FC = () => {
@@ -85,7 +85,6 @@ export const Details: React.FC = () => {
           <PostCard
             post={post}
             currentUserId={user?.id || user?._id}
-            allPosts={posts}
             onLike={() => { if (user) likePost(post.id, user.id || user._id || "") }}
             onComment={() => document.getElementById("comment-input")?.focus()}
             onHelp={handleHelp}
@@ -174,26 +173,7 @@ export const Details: React.FC = () => {
           </Card>
         </div>
       </div>
-      <BeneficiaryProfileModal
-        open={showProfile}
-        onClose={() => {
-          setShowProfile(false);
-          setOpenMessage(false);
-        }}
-        user={{
-          id: (post.requestedBy as any)?.id || (post.requestedBy as any)?._id,
-          name: (post.requestedBy as any)?.name || "مستخدم غير معروف",
-          avatar: (post.requestedBy as any)?.avatar || (post.requestedBy as any)?.avatarUrl || undefined,
-          role: (post.requestedBy as any)?.role || "user",
-        }}
-        posts={posts.filter((p) => {
-          const ownerId = (post.requestedBy as any)?.id || (post.requestedBy as any)?._id;
-          const pOwnerId = (p.requestedBy as any)?.id || (p.requestedBy as any)?._id;
-          return ownerId === pOwnerId;
-        })}
-        initialShowMsgInput={openMessage}
-        contextPostId={post.id}
-      />
+
     </div>
   );
 };

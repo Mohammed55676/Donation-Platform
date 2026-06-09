@@ -175,7 +175,6 @@ export const Feed: React.FC = () => {
                 key={p.id}
                 post={p}
                 currentUserId={myId}
-                allPosts={posts}
                 onLike={() => handleLike(p.id)}
                 onComment={() => navigate(`/community/${p.id}`)}
                 onHelp={() => navigate(`/community/${p.id}`)}

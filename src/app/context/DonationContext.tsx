@@ -34,19 +34,23 @@ export function DonationProvider({ children }: { children: ReactNode }) {
   const [donations, setDonations] = useState<ExtendedDonation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchDonations = async () => {
+  const fetchDonations = async (signal?: AbortSignal) => {
     try {
-      const res = await api.get('/donations?limit=500&sort=newest');
+      const res = await api.get('/donations?limit=500&sort=newest', { signal });
       setDonations(res.data.data || []);
-    } catch (error) {
-      console.error('Failed to fetch donations', error);
+    } catch (error: any) {
+      if (error?.name !== 'CanceledError') {
+        console.error('Failed to fetch donations', error);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDonations();
+    const controller = new AbortController();
+    fetchDonations(controller.signal);
+    return () => controller.abort();
   }, []);
 
   const addDonation = async (donation: Omit<ExtendedDonation, 'id' | 'status' | 'createdAt' | 'donor'>) => {

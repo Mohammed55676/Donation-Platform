@@ -5,11 +5,11 @@ import { toast } from 'sonner';
 
 interface UserTypeModalProps {
   open: boolean;
-  onClose: (selectedType: 'donor' | 'beneficiary') => void;
+  onClose: (selectedType: 'donor' | 'charity') => void;
 }
 
 export function UserTypeModal({ open, onClose }: UserTypeModalProps) {
-  const [selected, setSelected] = useState<'donor' | 'beneficiary' | null>(null);
+  const [selected, setSelected] = useState<'donor' | 'charity' | null>(null);
   const [loading, setLoading] = useState(false);
   const { updateUser } = useAuth();
 
@@ -23,7 +23,7 @@ export function UserTypeModal({ open, onClose }: UserTypeModalProps) {
     setLoading(true);
     try {
       await updateUser({ user_type: selected } as any);
-      toast.success(selected === 'donor' ? 'تم تسجيلك كمتبرع! 🎉' : 'تم تسجيلك كمستفيد! 🎉');
+      toast.success(selected === 'donor' ? 'تم تسجيلك كمتبرع! 🎉' : 'تم تسجيلك كجمعية خيرية! 🎉');
       onClose(selected);
     } catch {
       toast.error('حدث خطأ، حاول مرة أخرى');
@@ -90,35 +90,35 @@ export function UserTypeModal({ open, onClose }: UserTypeModalProps) {
             </div>
           </button>
 
-          {/* Beneficiary option */}
+          {/* Charity option */}
           <button
             type="button"
-            onClick={() => setSelected('beneficiary')}
+            onClick={() => setSelected('charity')}
             className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 text-right ${
-              selected === 'beneficiary'
+              selected === 'charity'
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-md shadow-blue-500/10'
                 : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-slate-50 dark:hover:bg-slate-800/50'
             }`}
           >
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
-              selected === 'beneficiary'
+              selected === 'charity'
                 ? 'bg-blue-500 text-white'
                 : 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
             }`}>
               <Heart className="w-6 h-6" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-slate-900 dark:text-white">مستفيد</h3>
+              <h3 className="font-semibold text-slate-900 dark:text-white">جمعية خيرية</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                أحتاج مساعدة وأريد طلب تبرعات
+                نحن جمعية خيرية ونريد استقبال وتوزيع التبرعات
               </p>
             </div>
             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-              selected === 'beneficiary'
+              selected === 'charity'
                 ? 'border-blue-500 bg-blue-500'
                 : 'border-slate-300 dark:border-slate-600'
             }`}>
-              {selected === 'beneficiary' && (
+              {selected === 'charity' && (
                 <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
                   <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>

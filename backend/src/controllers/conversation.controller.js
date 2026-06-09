@@ -27,12 +27,14 @@ async function getConversations(req, res, next) {
       $or: [{ requester_id: myId }, { receiver_id: myId }],
       status: { $in: ['active', 'pending'] }
     })
-      .populate('requester_id', 'id name avatar')
-      .populate('receiver_id', 'id name avatar')
+      .populate('requester_id', 'id name avatar user_type phone')
+      .populate('receiver_id', 'id name avatar user_type phone')
       .populate('post_id', 'id title status')
       .sort({ last_message_at: -1, createdAt: -1 });
 
-    return sendSuccess(res, convs, 'Conversations retrieved.');
+    const formattedConvs = convs.map(c => c.toJSON());
+
+    return sendSuccess(res, formattedConvs, 'Conversations retrieved.');
   } catch (err) {
     next(err);
   }
@@ -46,11 +48,13 @@ async function getRequests(req, res, next) {
       receiver_id: myId,
       status: 'pending'
     })
-      .populate('requester_id', 'id name avatar')
+      .populate('requester_id', 'id name avatar user_type phone')
       .populate('post_id', 'id title')
       .sort({ createdAt: -1 });
 
-    return sendSuccess(res, reqs, 'Conversation requests retrieved.');
+    const formattedReqs = reqs.map(r => r.toJSON());
+
+    return sendSuccess(res, formattedReqs, 'Conversation requests retrieved.');
   } catch (err) {
     next(err);
   }
@@ -171,8 +175,8 @@ async function getMessages(req, res, next) {
   try {
     const { id } = req.params;
     const conv = await Conversation.findById(id)
-      .populate('requester_id', 'id name avatar phone')
-      .populate('receiver_id', 'id name avatar phone')
+      .populate('requester_id', 'id name avatar phone user_type')
+      .populate('receiver_id', 'id name avatar phone user_type')
       .populate('post_id', 'id title status');
 
     if (!conv) throw new AppError('Conversation not found.', 404);
@@ -189,7 +193,9 @@ async function getMessages(req, res, next) {
       await Message.updateMany({ _id: { $in: unreadIds } }, { is_read: true, read_at: new Date() });
     }
 
-    return sendSuccess(res, { conversation: conv, messages }, 'Messages retrieved.');
+    let convObj = conv.toJSON();
+
+    return sendSuccess(res, { conversation: convObj, messages }, 'Messages retrieved.');
   } catch (err) {
     next(err);
   }

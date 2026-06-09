@@ -3,8 +3,8 @@ import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import api from '../utils/api';
 
-export type UserRole = 'user' | 'admin' | 'volunteer';
-export type UserType = 'donor' | 'beneficiary' | 'charity';
+export type UserRole = 'user' | 'admin';
+export type UserType = 'donor' | 'charity';
 
 export interface AuthUser {
   id: string;
@@ -23,23 +23,20 @@ export interface AuthUser {
   rating_count?: number;
   completed_donations_count?: number;
   verification_status?: 'not_verified' | 'pending_review' | 'trusted' | 'rejected' | 'blocked';
-  // Beneficiary admin verification
-  beneficiaryStatus?: 'not_submitted' | 'pending_admin' | 'verified' | 'rejected';
-  verifiedBy?: 'admin' | 'charity' | null;
-  charityId?: string | null;
-  beneficiaryVerificationNote?: string | null;
-  // Charity fields
   charityStatus?: 'pending' | 'verified' | 'rejected' | null;
   charityName?: string | null;
   charityBadge?: boolean;
   charityLicenseDocument?: string | null;
+  isVerified?: boolean;
 }
+
+type OtpResult = { success: boolean; error?: string; user?: AuthUser; requiresOTP?: boolean; email?: string; previewUrl?: string };
 
 interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
+  login: (email: string, password: string) => Promise<OtpResult>;
   loginWithGoogle: () => Promise<{ success: boolean; error?: string; user?: AuthUser; isNewUser?: boolean }>;
   signup: (
     name: string,
@@ -47,7 +44,9 @@ interface AuthContextValue {
     password: string,
     user_type?: UserType,
     phone?: string
-  ) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
+  ) => Promise<OtpResult>;
+  verifyOtp: (email: string, otp: string) => Promise<{ success: boolean; error?: string; user?: AuthUser }>;
+  resendOtp: (email: string) => Promise<{ success: boolean; error?: string; previewUrl?: string }>;
   logout: () => void;
   updateUser: (updates: Partial<AuthUser>) => void;
   toggleWishlist: (donationId: string) => void;
@@ -60,10 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const loginInProgress = useRef(false);
 
-  // Initialize auth from token
   useEffect(() => {
     const initAuth = async () => {
-      // Skip re-init while a login flow (e.g. Google) is actively running
       if (loginInProgress.current) return;
 
       const token = localStorage.getItem('token');
@@ -89,10 +86,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('auth_changed', handleAuthChange);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<OtpResult> => {
     try {
       const res = await api.post('/auth/login', { email, password });
-      const { token, user: userData } = res.data.data;
+      const data = res.data.data;
+      if (data.requiresOTP) {
+        return { success: true, requiresOTP: true, email: data.email, previewUrl: data.previewUrl };
+      }
+      const { token, user: userData } = data;
       localStorage.setItem('token', token);
       setUser(userData);
       return { success: true, user: userData };
@@ -106,18 +107,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const gUser = result.user;
-      
+
       const email = gUser.email || '';
       const name = gUser.displayName || 'Google User';
 
-      // Send google user data to our backend google login endpoint
       try {
-        const res = await api.post('/auth/google', { 
-          email, 
-          name, 
-          avatar: gUser.photoURL 
+        const res = await api.post('/auth/google', {
+          email,
+          name,
+          avatar: gUser.photoURL,
         });
-        
+
         const { token, user: userData, isNewUser } = res.data.data;
         localStorage.setItem('token', token);
         setUser(userData);
@@ -134,15 +134,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signup = async (name: string, email: string, password: string, user_type?: UserType, phone?: string) => {
+  const signup = async (name: string, email: string, password: string, user_type?: UserType, phone?: string): Promise<OtpResult> => {
     try {
       const res = await api.post('/auth/register', { name, email, password, user_type: user_type || 'donor', phone });
-      const { token, user: userData } = res.data.data;
+      const data = res.data.data;
+      if (data.requiresOTP) {
+        return { success: true, requiresOTP: true, email: data.email, previewUrl: data.previewUrl };
+      }
+      const { token, user: userData } = data;
       localStorage.setItem('token', token);
       setUser(userData);
       return { success: true, user: userData };
     } catch (err: any) {
       return { success: false, error: err.response?.data?.error || 'حدث خطأ أثناء إنشاء الحساب' };
+    }
+  };
+
+  const verifyOtp = async (email: string, otp: string) => {
+    try {
+      const res = await api.post('/auth/verify-otp', { email, otp });
+      const { token, user: userData } = res.data.data;
+      localStorage.setItem('token', token);
+      setUser(userData);
+      return { success: true, user: userData };
+    } catch (err: any) {
+      return { success: false, error: err.response?.data?.error || 'رمز التحقق غير صحيح' };
+    }
+  };
+
+  const resendOtp = async (email: string) => {
+    try {
+      const res = await api.post('/auth/resend-otp', { email });
+      return { success: true, previewUrl: res.data.data?.previewUrl };
+    } catch (err: any) {
+      return { success: false, error: err.response?.data?.error || 'فشل إعادة إرسال الرمز' };
     }
   };
 
@@ -176,7 +201,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ? currentWishlist.filter(id => id !== donationId)
       : [...currentWishlist, donationId];
 
-    // Optimistic update using functional form to avoid stale closure
     setUser(prev => prev ? { ...prev, wishlist: newWishlist } : prev);
 
     const userId = user.id ?? user._id;
@@ -197,6 +221,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         loginWithGoogle,
         signup,
+        verifyOtp,
+        resendOtp,
         logout,
         updateUser,
         toggleWishlist,

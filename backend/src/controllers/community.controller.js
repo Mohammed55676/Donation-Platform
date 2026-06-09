@@ -30,15 +30,17 @@ async function listRequests(req, res, next) {
 
     const [requests, total] = await Promise.all([
       CommunityRequest.find(filter)
-        .populate('requestedBy', 'name avatar')
-        .populate('comments.user', 'name avatar')
+        .populate('requestedBy', 'name avatar user_type')
+        .populate('comments.user', 'name avatar user_type')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
       CommunityRequest.countDocuments(filter),
     ]);
 
-    return sendSuccess(res, requests, 'Requests retrieved.', 200, buildPaginationMeta(total, page, limit));
+    let formattedRequests = requests.map(r => r.toJSON());
+
+    return sendSuccess(res, formattedRequests, 'Requests retrieved.', 200, buildPaginationMeta(total, page, limit));
   } catch (err) {
     next(err);
   }
@@ -48,10 +50,11 @@ async function listRequests(req, res, next) {
 async function getRequest(req, res, next) {
   try {
     const request = await CommunityRequest.findById(req.params.id)
-      .populate('requestedBy', 'name avatar')
-      .populate('comments.user', 'name avatar');
+      .populate('requestedBy', 'name avatar user_type')
+      .populate('comments.user', 'name avatar user_type');
     if (!request) throw new AppError('Request not found.', 404);
-    return sendSuccess(res, request);
+    let reqObj = request.toJSON();
+    return sendSuccess(res, reqObj);
   } catch (err) {
     next(err);
   }

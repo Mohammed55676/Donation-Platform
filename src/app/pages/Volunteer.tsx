@@ -27,7 +27,7 @@ type VolunteerErrors = { name?: string; email?: string; phone?: string; national
 type ContactErrors = { name?: string; email?: string; message?: string };
 
 export function Volunteer() {
-  const { opportunities, fetchOpportunities, setOpportunities } = useVolunteerOpportunities();
+  const { opportunities, fetchOpportunities } = useVolunteerOpportunities();
   const [selectedOpportunity, setSelectedOpportunity] = useState<string | null>(null);
   const { addNotification } = useNotifications();
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', nationality: 'أردني', program: '', message: '' });
@@ -75,13 +75,6 @@ export function Volunteer() {
 
     setIsApplying(true);
     try {
-      // Optimistic update
-      setOpportunities(prev => prev.map(opp => 
-        opp.id === selectedOpportunity 
-          ? { ...opp, volunteers: opp.volunteers + 1 }
-          : opp
-      ));
-
       await api.post(`/volunteer/${selectedOpportunity}/apply`);
       
       toast.success('تم تسجيلك بنجاح!');

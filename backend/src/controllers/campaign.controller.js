@@ -37,6 +37,18 @@ async function listCampaigns(req, res, next) {
   }
 }
 
+// ── GET /api/campaigns/my ────────────────────────────────────────────
+async function getMyCampaigns(req, res, next) {
+  try {
+    const campaigns = await Campaign.find({ createdBy: req.user._id })
+      .populate('createdBy', 'name')
+      .sort({ createdAt: -1 });
+    return sendSuccess(res, campaigns, 'My campaigns retrieved.', 200);
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ── GET /api/campaigns/:id ───────────────────────────────────────────
 async function getCampaign(req, res, next) {
   try {
@@ -146,4 +158,4 @@ async function donateToCampaign(req, res, next) {
   }
 }
 
-module.exports = { listCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign, donateToCampaign };
+module.exports = { listCampaigns, getMyCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign, donateToCampaign };

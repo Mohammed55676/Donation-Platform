@@ -38,7 +38,7 @@ async function listUsers(req, res, next) {
       User.countDocuments(filter),
     ]);
 
-    return sendSuccess(res, users, 'Users retrieved.', 200, buildPaginationMeta(total, page, limit));
+    return sendSuccess(res, users, 'تم جلب المستخدمين.', 200, buildPaginationMeta(total, page, limit));
   } catch (err) {
     next(err);
   }
@@ -54,12 +54,12 @@ async function createUser(req, res, next) {
   try {
     const { name, email, password, role } = req.body;
     const existing = await User.findOne({ email: email.toLowerCase() });
-    if (existing) throw new AppError('Email already registered.', 409);
+    if (existing) throw new AppError('البريد الإلكتروني مسجل مسبقاً.', 409);
 
     const user = await User.create({ name, email, password, role });
     // Remove password from response
     user.password = undefined;
-    return sendSuccess(res, user, 'User created successfully.', 201);
+    return sendSuccess(res, user, 'تم إنشاء المستخدم بنجاح.', 201);
   } catch (err) {
     next(err);
   }
@@ -69,7 +69,7 @@ async function createUser(req, res, next) {
 async function getUser(req, res, next) {
   try {
     const user = await User.findById(req.params.id);
-    if (!user) throw new AppError('User not found.', 404);
+    if (!user) throw new AppError('المستخدم غير موجود.', 404);
     return sendSuccess(res, user);
   } catch (err) {
     next(err);
@@ -86,7 +86,7 @@ async function updateUser(req, res, next) {
   try {
     const isSelf  = req.user._id.toString() === req.params.id;
     const isAdmin = req.user.role === 'admin';
-    if (!isSelf && !isAdmin) throw new AppError('Forbidden.', 403);
+    if (!isSelf && !isAdmin) throw new AppError('غير مسموح لك بإجراء هذا التعديل.', 403);
 
     // Prevent non-admins from elevating role
     if (!isAdmin) {
@@ -100,9 +100,9 @@ async function updateUser(req, res, next) {
       new: true,
       runValidators: true,
     });
-    if (!user) throw new AppError('User not found.', 404);
+    if (!user) throw new AppError('المستخدم غير موجود.', 404);
 
-    return sendSuccess(res, user, 'User updated.');
+    return sendSuccess(res, user, 'تم تحديث البيانات.');
   } catch (err) {
     next(err);
   }
@@ -118,15 +118,15 @@ async function updateUserStatus(req, res, next) {
   try {
     const { status } = req.body;
     if (!['active', 'banned'].includes(status)) {
-      throw new AppError('Status must be "active" or "banned".', 400);
+      throw new AppError('يجب أن تكون الحالة "active" أو "banned".', 400);
     }
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { status },
       { new: true }
     );
-    if (!user) throw new AppError('User not found.', 404);
-    return sendSuccess(res, user, `User ${status === 'banned' ? 'banned' : 'unbanned'}.`);
+    if (!user) throw new AppError('المستخدم غير موجود.', 404);
+    return sendSuccess(res, user, `تم ${status === 'banned' ? 'حظر' : 'تفعيل'} المستخدم.`);
   } catch (err) {
     next(err);
   }
@@ -136,8 +136,8 @@ async function updateUserStatus(req, res, next) {
 async function deleteUser(req, res, next) {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) throw new AppError('User not found.', 404);
-    return sendSuccess(res, null, 'User deleted.');
+    if (!user) throw new AppError('المستخدم غير موجود.', 404);
+    return sendSuccess(res, null, 'تم حذف المستخدم.');
   } catch (err) {
     next(err);
   }
@@ -147,13 +147,13 @@ async function deleteUser(req, res, next) {
 async function toggleWishlist(req, res, next) {
   try {
     const isSelf = req.user._id.toString() === req.params.id;
-    if (!isSelf) throw new AppError('Forbidden.', 403);
+    if (!isSelf) throw new AppError('غير مسموح لك بإجراء هذا التعديل.', 403);
 
     const user = await User.findById(req.params.id);
-    if (!user) throw new AppError('User not found.', 404);
+    if (!user) throw new AppError('المستخدم غير موجود.', 404);
 
     const donationId = req.body.donationId;
-    if (!donationId) throw new AppError('Donation ID is required.', 400);
+    if (!donationId) throw new AppError('معرّف التبرع مطلوب.', 400);
 
     const index = user.wishlist.indexOf(donationId);
     if (index === -1) {
@@ -163,7 +163,7 @@ async function toggleWishlist(req, res, next) {
     }
     
     await user.save({ validateBeforeSave: false });
-    return sendSuccess(res, user, 'Wishlist updated.');
+    return sendSuccess(res, user, 'تم تحديث قائمة الأمنيات.');
   } catch (err) {
     next(err);
   }

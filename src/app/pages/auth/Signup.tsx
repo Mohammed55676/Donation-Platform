@@ -63,6 +63,10 @@ export function Signup() {
     const result = await signup(name, email, password, userType, phone);
     setLoading(false);
     if (result.success) {
+      if (result.requiresOTP) {
+        navigate('/verify-otp', { state: { email: result.email, previewUrl: result.previewUrl } });
+        return;
+      }
       toast.success(t('auth.signup_success'));
       const user = result.user;
       let redirect = '/dashboard';
@@ -92,7 +96,7 @@ export function Signup() {
         {/* User type selection */}
         <div className="space-y-2">
           <Label>نوع الحساب</Label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => setUserType('donor')}
@@ -105,19 +109,6 @@ export function Signup() {
               <Gift className="h-6 w-6" />
               <span className="text-sm font-semibold">متبرع</span>
               <span className="text-xs opacity-70">أتبرع بالأشياء</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setUserType('beneficiary')}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                userType === 'beneficiary'
-                  ? 'border-secondary bg-secondary/10 text-secondary'
-                  : 'border-border/60 hover:border-secondary/40 text-muted-foreground'
-              }`}
-            >
-              <HandCoins className="h-6 w-6" />
-              <span className="text-sm font-semibold">مستفيد</span>
-              <span className="text-xs opacity-70">أطلب التبرعات</span>
             </button>
             <button
               type="button"

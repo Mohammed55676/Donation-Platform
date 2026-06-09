@@ -1,9 +1,9 @@
 /**
  * src/routes/donationRequest.routes.js
  *
- * POST /api/donation-requests                  — Beneficiary creates request
- * GET  /api/donation-requests/my               — Beneficiary views their requests
- * GET  /api/donation-requests/for-my-donations — Donor views requests on their donations (masked)
+ * POST /api/donation-requests                  — Charity creates request
+ * GET  /api/donation-requests/my               — Charity views their requests
+ * GET  /api/donation-requests/for-donor        — Donor views requests on their donations (masked)
  * GET  /api/donation-requests/admin            — Admin oversight (read-only)
  * PUT  /api/donation-requests/:id/donor-review — Donor accepts or rejects
  * PUT  /api/donation-requests/:id/received     — Mark as received
@@ -36,7 +36,7 @@ const donorReviewSchema = Joi.object({
 
 // Note: named routes must come BEFORE /:id routes to avoid ID matching
 router.get('/my',               protect, getMyRequests);
-router.get('/for-my-donations', protect, getRequestsForMyDonations);
+router.get('/for-donor', protect, getRequestsForMyDonations);
 router.get('/admin',            protect, requireRole('admin'), adminListRequests);
 
 router.post('/', protect, validate(createRequestSchema), createRequest);
