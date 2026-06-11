@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useDonations } from '../context/DonationContext';
 import { useAuth } from '../context/AuthContext';
+import { DonationCard } from '../components/ui/DonationCard';
 
 // ── Category config ────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -295,100 +296,14 @@ export function Donations() {
           </div>
         ) : filteredDonations.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {filteredDonations.map(donation => {
-              const catCfg    = getCategoryConfig(donation.category);
-              const statusCfg = STATUS_CONFIG[donation.status] ?? { label: donation.status, className: 'bg-muted/80 text-muted-foreground' };
-              const condCfg   = donation.condition ? (CONDITION_CONFIG[donation.condition] ?? { label: donation.condition, className: 'bg-muted text-muted-foreground border border-border' }) : null;
-              const isWishlisted = user?.wishlist?.includes(donation.id);
-              const urgencyDot   = donation.urgency ? URGENCY_DOT[donation.urgency] : null;
-
-              return (
-                <Link key={donation.id} to={`/donations/${donation.id}`} className="group block cursor-pointer">
-                  <article className="rounded-2xl overflow-hidden border border-border/60 bg-card shadow-sm hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 hover:border-primary/25 transition-all duration-300 flex flex-col h-full">
-
-                    {/* Image */}
-                    <div className="relative h-52 overflow-hidden bg-muted flex-shrink-0">
-                      <DonationImage src={donation.image} alt={donation.title} category={donation.category} />
-
-                      {/* gradient scrim */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
-
-                      {/* Status badge — bottom-left over scrim */}
-                      <div className="absolute bottom-3 start-3">
-                        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm ${statusCfg.className}`}>
-                          {statusCfg.label}
-                        </span>
-                      </div>
-
-                      {/* Urgency dot — top-left */}
-                      {urgencyDot && (
-                        <div className="absolute top-3 start-3 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5">
-                          <span className={`h-2 w-2 rounded-full ${urgencyDot} flex-shrink-0`} />
-                          <span className="text-[10px] text-white font-medium">{donation.urgency}</span>
-                        </div>
-                      )}
-
-                      {/* Wishlist button — top-right with 44px touch target */}
-                      <button
-                        aria-label={isWishlisted ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}
-                        className={`absolute top-2 end-2 h-9 w-9 rounded-full flex items-center justify-center bg-white/90 dark:bg-black/60 shadow-md backdrop-blur-sm transition-all duration-200 cursor-pointer hover:scale-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
-                          isWishlisted ? 'text-red-500' : 'text-slate-400 hover:text-red-500'
-                        }`}
-                        onClick={e => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (!user) { navigate('/login'); return; }
-                          toggleWishlist(donation.id);
-                        }}
-                      >
-                        <Heart className={`h-4 w-4 transition-transform duration-200 ${isWishlisted ? 'fill-current scale-110' : ''}`} />
-                      </button>
-                    </div>
-
-                    {/* Body */}
-                    <div className="flex flex-col flex-1 p-4 gap-2">
-
-                      {/* Category + Condition badges */}
-                      <div className="flex flex-wrap gap-1.5">
-                        <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${catCfg.bg} ${catCfg.color}`}>
-                          <catCfg.icon className="h-3 w-3" />
-                          {donation.category}
-                        </span>
-                        {condCfg && (
-                          <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full ${condCfg.className}`}>
-                            {condCfg.label}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Title */}
-                      <h3 className="font-bold text-sm leading-snug line-clamp-1 group-hover:text-primary transition-colors duration-200">
-                        {donation.title}
-                      </h3>
-
-                      {/* Description */}
-                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                        {donation.description}
-                      </p>
-
-                      {/* Footer */}
-                      <div className="mt-auto pt-3 border-t border-border/40 space-y-2">
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <MapPin className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                          <span className="truncate">{donation.location}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <DonorAvatar donor={donation.donor} />
-                          <span className="text-xs text-muted-foreground font-medium truncate">
-                            {donation.donor?.name || 'مجهول'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                </Link>
-              );
-            })}
+            {filteredDonations.map(donation => (
+              <DonationCard
+                key={donation.id}
+                donation={donation}
+                user={user}
+                toggleWishlist={toggleWishlist}
+              />
+            ))}
           </div>
         ) : (
           /* ── Empty state ── */

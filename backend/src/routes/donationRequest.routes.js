@@ -1,46 +1,50 @@
 /**
  * src/routes/donationRequest.routes.js
- *
- * POST /api/donation-requests                  — Charity creates request
- * GET  /api/donation-requests/my               — Charity views their requests
- * GET  /api/donation-requests/for-donor        — Donor views requests on their donations (masked)
- * GET  /api/donation-requests/admin            — Admin oversight (read-only)
- * PUT  /api/donation-requests/:id/donor-review — Donor accepts or rejects
- * PUT  /api/donation-requests/:id/received     — Mark as received
  */
 const express = require('express');
 const Joi     = require('joi');
 const router  = express.Router();
 
 const {
-  createRequest,
-  getMyRequests,
-  getRequestsForMyDonations,
-  adminListRequests,
-  donorReviewRequest,
-  markReceived,
+    createRequest,
+    getActiveRequests,
+    getMyRequests,
+    updateRequest,
+    cancelRequest,
+    listPendingRequests,
+    approveRequest,
+    rejectRequest
 } = require('../controllers/donationRequest.controller');
 
 const { protect }     = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/role.middleware');
 const { validate }    = require('../middleware/validate.middleware');
 
-const createRequestSchema = Joi.object({
-  donation_id: Joi.string().hex().length(24).required(),
+const requestSchema = Joi.object({
+    title: Joi.string().max(120).required(),
+    description: Joi.string().max(2000).required(),
+    category: Joi.string().required(),
+    quantityNeeded: Joi.number().min(1).required(),
+    urgency: Joi.string().valid('عالية', 'متوسطة', 'منخفضة').default('متوسطة'),
+    location: Joi.string().required()
 });
 
-const donorReviewSchema = Joi.object({
-  action:      Joi.string().valid('accept', 'reject').required(),
-  donor_notes: Joi.string().allow('', null),
+const rejectSchema = Joi.object({
+    adminNote: Joi.string().allow('', null)
 });
 
-// Note: named routes must come BEFORE /:id routes to avoid ID matching
-router.get('/my',               protect, getMyRequests);
-router.get('/for-donor', protect, getRequestsForMyDonations);
-router.get('/admin',            protect, requireRole('admin'), adminListRequests);
+// Public
+router.get('/', getActiveRequests);
 
-router.post('/', protect, validate(createRequestSchema), createRequest);
-router.put('/:id/donor-review', protect, validate(donorReviewSchema), donorReviewRequest);
-router.put('/:id/received',     protect, markReceived);
+// Charity
+router.get('/my', protect, getMyRequests);
+router.post('/', protect, validate(requestSchema), createRequest);
+router.put('/:id', protect, validate(requestSchema), updateRequest);
+router.patch('/:id/cancel', protect, cancelRequest);
+
+// Admin
+router.get('/admin/pending', protect, requireRole('admin'), listPendingRequests);
+router.patch('/admin/:id/approve', protect, requireRole('admin'), approveRequest);
+router.patch('/admin/:id/reject', protect, requireRole('admin'), validate(rejectSchema), rejectRequest);
 
 module.exports = router;

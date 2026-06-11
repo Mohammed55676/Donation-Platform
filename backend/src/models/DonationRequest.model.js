@@ -1,57 +1,75 @@
 /**
  * src/models/DonationRequest.model.js
  *
- * A charity's request for a specific donation item.
- * The 14-day restriction is enforced using national_id_number,
- * not just user account ID, to prevent bypass via multiple accounts.
+ * A request created by a verified charity asking donors for specific needs.
  */
 const mongoose = require('mongoose');
 
 const donationRequestSchema = new mongoose.Schema(
   {
-    donation_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Donation',
-      required: true,
-    },
-    charity_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: false,
-    },
-    // Snapshot of the national_id at request time — used for 14-day cross-account checks (legacy)
-    national_id_number: {
+    title: {
       type: String,
-      required: false,
+      required: true,
+      trim: true,
+      maxlength: 120,
+    },
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 2000,
+    },
+    category: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    quantityNeeded: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+    quantityReceived: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    urgency: {
+      type: String,
+      enum: ['عالية', 'متوسطة', 'منخفضة'],
+      default: 'متوسطة',
+    },
+    location: {
+      type: String,
+      required: true,
       trim: true,
     },
     status: {
       type: String,
-      enum: ['pending_review', 'accepted', 'rejected', 'cancelled', 'received'],
+      enum: ['pending_review', 'active', 'completed', 'cancelled', 'rejected'],
       default: 'pending_review',
     },
-    // Admin can override 14-day restriction in emergencies
-    emergency_exception: { type: Boolean, default: false },
-    emergency_reason:    { type: String,  default: null },
-    admin_notes:         { type: String,  default: null },
-    donor_notes:         { type: String,  default: null },
-    accepted_at:         { type: Date,    default: null },
-    received_at:         { type: Date,    default: null },
+    charityId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    adminNote: {
+      type: String,
+      default: null,
+      trim: true,
+    },
   },
   { timestamps: true }
 );
 
-// Prevent the same user from submitting two requests
-donationRequestSchema.index(
-  { donation_id: 1, charity_id: 1 },
-  { unique: true, partialFilterExpression: { charity_id: { $exists: true } } }
-);
-
-// Fast lookups
-donationRequestSchema.index({ charity_id: 1 });
-donationRequestSchema.index({ donation_id: 1 });
+donationRequestSchema.index({ charityId: 1 });
 donationRequestSchema.index({ status: 1 });
-donationRequestSchema.index({ national_id_number: 1 });
 donationRequestSchema.index({ createdAt: -1 });
 
 donationRequestSchema.set('toJSON', {

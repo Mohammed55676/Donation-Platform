@@ -6,7 +6,7 @@ The Donation Platform is a digital bridge connecting individuals who want to hel
 ## 2. The Problem
 In many societies, there is a disconnect between willingness to help and the ability to do so safely and effectively.
 * **Trust Issues:** Donors are often hesitant to give because they cannot verify if an organization or individual is legitimate.
-* **Privacy Concerns:** Direct contact between donors and beneficiaries can lead to unwanted solicitations, harassment, or privacy breaches.
+* **Privacy Concerns:** Direct contact between donors and unverified individuals can lead to unwanted solicitations, harassment, or privacy breaches.
 * **Inefficiency:** Charities struggle to manage incoming physical donations, track volunteers, and run campaigns without multiple disparate tools.
 * **Lack of Visibility:** Smaller, verified charities often lack the platform to reach a wider audience of potential donors.
 

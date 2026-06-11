@@ -9,7 +9,7 @@ Imagine a digital bulletin board where people who want to give away items (cloth
 
 The Donation Platform is an Arabic-first web application that digitizes the entire charitable cycle:
 * **Donors** can list items they want to give away.
-* **Beneficiaries/Charities** can request those items or post their own requests for help in a community feed.
+* **Charities** can request those items or post their own requests for help in a community feed.
 * **Volunteers** can find upcoming events (like packing food boxes) and register to help.
 
 **To a developer:** It is a front-end React application utilizing simulated client-side state (React Context/Local Storage) to mock a full-stack experience (user auth, data fetching, database updates).

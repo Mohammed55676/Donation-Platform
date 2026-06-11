@@ -1,11 +1,5 @@
 /**
  * src/routes/campaign.routes.js
- *
- * GET    /api/campaigns       (public)
- * GET    /api/campaigns/:id   (public)
- * POST   /api/campaigns       (admin)
- * PUT    /api/campaigns/:id   (admin)
- * DELETE /api/campaigns/:id   (admin)
  */
 const express = require('express');
 const Joi     = require('joi');
@@ -13,6 +7,7 @@ const router  = express.Router();
 
 const {
   listCampaigns, getMyCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign, donateToCampaign,
+  listPendingCampaigns, reviewCampaign
 } = require('../controllers/campaign.controller');
 const { protect }     = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/role.middleware');
@@ -34,9 +29,16 @@ const donateSchema = Joi.object({
   isDemoPayment: Joi.boolean().default(true),
 });
 
-router.get('/',            listCampaigns);
+const reviewSchema = Joi.object({
+    action: Joi.string().valid('approve', 'reject').required(),
+});
+
+router.get('/pending',     protect, requireRole('admin'), listPendingCampaigns);
+router.patch('/:id/review', protect, requireRole('admin'), validate(reviewSchema), reviewCampaign);
+
 router.get('/my',          protect, getMyCampaigns);
-router.get('/:id',         getCampaign);
+router.get('/',            listCampaigns);
+router.get('/:id',         getCampaign); // protect inside if needed, currently custom logic
 router.post('/',           protect, validate(campaignSchema), createCampaign);
 router.post('/:id/donate', protect, validate(donateSchema), donateToCampaign);
 router.put('/:id',         protect, requireRole('admin'), updateCampaign);

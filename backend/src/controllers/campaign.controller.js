@@ -1,11 +1,5 @@
 /**
  * src/controllers/campaign.controller.js
- *
- * GET    /api/campaigns        — List all campaigns (public)
- * GET    /api/campaigns/:id    — Get single campaign (public)
- * POST   /api/campaigns        — Create campaign (admin)
- * PUT    /api/campaigns/:id    — Update campaign (admin)
- * DELETE /api/campaigns/:id    — Delete campaign (admin)
  */
 const Campaign = require('../models/Campaign.model');
 const { sendSuccess } = require('../utils/apiResponse');
@@ -16,11 +10,10 @@ const { AppError } = require('../middleware/error.middleware');
 async function listCampaigns(req, res, next) {
   try {
     const { page, limit, skip } = parsePagination(req.query);
-    const { urgency, isActive } = req.query;
+    const { urgency } = req.query;
 
-    const filter = {};
-    if (urgency)  filter.urgency  = urgency;
-    if (isActive !== undefined) filter.isActive = isActive !== 'false';
+    const filter = { status: 'active' };
+    if (urgency) filter.urgency = urgency;
 
     const [campaigns, total] = await Promise.all([
       Campaign.find(filter)
@@ -54,6 +47,14 @@ async function getCampaign(req, res, next) {
   try {
     const campaign = await Campaign.findById(req.params.id).populate('createdBy', 'name');
     if (!campaign) throw new AppError('Campaign not found.', 404);
+    // Don't leak pending/rejected campaigns to public unless it's admin or owner
+    if (campaign.status !== 'active') {
+        const isAdmin = req.user?.role === 'admin';
+        const isOwner = req.user?._id?.toString() === campaign.createdBy.toString();
+        if (!isAdmin && !isOwner) {
+            throw new AppError('Campaign not found or not active.', 404);
+        }
+    }
     return sendSuccess(res, campaign);
   } catch (err) {
     next(err);
@@ -75,7 +76,6 @@ async function createCampaign(req, res, next) {
       createdBy: req.user._id,
     };
 
-    // Admin campaigns are active directly; charity campaigns need review
     if (isAdmin) {
       campaignData.status = 'active';
     } else {
@@ -116,8 +116,6 @@ async function deleteCampaign(req, res, next) {
 }
 
 // ── POST /api/campaigns/:id/donate ──────────────────────────────────
-// Demo-only: records a fake transaction and increments current amount.
-// Card data is NEVER received or stored here — it stays on the frontend.
 async function donateToCampaign(req, res, next) {
   try {
     const { amount, paymentMethod, isDemoPayment } = req.body;
@@ -126,8 +124,8 @@ async function donateToCampaign(req, res, next) {
       throw new AppError('المبلغ يجب أن يكون أكبر من صفر.', 400);
     }
 
-    const campaign = await Campaign.findByIdAndUpdate(
-      req.params.id,
+    const campaign = await Campaign.findOneAndUpdate(
+      { _id: req.params.id, status: 'active' },
       {
         $inc: { current: Number(amount) },
         $push: {
@@ -144,7 +142,7 @@ async function donateToCampaign(req, res, next) {
       { new: true, runValidators: false }
     );
 
-    if (!campaign) throw new AppError('Campaign not found.', 404);
+    if (!campaign) throw new AppError('Campaign not found or not active.', 404);
 
     return sendSuccess(res, {
       campaignId:    campaign.id,
@@ -158,4 +156,40 @@ async function donateToCampaign(req, res, next) {
   }
 }
 
-module.exports = { listCampaigns, getMyCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign, donateToCampaign };
+// ── ADMIN: LIST PENDING CAMPAIGNS ────────────────────────────────────
+async function listPendingCampaigns(req, res, next) {
+    try {
+        const campaigns = await Campaign.find({ status: 'pending_review' })
+            .populate('createdBy', 'name')
+            .populate('charityId', 'name email')
+            .sort({ createdAt: -1 });
+        return sendSuccess(res, campaigns, 'Pending campaigns retrieved.');
+    } catch (err) {
+        next(err);
+    }
+}
+
+// ── ADMIN: APPROVE/REJECT CAMPAIGN ───────────────────────────────────
+async function reviewCampaign(req, res, next) {
+    try {
+        const { action } = req.body; // 'approve' or 'reject'
+        if (!['approve', 'reject'].includes(action)) throw new AppError('Invalid action', 400);
+
+        const status = action === 'approve' ? 'active' : 'rejected';
+        const campaign = await Campaign.findByIdAndUpdate(
+            req.params.id,
+            { status },
+            { new: true }
+        );
+
+        if (!campaign) throw new AppError('Campaign not found', 404);
+        return sendSuccess(res, campaign, `Campaign ${action}d successfully`);
+    } catch (err) {
+        next(err);
+    }
+}
+
+module.exports = {
+  listCampaigns, getMyCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign, donateToCampaign,
+  listPendingCampaigns, reviewCampaign
+};

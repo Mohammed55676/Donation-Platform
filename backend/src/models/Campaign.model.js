@@ -56,8 +56,8 @@ const campaignSchema = new mongoose.Schema(
     // Campaign status with review workflow
     status: {
       type: String,
-      enum: ['pending_review', 'active', 'completed', 'cancelled'],
-      default: 'active',
+      enum: ['pending_review', 'active', 'completed', 'cancelled', 'rejected'],
+      default: 'pending_review',
     },
     isActive: { type: Boolean, default: true },
 

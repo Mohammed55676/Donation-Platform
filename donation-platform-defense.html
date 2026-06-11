@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Donation Platform — Graduation Defense 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,300;1,8..60,400;1,8..60,600;1,8..60,700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   VIEWPORT BASE — MANDATORY FIXED 16:9 STAGE
+   ============================================================ */
+html, body { width:100%; height:100%; margin:0; overflow:hidden; background:var(--stage-bg,#0e1220); }
+.deck-viewport { position:fixed; inset:0; overflow:hidden; background:var(--stage-bg,#0e1220); }
+.deck-stage { position:absolute; left:0; top:0; width:1920px; height:1080px; overflow:hidden; transform-origin:0 0; }
+.slide { position:absolute; inset:0; width:1920px; height:1080px; overflow:hidden; display:block; visibility:hidden; opacity:0; pointer-events:none; }
+.slide.active, .slide.visible { visibility:visible; opacity:1; pointer-events:auto; z-index:1; }
+img, video, canvas, svg { max-width:100%; max-height:100%; }
+@media print {
+  html,body{width:1920px;height:auto;overflow:visible;}
+  .deck-viewport{position:static;overflow:visible;}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always;}
+  .slide:last-child{break-after:auto;page-break-after:auto;}
+  .deck-controls,.edit-hotzone,.edit-toggle{display:none!important;}
+}
+@media (prefers-reduced-motion:reduce) { *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important;} }
+
+/* ============================================================
+   SIGNAL DESIGN SYSTEM — COLOR TOKENS
+   ============================================================ */
+:root {
+  --stage-bg:   #0e1220;
+  --navy:       #1C2644;
+  --navy-alt:   #232F55;
+  --cream:      #F0ECE3;
+  --cream-alt:  #E6E0D4;
+  --text-warm:  #E2DCD0;
+  --text-md-dk: #8A96A8;
+  --text-lt-dk: #4E5A6E;
+  --ink:        #1A2030;
+  --text-md-lt: #5A6270;
+  --text-lt-lt: #9AA0A8;
+  --gold:       #C8A870;
+  --gold-dim:   rgba(200,168,112,0.25);
+  --bd-dk:      #2E3D5C;
+  --bd-lt:      #CAC4B4;
+
+  /* Typography families */
+  --ff-serif: 'Source Serif 4', Georgia, serif;
+  --ff-sans:  'DM Sans', system-ui, sans-serif;
+  --ff-mono:  'IBM Plex Mono', monospace;
+
+  /* Type scale (px at 1920×1080 stage) */
+  --sz-display: 176px;
+  --sz-h1:      100px;
+  --sz-h2:       60px;
+  --sz-h3:       40px;
+  --sz-lead:     28px;
+  --sz-body:     22px;
+  --sz-caption:  18px;
+  --sz-label:    15px;
+
+  /* Spacing */
+  --px: 144px;   /* horizontal padding */
+  --py: 64px;    /* vertical padding */
+  --gap-lg: 44px;
+  --gap-md: 28px;
+  --gap-sm: 14px;
+
+  /* Easing */
+  --ease: cubic-bezier(0.16,1,0.3,1);
+  --ease-slide: cubic-bezier(0.77,0,0.175,1);
+}
+
+/* ============================================================
+   BASE SURFACES
+   ============================================================ */
+.dark  { background: var(--navy); }
+.light { background: var(--cream); }
+
+/* 80px grid texture on all dark slides */
+.dark::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+/* Surface-aware text defaults */
+.dark  { color: var(--text-warm); }
+.light { color: var(--ink); }
+
+/* ============================================================
+   CHROME & FOOT BARS
+   ============================================================ */
+.chrome-bar {
+  position: absolute; top:0; left:0; right:0; z-index:2;
+  height: 72px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--px);
+}
+.dark  .chrome-bar { border-bottom: 1px solid var(--bd-dk); }
+.light .chrome-bar { border-bottom: 1px solid var(--bd-lt); }
+
+.foot-bar {
+  position: absolute; bottom:0; left:0; right:0; z-index:2;
+  height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--px);
+}
+.dark  .foot-bar { border-top: 1px solid var(--bd-dk); }
+.light .foot-bar { border-top: 1px solid var(--bd-lt); }
+
+.chrome-label, .foot-left, .foot-right, .chrome-counter {
+  font-family: var(--ff-mono);
+  font-size: var(--sz-label);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.dark  .chrome-label, .dark .chrome-counter { color: var(--text-lt-dk); }
+.light .chrome-label, .light .chrome-counter { color: var(--text-lt-lt); }
+.dark  .foot-left, .dark .foot-right   { color: var(--text-lt-dk); }
+.light .foot-left, .light .foot-right  { color: var(--text-lt-lt); }
+.chrome-counter { color: var(--gold) !important; }
+
+/* ============================================================
+   SLIDE BODY (the content area between chrome and foot)
+   ============================================================ */
+.slide-body {
+  position: absolute;
+  top: 72px; bottom: 60px; left: 0; right: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: var(--gap-md) var(--px);
+  z-index: 1;
+}
+
+/* ============================================================
+   TYPOGRAPHY COMPONENTS
+   ============================================================ */
+.kicker {
+  font-family: var(--ff-mono);
+  font-size: var(--sz-label);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: var(--gap-sm);
+}
+
+.gold-rule {
+  width: 36px; height: 1px;
+  background: var(--gold);
+  margin-bottom: var(--gap-md);
+  flex-shrink: 0;
+}
+
+/* Headlines */
+.h-display {
+  font-family: var(--ff-serif);
+  font-size: var(--sz-display);
+  font-weight: 700;
+  line-height: 0.93;
+  letter-spacing: -0.025em;
+}
+.h1 {
+  font-family: var(--ff-serif);
+  font-size: var(--sz-h1);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+}
+.h2 {
+  font-family: var(--ff-serif);
+  font-size: var(--sz-h2);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+}
+.h3 {
+  font-family: var(--ff-serif);
+  font-size: var(--sz-h3);
+  font-weight: 500;
+  line-height: 1.25;
+}
+.lead {
+  font-family: var(--ff-sans);
+  font-size: var(--sz-lead);
+  font-weight: 400;
+  line-height: 1.55;
+}
+.body-text {
+  font-family: var(--ff-sans);
+  font-size: var(--sz-body);
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* Gold italic em inside serif headlines — THE SIGNAL MOMENT */
+.dark  h1 em, .dark  h2 em, .dark  .h1 em, .dark  .h2 em, .dark  .h3 em, .dark  .h-display em { color:var(--gold); font-style:italic; }
+.light h1 em, .light h2 em, .light .h1 em, .light .h2 em, .light .h3 em, .light .h-display em { color:var(--gold); font-style:italic; }
+
+/* Color variants */
+.dark  .lead { color: var(--text-md-dk); }
+.light .lead { color: var(--text-md-lt); }
+.dark  .body-text { color: var(--text-md-dk); }
+.light .body-text { color: var(--text-md-lt); }
+.dark  .h2, .dark  .h1 { color: var(--text-warm); }
+.light .h2, .light .h1 { color: var(--ink); }
+.dark  .h3 { color: var(--text-md-dk); }
+.light .h3 { color: var(--text-md-lt); }
+
+/* Em-dash bullet list */
+.em-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:var(--gap-sm); }
+.em-list li {
+  display:flex; align-items:flex-start; gap:18px;
+  font-family:var(--ff-sans); font-size:var(--sz-body); line-height:1.55;
+}
+.em-list li::before {
+  content:'—';
+  font-family:var(--ff-mono);
+  color:var(--gold);
+  flex-shrink:0;
+  font-size:var(--sz-body);
+  line-height:1.55;
+}
+.dark  .em-list li { color: var(--text-md-dk); }
+.light .em-list li { color: var(--text-md-lt); }
+
+/* Large em-list */
+.em-list.large li { font-size: var(--sz-lead); gap:22px; }
+.em-list.large li::before { font-size: var(--sz-lead); }
+
+/* ============================================================
+   REVEAL ANIMATIONS
+   ============================================================ */
+.reveal {
+  opacity:0; transform:translateY(22px);
+  transition: opacity .55s var(--ease), transform .55s var(--ease);
+}
+.slide.visible .reveal { opacity:1; transform:translateY(0); }
+
+.reveal-l {
+  opacity:0; transform:translateX(-22px);
+  transition: opacity .55s var(--ease), transform .55s var(--ease);
+}
+.slide.visible .reveal-l { opacity:1; transform:translateX(0); }
+
+.reveal-r {
+  opacity:0; transform:translateX(22px);
+  transition: opacity .55s var(--ease), transform .55s var(--ease);
+}
+.slide.visible .reveal-r { opacity:1; transform:translateX(0); }
+
+.reveal-f { opacity:0; transition: opacity .7s ease; }
+.slide.visible .reveal-f { opacity:1; }
+
+.d1{transition-delay:.05s} .d2{transition-delay:.15s} .d3{transition-delay:.25s}
+.d4{transition-delay:.35s} .d5{transition-delay:.45s} .d6{transition-delay:.55s}
+.d7{transition-delay:.65s}
+
+/* ============================================================
+   HAIRLINE DIVIDER
+   ============================================================ */
+.rule-full {
+  height:1px; width:100%;
+}
+.dark  .rule-full { background: var(--bd-dk); }
+.light .rule-full { background: var(--bd-lt); }
+
+/* ============================================================
+   TAG / OUTLINED PILL
+   ============================================================ */
+.tag {
+  display:inline-block;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-family:var(--ff-mono);
+  font-size: var(--sz-label);
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  padding: 6px 18px;
+}
+
+/* ============================================================
+   FLOW DIAGRAM COMPONENTS
+   ============================================================ */
+.flow-row {
+  display:flex; align-items:stretch; gap:0;
+}
+
+.flow-node {
+  flex:1;
+  border-top: 2px solid var(--gold);
+  padding: 28px 32px 28px 0;
+  display:flex; flex-direction:column; gap:10px;
+}
+
+.flow-node .node-num {
+  font-family:var(--ff-serif);
+  font-size: 52px;
+  font-weight:600;
+  color:var(--gold);
+  line-height:1;
+  letter-spacing:-0.02em;
+}
+
+.flow-node .node-title {
+  font-family:var(--ff-serif);
+  font-size: 30px;
+  font-weight:600;
+  line-height:1.2;
+}
+.dark  .flow-node .node-title { color:var(--text-warm); }
+.light .flow-node .node-title { color:var(--ink); }
+
+.flow-node .node-desc {
+  font-family:var(--ff-sans);
+  font-size: 20px;
+  line-height:1.5;
+}
+.dark  .flow-node .node-desc { color:var(--text-md-dk); }
+.light .flow-node .node-desc { color:var(--text-md-lt); }
+
+.flow-arrow {
+  flex-shrink:0;
+  width:52px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--ff-mono);
+  font-size:26px;
+  color: var(--gold);
+  padding-top: 28px;
+}
+
+/* ============================================================
+   STAT TILE
+   ============================================================ */
+.stat-tile {
+  border-top:1px solid;
+  padding-top: var(--gap-md);
+}
+.dark  .stat-tile { border-color:var(--bd-dk); }
+.light .stat-tile { border-color:var(--bd-lt); }
+
+.stat-val {
+  font-family:var(--ff-serif);
+  font-size: 100px;
+  font-weight:600;
+  color:var(--gold);
+  line-height:1;
+  letter-spacing:-0.025em;
+}
+.stat-label {
+  font-family:var(--ff-sans);
+  font-size: var(--sz-lead);
+  margin-top: 8px;
+}
+.dark  .stat-label { color:var(--text-md-dk); }
+.light .stat-label { color:var(--text-md-lt); }
+
+/* ============================================================
+   THREE-COLUMN COMPARISON (roles slide)
+   ============================================================ */
+.col3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; height:100%; }
+.col-panel {
+  padding: 36px 40px;
+  display:flex; flex-direction:column; gap: var(--gap-md);
+}
+.dark  .col-panel:not(:last-child) { border-right:1px solid var(--bd-dk); }
+.light .col-panel:not(:last-child) { border-right:1px solid var(--bd-lt); }
+.col-panel .col-label {
+  font-family:var(--ff-mono);
+  font-size:var(--sz-label);
+  color:var(--gold);
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  margin-bottom:4px;
+}
+.col-panel .col-title {
+  font-family:var(--ff-serif);
+  font-size:48px;
+  font-weight:600;
+  line-height:1;
+}
+.dark  .col-panel .col-title { color:var(--text-warm); }
+.light .col-panel .col-title { color:var(--ink); }
+
+/* ============================================================
+   ARCHITECTURE DIAGRAM
+   ============================================================ */
+.arch-layer {
+  border: 1px solid;
+  padding: 28px 40px;
+  display:flex; flex-direction:column; gap:10px;
+  position:relative;
+}
+.dark  .arch-layer { border-color:var(--bd-dk); background:rgba(46,61,92,.35); }
+.light .arch-layer { border-color:var(--bd-lt); background:rgba(202,196,180,.25); }
+
+.arch-layer .layer-label {
+  font-family:var(--ff-mono);
+  font-size:var(--sz-label);
+  color:var(--gold);
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+.arch-layer .layer-title {
+  font-family:var(--ff-serif);
+  font-size:36px;
+  font-weight:600;
+}
+.dark  .arch-layer .layer-title { color:var(--text-warm); }
+.light .arch-layer .layer-title { color:var(--ink); }
+
+.arch-layer .layer-items {
+  font-family:var(--ff-sans);
+  font-size:var(--sz-body);
+  display:flex; flex-wrap:wrap; gap:10px 32px;
+}
+.dark  .arch-layer .layer-items { color:var(--text-md-dk); }
+.light .arch-layer .layer-items { color:var(--text-md-lt); }
+
+.arch-layer .layer-items span { white-space:nowrap; }
+
+.arch-connector {
+  display:flex; align-items:center; justify-content:center;
+  height:40px;
+  font-family:var(--ff-mono);
+  font-size:28px;
+  color:var(--gold);
+}
+
+/* DB grid */
+.db-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:2px; }
+.db-card {
+  border-top: 2px solid var(--gold);
+  padding: 24px 28px;
+  display:flex; flex-direction:column; gap:8px;
+}
+.dark  .db-card { background:rgba(46,61,92,.2); }
+.light .db-card { background:rgba(202,196,180,.2); }
+.db-card .db-name {
+  font-family:var(--ff-serif); font-size:30px; font-weight:600;
+}
+.dark  .db-card .db-name { color:var(--text-warm); }
+.light .db-card .db-name { color:var(--ink); }
+.db-card .db-fields {
+  font-family:var(--ff-mono); font-size:15px; color:var(--gold); letter-spacing:.06em;
+  line-height:1.7;
+}
+
+/* ============================================================
+   PROGRESS DOTS (outside the stage)
+   ============================================================ */
+#progress-dots {
+  position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+  display:flex; gap:8px; z-index:9999;
+}
+#progress-dots span {
+  width:7px; height:7px; border-radius:50%;
+  background:rgba(200,168,112,.25);
+  transition:background .3s ease;
+  cursor:pointer;
+}
+#progress-dots span.on { background:var(--gold,#C8A870); }
+
+/* ============================================================
+   INLINE EDITING
+   ============================================================ */
+.edit-hotzone {
+  position:fixed; top:0; left:0; width:80px; height:80px; z-index:10000; cursor:pointer;
+}
+.edit-toggle {
+  position:fixed; top:16px; left:16px; z-index:10001;
+  background:rgba(28,38,68,.9); border:1px solid var(--gold,#C8A870);
+  color:#C8A870; font-family:'IBM Plex Mono',monospace; font-size:13px;
+  padding:8px 16px; cursor:pointer; letter-spacing:.1em;
+  opacity:0; pointer-events:none; transition:opacity .3s ease;
+}
+.edit-toggle.show, .edit-toggle.active { opacity:1; pointer-events:auto; }
+[contenteditable="true"] { outline:1px solid rgba(200,168,112,.5); }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     PROGRESS DOTS
+     ============================================================ -->
+<div id="progress-dots"></div>
+
+<!-- ============================================================
+     EDIT CONTROLS
+     ============================================================ -->
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle">✏ EDIT (E)</button>
+
+<!-- ============================================================
+     DECK STAGE
+     ============================================================ -->
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- ========================================================
+     SLIDE 1 — TITLE
+     Speaker notes: Greet the committee. Briefly state what the
+     project is. Keep it to 30 seconds — let the slide breathe.
+     "Good morning. My name is Mohammed Hamdi. Today I'm
+     defending my graduation project: the Donation Platform —
+     a web application that connects donors with verified charities
+     through trust, transparency, and technology."
+     ======================================================== -->
+<section class="slide dark active" id="s1">
+  <div style="position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;justify-content:center;padding:0 var(--px);">
+
+    <div class="reveal d1" style="margin-bottom:var(--gap-sm);">
+      <span class="kicker">Computer Science · Graduation Defense · 2026</span>
+    </div>
+
+    <div class="gold-rule reveal d2"></div>
+
+    <div class="h-display reveal d2" style="color:var(--text-warm);margin-bottom:var(--gap-md);">
+      Donation<br><em>Platform</em>
+    </div>
+
+    <div class="lead reveal d3" style="max-width:860px;margin-bottom:var(--gap-lg);">
+      A web application connecting donors with <em style="font-family:var(--ff-serif);font-style:italic;color:var(--gold);">verified charities</em>
+      through trust, transparency, and secure technology.
+    </div>
+
+    <div class="reveal d4" style="display:flex;align-items:center;gap:32px;">
+      <div style="border:1px solid var(--bd-dk);padding:20px 36px;">
+        <div style="font-family:var(--ff-serif);font-size:28px;font-weight:600;color:var(--text-warm);margin-bottom:4px;">Mohammed Hamdi</div>
+        <div style="font-family:var(--ff-mono);font-size:var(--sz-label);color:var(--text-lt-dk);letter-spacing:.12em;text-transform:uppercase;">Computer Science — Final Year</div>
+      </div>
+      <div style="width:1px;height:60px;background:var(--bd-dk);"></div>
+      <div>
+        <div style="font-family:var(--ff-mono);font-size:var(--sz-label);color:var(--text-lt-dk);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px;">Academic Year</div>
+        <div style="font-family:var(--ff-serif);font-size:32px;font-weight:600;color:var(--gold);">2025 — 2026</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right column info -->
+  <div class="reveal-r d5" style="position:absolute;top:50%;right:var(--px);transform:translateY(-50%);width:420px;z-index:1;display:flex;flex-direction:column;gap:0;border-left:1px solid var(--bd-dk);padding-left:48px;">
+    <div style="margin-bottom:32px;">
+      <div class="kicker" style="margin-bottom:10px;">Stack</div>
+      <div style="font-family:var(--ff-sans);font-size:22px;color:var(--text-md-dk);line-height:1.8;">
+        React · Node.js · Express<br>MongoDB · Socket.IO<br>Firebase OAuth · JWT
+      </div>
+    </div>
+    <div style="height:1px;background:var(--bd-dk);margin-bottom:32px;"></div>
+    <div>
+      <div class="kicker" style="margin-bottom:10px;">Roles</div>
+      <div style="font-family:var(--ff-sans);font-size:22px;color:var(--text-md-dk);line-height:1.8;">
+        Donor · Charity · Admin
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold) 0%,rgba(200,168,112,0) 60%);z-index:2;"></div>
+</section>
+
+
+<!-- ========================================================
+     SLIDE 2 — PROBLEM STATEMENT
+     Speaker notes: "Before I describe what I built, let me explain
+     the problem. Online donation in the Arab world suffers from
+     a serious trust gap. Donors don't know if charities are
+     legitimate. Fake campaigns are common. There is no
+     verification mechanism, no accountability, and communication
+     between donors and charities is non-existent or unsafe."
+     ======================================================== -->
+<section class="slide light" id="s2">
+  <div class="chrome-bar">
+    <span class="chrome-label">Problem Statement</span>
+    <span class="chrome-counter">02 / 14</span>
+  </div>
+
+  <div class="slide-body" style="flex-direction:row;align-items:stretch;gap:0;padding-top:0;padding-bottom:0;">
+
+    <!-- Left: headline -->
+    <div class="reveal-l d1" style="flex:0 0 560px;display:flex;flex-direction:column;justify-content:center;border-right:1px solid var(--bd-lt);padding-right:64px;">
+      <div class="kicker" style="margin-bottom:var(--gap-sm);">The Challenge</div>
+      <div class="gold-rule"></div>
+      <div class="h1" style="color:var(--ink);margin-bottom:var(--gap-md);">
+        Trust is<br><em>broken</em><br>in online<br>giving.
+      </div>
+    </div>
+
+    <!-- Right: problems -->
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding-left:64px;gap:var(--gap-md);">
+
+      <div class="reveal d2">
+        <div style="font-family:var(--ff-serif);font-size:32px;font-weight:600;color:var(--ink);margin-bottom:8px;">No Verification Layer</div>
+        <div class="body-text">Anyone can create a charity account and collect donations — there is no vetting or approval process.</div>
+      </div>
+
+      <div style="height:1px;background:var(--bd-lt);"></div>
+
+      <div class="reveal d3">
+        <div style="font-family:var(--ff-serif);font-size:32px;font-weight:600;color:var(--ink);margin-bottom:8px;">Donor Privacy at Risk</div>
+        <div class="body-text">Personal data, donation history, and communications are exposed without proper security controls.</div>
+      </div>
+
+      <div style="height:1px;background:var(--bd-lt);"></div>
+
+      <div class="reveal d4">
+        <div style="font-family:var(--ff-serif);font-size:32px;font-weight:600;color:var(--ink);margin-bottom:8px;">No Transparent Accountability</div>
+        <div class="body-text">Donors cannot track how their contributions are used, reducing long-term trust and engagement.</div>
+      </div>
+
+      <div style="height:1px;background:var(--bd-lt);"></div>
+
+      <div class="reveal d5">
+        <div style="font-family:var(--ff-serif);font-size:32px;font-weight:600;color:var(--ink);margin-bottom:8px;">No Safe Communication Channel</div>
+        <div class="body-text">Donors and charities have no secure, purpose-built channel to coordinate or ask questions.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="foot-bar">
+    <span class="foot-left">Donation Platform</span>
+    <span class="foot-right">Mohammed Hamdi · 2026</span>
+  </div>
+</section>
+
+
+<!-- ========================================================
+     SLIDE 3 — PROPOSED SOLUTION
+     Speaker notes: "The Donation Platform solves this with three
+     pillars: verification, transparency, and security. Only
+     admin-approved charities can raise funds. Every interaction
+     is logged. Communication happens through end-to-end
+     authenticated real-time chat."
+     ======================================================== -->
+<section class="slide dark" id="s3">
+  <div class="chrome-bar">
+    <span class="chrome-label">Proposed Solution</span>
+    <span class="chrome-counter">03 / 14</span>
+  </div>
+
+  <div class="slide-body" style="justify-content:center;gap:var(--gap-lg);">
+
+    <div class="reveal d1" style="display:flex;flex-direction:column;gap:var(--gap-sm);">
+      <div class="kicker">The Answer</div>
+      <div class="gold-rule"></div>
+      <div class="h1" style="color:var(--text-warm);">
+        A <em>verified</em>, transparent,<br>and secure giving ecosystem.
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;" class="reveal-f d3">
+      <div style="border-top:2px solid var(--gold);padding:28px 32px 28px 0;">
+        <div style="font-family:var(--ff-mono);font-size:var(--sz-label);color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;">01 — Verification</div>
+        <div style="font-family:var(--ff-serif);font-size:34px;font-weight:600;color:var(--text-warm);margin-bottom:10px;">Admin-Gated Charities</div>
+        <div class="body-text" style="color:var(--text-md-dk);">Only approved charities can create campaigns and receive donations. A human admin reviews every application.</div>
+      </div>
+      <div style="border-top:2px solid var(--gold);padding:28px 32px;">
+        <div style="font-family:var(--ff-mono);font-size:var(--sz-label);color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;">02 — Transparency</div>
+        <div style="font-family:var(--ff-serif);font-size:34px;font-weight:600;color:var(--text-warm);margin-bottom:10px;">Open Campaign Tracking</div>
+        <div class="body-text" style="color:var(--text-md-dk);">Donors browse campaigns, track progress, and see exactly where contributions are directed.</div>
+      </div>
+      <div style="border-top:2px solid var(--gold);padding:28px 0 28px 32px;">
+        <div style="font-family:var(--ff-mono);font-size:var(--sz-label);color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;">03 — Security</div>
+        <div style="font-family:var(--ff-serif);font-size:34px;font-weight:600;color:var(--text-warm);margin-bottom:10px;">Role-Based &amp; Encrypted</div>
+        <div class="body-text" style="color:var(--text-md-dk);">JWT authentication, bcrypt hashing, RBAC, rate limiting, and real-time chat via Socket.IO.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="foot-bar">
+    <span class="foot-left">Donation Platform</span>
+    <span class="foot-right">Mohammed Hamdi · 2026</span>
+  </div>
+</section>
+
+
+<!-- ========================================================
+     SLIDE 4 — TARGET USERS
+     Speaker notes: "The platform has two primary user types:
+     Donors and Charities. Beneficiaries are NOT platform users —
+     they receive help offline. The charity is responsible for
+     distributing received donations to those in need."
+     ======================================================== -->
+<section class="slide light" id="s4">
+  <div class="chrome-bar">
+    <span class="chrome-label">Target Users</span>
+    <span class="chrome-counter">04 / 14</span>
+  </div>
+
+  <div class="slide-body" style="flex-direction:row;align-items:stretch;gap:0;padding:0 var(--px);">
+
+    <!-- Donor -->
+    <div class="reveal-l d1" style="flex:1;display:flex;flex-direction:column;justify-content:center;border-right:1px solid var(--bd-lt);padding-right:60px;">
+      <div class="kicker" style="margin-bottom:var(--gap-sm);">User Type 01</div>
+      <div class="h1" style="color:var(--ink);margin-bottom:var(--gap-md);">The <em>Donor</em></div>
+      <ul class="em-list large">
+        <li>Browses verified campaigns and charity profiles</li>
+        <li>Donates money or physical items</li>
+        <li>Applies for volunteer opportunities</li>
+        <li>Chats securely with charities</li>
+        <li>Reports suspicious activity</li>
+      </ul>
+    </div>
+
+    <!-- Charity -->
+    <div class="reveal-r d3" style="flex:1;display:flex;flex-direction:column;justify-content:center;padding-left:60px;">
+      <div class="kicker" style="margin-bottom:var(--gap-sm);">User Type 02</div>
+      <div class="h1" style="color:var(--ink);margin-bottom:var(--gap-md);">The <em>Charity</em></div>
+      <ul class="em-list large">
+        <li>Creates and manages donation campaigns</li>
+        <li>Posts volunteer opportunities</li>
+        <li>Receives and tracks incoming donations</li>
+        <li>Communicates with donors via real-time chat</li>
+        <li>Distributes aid to beneficiaries <em style="color:var(--gold);font-family:var(--ff-serif);">offline</em></li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- Important note at bottom -->
+  <div class="reveal-f d5" style="position:absolute;bottom:72px;left:var(--px);right:var(--px);padding:18px 28px;background:rgba(202,196,180,.3);border-left:3px solid var(--gold);z-index:2;">
+    <div style="font-family:var(--ff-mono);font-size:var(--sz-label);color:var(--text-lt-lt);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px;">Important Scope Note</div>
+    <div style="font-family:var(--ff-sans);font-size:var(--sz-body);color:var(--text-md-lt);">Beneficiaries are <strong style="font-weight:500;color:var(--ink);">not</strong> direct platform users. The charity is fully responsible for offline distribution of donated goods and funds.</div>
+  </div>
+
+  <div class="foot-bar">
+    <span class="foot-left">Donation Platform</span>
+    <span class="foot-right">Mohammed Hamdi · 2026</span>
+  </div>
+</section>
+
+
+<!-- ========================================================
+     SLIDE 5 — MAIN SYSTEM FLOW
+     Speaker notes: "The core flow has three actors. The donor
+     interacts with the platform. The verified charity manages
+     campaigns and receives donations. Then the charity —
+     not the platform — distributes help to beneficiaries offline.
+     The platform is only responsible for the digital layer."
+     ======================================================== -->
+<section class="slide dark" id="s5">
+  <div class="chrome-bar">
+    <span class="chrome-label">Main System Flow</span>
+    <span class="chrome-counter">05 / 14</span>
+  </div>
+
+  <div class="slide-body" style="justify-content:center;gap:var(--gap-lg);">
+
+    <div class="reveal d1">
+      <div class="kicker" style="margin-bottom:var(--gap-sm);">How It Works</div>
+      <div class="h2" style="color:var(--text-warm);">The complete <em>giving journey</em></div>
+    </div>
+
+    <!-- Flow diagram -->
+    <div class="flow-row reveal d2" style="align-items:flex-start;">
+
+      <!-- Node 1: Donor -->
+      <div class="flow-node">
+        <div class="node-num">01</div>
+        <div class="node-title">Donor</div>
+        <ul class="em-list" style="margin-top:8px;">
+          <li>Browses campaigns</li>
+          <li>Makes donation or item gift</li>
+          <li>Applies to volunteer</li>
+          <li>Chats with charity</li>
+        </ul>
+      </div>
+
+      <div class="flow-arrow">→</div>
+
+      <!-- Node 2: Platform -->
+      <div class="flow-node">
+        <div class="node-num">02</div>
+        <div class="node-title">Platform<br>(Verified Charity)</div>
+        <ul class="em-list" style="margin-top:8px;">
+          <li>Admin-approved charities only</li>
+          <li>Manages campaigns &amp; donations</li>
+          <li>Communicates with donors</li>
+          <li>Reports to administrators</li>
+        </ul>
+      </div>
+
+      <div class="flow-arrow">→</div>
+
+      <!-- Node 3: Beneficiaries -->
+      <div class="flow-node" style="opacity:.65;">
+        <div class="node-num" style="color:var(--text-lt-dk);">03</div>
+        <div class="node-title" style="color:var(--text-md-dk);">Beneficiaries</div>
+        <div class="node-desc" style="margin-top:8px;">Receive aid <em style="font-family:var(--ff-serif);font-style:italic;color:var(--gold);">offline</em> from the charity.<br>They are not direct<br>platform users.</div>
+      </div>
+
+    </div>
+
+    <!-- Note row -->
+    <div class="reveal-f d4" style="padding:18px 28px;border-left:3px solid var(--gold);background:rgba(46,61,92,.4);">
+      <span style="font-family:var(--ff-mono);font-size:var(--sz-label);color:var(--text-lt-dk);letter-spacing:.12em;text-transform:uppercase;">Scope Boundary — </span>
+      <span style="font-family:var(--ff-sans);font-size:var(--sz-body);color:var(--text-md-dk);">The platform manages the digital donation flow. Offline distribution is the charity's responsibility.</span>
+    </div>
+
+  </div>
+
+  <div class="foot-bar">
+    <span class="foot-left">Donation Platform</span>
+    <span class="foot-right">Mohammed Hamdi · 2026</span>
+  </div>
+</section>
+
+
+<!-- ========================================================
+     SLIDE 6 — CORE FEATURES
+     Speaker notes: "The platform delivers six core features.
+     Campaign management lets charities run targeted drives.
+     Item donations address in-kind giving. Volunteering connects
+     skills with needs. Real-time chat builds direct relationships.
+     Admin controls ensure oversight. And the report/block system
+     maintains community safety."
+     ======================================================== -->
+<section class="slide light" id="s6">
+  <div class="chrome-bar">
+    <span class="chrome-label">Core Features</span>
+    <span class="chrome-counter">06 / 14</span>
+  </div>
+
+  <div class="slide-body" style="justify-content:center;gap:var(--gap-md);">
+    <div class="reveal d1">
+      <div class="kicker" style="margin-bottom:var(--gap-sm);">What the Platform Does</div>
+      <div class="h2" style="color:var(--ink);">Six <em>pillars</em> of trusted giving</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;" class="reveal-f d2">
+
+      <div style="border-top:2px solid var(--gold);padding:24px 28px;">
+        <div style="font-family:var(--ff-mono);font-size:14px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;">01</div>
+        <div style="font-family:var(--ff-serif);font-size:30px;font-weight:600;color:var(--ink);margin-bottom:8px;">Campaign Management</div>
+        <div class="body-text">Charities create, edit, and close donation campaigns with progress tracking and goals.</div>
+      </div>
+
+      <div style="border-top:2px solid var(--gold);padding:24px 28px;">
+        <div style="font-family:var(--ff-mono);font-size:14px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;">02</div>
+        <div style="font-family:var(--ff-serif);font-size:30px;font-weight:600;color:var(--ink);margin-bottom:8px;">Item Donations</div>
+        <div class="body-text">Donors can contribute physical goods — clothes, food, equipment — directly through campaigns.</div>
+      </div>
+
+      <div style="border-top:2px solid var(--gold);padding:24px 28px;">
+        <div style="font-family:var(--ff-mono);font-size:14px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;">03</div>
+        <div style="font-family:var(--ff-serif);font-size:30px;font-weight:600;color:var(--ink);margin-bottom:8px;">Volunteer Matching</div>
+        <div class="body-text">Charities post volunteer opportunities; donors can apply and be accepted directly via the platform.</div>
+      </div>
+
+      <div style="border-top:2px solid var(--gold);padding:24px 28px;">
+        <div style="font-family:var(--ff-mono);font-size:14px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;">04</div>
+        <div style="font-family:var(--ff-serif);font-size:30px;font-weight:600;color:var(--ink);margin-bottom:8px;">Real-Time Chat</div>
+        <div class="body-text">Socket.IO-powered secure messaging between donors and charities, with message history.</div>
+      </div>
+
+      <div style="border-top:2px solid var(--gold);padding:24px 28px;">
+        <div style="font-family:var(--ff-mono);font-size:14px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;">05</div>
+        <div style="font-family:var(--ff-serif);font-size:30px;font-weight:600;color:var(--ink);margin-bottom:8px;">Admin Dashboard</div>
+        <div class="body-text">Administrators verify charities, manage all users, monitor platform activity, and review reports.</div>
+      </div>
+
+      <div style="border-top:2px solid var(--gold);padding:24px 28px;">
+        <div style="font-family:var(--ff-mono);font-size:14px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;">06</div>
+        <div style="font-family:var(--ff-serif);font-size:30px;font-weight:600;color:var(--ink);margin-bottom:8px;">Report &amp; Block System</div>
+        <div class="body-text">Users can report suspicious behaviour; admins review reports and take enforcement actions.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="foot-bar">
+    <span class="foot-left">Donation Platform</span>
+    <span class="foot-right">Mohammed Hamdi · 2026</span>
+  </div>
+</section>
+
+
+<!-- ========================================================
+     SLIDE 7 — USER ROLES & PERMISSIONS
+     Speaker notes: "The system enforces strict role separation.
+     Each role has a distinct set of capabilities enforced at the
+     backend through JWT middleware and role-based access control.
+     A charity cannot act as an admin. A donor cannot create
+     campaigns. Each role sees only what it is authorised to see."
+     ======================================================== -->
+<section class="slide dark" id="s7">
+  <div class="chrome-bar">
+    <span class="chrome-label">User Roles &amp; Permissions</span>
+    <span class="chrome-counter">07 / 14</span>
+  </div>
+
+  <div class="slide-body" style="padding:0;gap:0;">
+
+    <div class="reveal d1" style="padding:var(--gap-md) var(--px) var(--gap-md);">
+      <div class="kicker" style="margin-bottom:6px;">Access Control</div>
+      <div class="h2" style="color:var(--text-warm);">Three <em>distinct</em> roles, zero overlap.</div>
+    </div>
+
+    <div style="height:1px;background:var(--bd-dk);margin:0 var(--px);"></div>
+
+    <div class="reveal-f d2" style="flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;margin:0 var(--px);">
+
+      <!-- Donor -->
+      <div class="col-panel" style="padding-left:0;">
+        <div>
+          <div class="col-label">Role 01</div>
+          <div class="col-title">Donor</div>
+        </div>
+        <ul class="em-list">
+          <li>Browse all verified campaigns</li>
+          <li>Make monetary or item donations</li>
+          <li>Apply for volunteer positions</li>
+          <li>Chat with charities</li>
+          <li>Report suspicious accounts</li>
+          <li>Manage own profile &amp; history</li>
+        </ul>
+      </div>
+
+      <!-- Charity -->
+      <div class="col-panel">
+        <div>
+          <div class="col-label">Role 02</div>
+          <div class="col-title">Charity</div>
+        </div>
+        <ul class="em-list">
+          <li>Create &amp; manage campaigns</li>
+          <li>Receive and track donations</li>
+          <li>Post volunteer opportunities</li>
+          <li>Reply to donor messages</li>
+          <li>View campaign analytics</li>
+          <li>Access requires admin approval</li>
+        </ul>
+      </div>
+
+      <!-- Admin -->
+      <div class="col-panel" style="padding-right:0;">
+        <div>
+          <div class="col-label">Role 03</div>
+          <div class="col-title">Admin</div>
+        </div>
+        <ul class="em-list">
+          <li>Verify &amp; approve charities</li>
+          <li>Manage all platform users</li>
+          <li>Review reports &amp; take action</li>
+          <li>Block or suspend accounts</li>
+          <li>Platform-wide oversight</li>
+          <li>No donation or campaign access</li>
+        </ul>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="foot-bar">
+    <span class="foot-left">Donation Platform</span>
+    <span class="foot-right">Mohammed Hamdi · 2026</span>
+  </div>
+</section>
+
+
+<!-- ========================================================
+     SLIDE 8 — CHARITY VERIFICATION FLOW
+     Speaker notes: "Charity verification is the most critical
+     trust mechanism. A new charity submits their registration.
+     The admin reviews the documents. The system either approves
+     or rejects with a reason. Only after approval can a charity
+     access fundraising features. This human-in-the-loop design
+     is intentional — technology alone cannot verify intent."
+     ======================================================== -->
+<section class="slide light" id="s8">
+  <div class="chrome-bar">
+    <span class="chrome-label">Charity Verification Flow</span>
+    <span class="chrome-counter">08 / 14</span>
+  </div>
+
+  <div class="slide-body" style="justify-content:center;gap:var(--gap-lg);">
+
+    <div class="reveal d1">
+      <div class="kicker" style="margin-bottom:var(--gap-sm);">Trust Mechanism</div>
+      <div class="h2" style="color:var(--ink);">Every charity passes a <em>human review</em></div>
+    </div>
+
+    <!-- 4-step flow -->
+    <div class="reveal d2" style="display:flex;align-items:flex-start;gap:0;">
+
+      <div style="flex:1;border-top:2px solid var(--gold);padding:28px 24px 0 0;">
+        <div style="font-family:var(--ff-serif);font-size:52px;font-weight:600;color:var(--gold);line-height:1;margin-bottom:12px;">01</div>
+        <div style="font-family:var(--ff-serif);font-size:30px;font-weight:600;color:var(--ink);margin-bottom:10px;">Charity Registers</div>
+        <div class="body-text">Submits name, legal documents, mission statement, and contact information.</div>
+        <div style="margin-top:14px;" class="tag">Status: Pending</div>
+      </div>
+
+      <div style="flex-shrink:0;width:48px;display:flex;align-items:center;justify-content:center;padding-top:40px;font-family:var(--ff-mono);font-size:24px;color:var(--gold);">→</div>
+
+      <div style="flex:1;border-top:2px solid var(--gold);padding:28px 24px 0;">
+        <div style="font-family:var(--ff-serif);font-size:52px;font-weight:600;color:var(--gold);line-height:1;margin-bottom:12px;">02</div>
+        <div style="font-family:var(--ff-serif);font-size:30px;font-weight:600;color:var(--ink);margin-bottom:10px;">Admin Reviews</div>
+        <div class="body-text">Administrator manually inspects submitted documents and evaluates legitimacy.</div>
+        <div style="margin-top:14px;" class="tag">Under Review</div>
+      </div>
+
+      <div style="flex-shrink:0;width:48px;display:flex;align-items:center;justify-content:center;padding-top:40px;font-family:var(--ff-mono);font-size:24px;color:var(--gold);">→</div>
+
+      <div style="flex:1;border-top:2px solid var(--gold);padding:28px 24px 0;">
+        <div style="font-family:var(--ff-serif);font-size:52px;font-weight:600;color:var(--gold);line-height:1;margin-bottom:12px;">03</div>
+        <div style="font-family:var(--ff-serif);font-size:30px;font-weight:600;color:var(--ink);margin-bottom:10px;">Approved / Rejected</div>
+        <div class="body-text">Admin makes a decision. Rejected charities receive a reason and may reapply.</div>
+        <div style="margin-top:14px;display:flex;gap:10px;">
+          <div class="tag" style="color:#2d8a4e;border-color:#2d8a4e;">Approved</div>
+          <div class="tag" style="color:#c0392b;border-color:#c0392b;">Rejected</div>
+        </div>
+      </div>
+
+      <div style="flex-shrink:0;width:48px;display:flex;align-items:center;justify-content:center;padding-top:40px;font-family:var(--ff-mono);font-size:24px;color:var(--gold);">→</div>
+
+      <div style="flex:1;border-top:2px solid var(--gold);padding:28px 0 0 24px;">
+        <div style="font-family:var(--ff-serif);font-size:52px;font-weight:600;color:var(--gold);line-height:1;margin-bottom:12px;">04</div>
+        <div style="font-family:var(--ff-serif);font-size:30px;font-weight:600;color:var(--ink);margin-bottom:10px;">Verified Charity</div>
+        <div class="body-text">Badge granted. Charity can now create campaigns, receive donations, and chat with donors.</div>
+        <div style="margin-top:14px;" class="tag" style="color:#2d8a4e;border-color:#2d8a4e;">✓ Verified</div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="foot-bar">
+    <span class="foot-left">Donation Platform</span>
+    <span class="foot-right">Mohammed Hamdi · 2026</span>
+  </div>
+</section>
+
+
+<!-- ========================================================
+     SLIDE 9 — DONATION / CAMPAIGN FLOW
+     Speaker notes: "The donation flow follows five steps.
+     The charity creates a campaign with a goal and deadline.
+     The admin reviews and publishes it. Donors can then browse
+     and contribute. The charity tracks progress and communicates
+     updates. Note that payment is currently a simulated flow —
+     integration with a real payment gateway is planned as a
+     future improvement."
+     ======================================================== -->
+<section class="slide dark" id="s9">
+  <div class="chrome-bar">
+    <span class="chrome-label">Donation &amp; Campaign Flow</span>
+    <span class="chrome-counter">09 / 14</span>
+  </div>
+
+  <div class="slide-body" style="justify-content:center;gap:var(--gap-lg);">
+
+    <div class="reveal d1">
+      <div class="kicker" style="margin-bottom:var(--gap-sm);">End-to-End Process</div>
+      <div class="h2" style="color:var(--text-warm);">From <em>campaign</em> to donation received</div>
+    </div>
+
+    <div class="flow-row reveal d2">
+
+      <div class="flow-node">
+        <div class="node-num">01</div>
+        <div class="node-title">Charity Creates Campaign</div>
+        <div class="node-desc">Sets title, goal amount, deadline, and category.</div>
+      </div>
+      <div class="flow-arrow">→</div>
+
+      <div class="flow-node">
+        <div class="node-num">02</div>
+        <div class="node-title">Published on Platform</div>
+        <div class="node-desc">Campaign goes live and is visible to all donors.</div>
+      </div>
+      <div class="flow-arrow">→</div>
+
+      <div class="flow-node">
+        <div class="node-num">03</div>
+        <div class="node-title">Donor Contributes</div>
+        <div class="node-desc">Donates money or items via simulated checkout flow.*</div>
+      </div>
+      <div class="flow-arrow">→</div>
+
+      <div class="flow-node">
+        <div class="node-num">04</div>
+        <div class="node-title">Charity Tracks &amp; Updates</div>
+        <div class="node-desc">Progress bar updates; charity posts updates for donors.</div>
+      </div>
+      <div class="flow-arrow">→</div>
+
+      <div class="flow-node" style="padding-right:0;">
+        <div class="node-num">05</div>
+        <div class="node-title">Goal Reached / Closed</div>
+        <div class="node-desc">Charity closes campaign; distributes aid offline.</div>
+      </div>
+
+    </div>
+
+    <div class="reveal-f d4" style="padding:16px 24px;border-left:3px solid var(--gold);background:rgba(46,61,92,.4);">
+      <span style="font-family:var(--ff-mono);font-size:var(--sz-label);color:var(--gold);letter-spacing:.12em;text-transform:uppercase;">* Payment Note — </span>
+      <span style="font-family:var(--ff-sans);font-size:var(--sz-body);color:var(--text-md-dk);">Current payment is a <em style="font-family:var(--ff-serif);font-style:italic;color:var(--gold);">demo / simulated flow.</em> Real payment gateway integration is a planned future improvement.</span>
+    </div>
+
+  </div>
+
+  <div class="foot-bar">
+    <span class="foot-left">Donation Platform</span>
+    <span class="foot-right">Mohammed Hamdi · 2026</span>
+  </div>
+</section>
+
+
+<!-- ========================================================
+     SLIDE 10 — SECURE MESSAGING FLOW
+     Speaker notes: "The messaging system uses Socket.IO for
+     real-time communication. A donor initiates a conversation
+     with a charity. Messages are sent via WebSocket, stored in
+     MongoDB, and the server validates both sender and recipient
+     identity on every message. Users can block contacts, and
+     admins can review flagged conversations."
+     ======================================================== -->
+<section class="slide light" id="s10">
+  <div class="chrome-bar">
+    <span class="chrome-label">Secure Messaging Flow</span>
+    <span class="chrome-counter">10 / 14</span>
+  </div>
+
+  <div class="slide-body" style="flex-direction:row;align-items:stretch;gap:0;padding:0 var(--px);">
+
+    <!-- Left: description -->
+    <div class="reveal-l d1" style="flex:0 0 560px;display:flex;flex-direction:column;justify-content:center;border-right:1px solid var(--bd-lt);padding-right:60px;">
+      <div class="kicker" style="margin-bottom:var(--gap-sm);">Real-Time Communication</div>
+      <div class="gold-rule"></div>
+      <div class="h2" style="color:var(--ink);margin-bottom:var(--gap-md);">Chat that is<br><em>authenticated</em><br>end-to-end.</div>
+      <div class="lead">Socket.IO WebSocket with JWT-validated identity on every event. No anonymous messages.</div>
+    </div>
+
+    <!-- Right: steps -->
+    <div class="reveal d3" style="flex:1;display:flex;flex-direction:column;justify-content:center;padding-left:60px;gap:0;">
+
+      <div style="border-top:1px solid var(--bd-lt);padding:20px 0;display:flex;align-items:flex-start;gap:24px;">
+        <div style="font-family:var(--ff-serif);font-size:36px;font-weight:600;color:var(--gold);line-height:1;flex-shrink:0;width:40px;">1</div>
+        <div>
+          <div style="font-family:var(--ff-serif);font-size:26px;font-weight:600;color:var(--ink);margin-bottom:4px;">Donor Opens Chat</div>
+          <div class="body-text">Initiates a conversation with a verified charity from their profile or campaign page.</div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--bd-lt);padding:20px 0;display:flex;align-items:flex-start;gap:24px;">
+        <div style="font-family:var(--ff-serif);font-size:36px;font-weight:600;color:var(--gold);line-height:1;flex-shrink:0;width:40px;">2</div>
+        <div>
+          <div style="font-family:var(--ff-serif);font-size:26px;font-weight:600;color:var(--ink);margin-bottom:4px;">JWT Authentication</div>
+          <div class="body-text">Server validates token on WebSocket connection. Unauthorised connections are rejected immediately.</div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--bd-lt);padding:20px 0;display:flex;align-items:flex-start;gap:24px;">
+        <div style="font-family:var(--ff-serif);font-size:36px;font-weight:600;color:var(--gold);line-height:1;flex-shrink:0;width:40px;">3</div>
+        <div>
+          <div style="font-family:var(--ff-serif);font-size:26px;font-weight:600;color:var(--ink);margin-bottom:4px;">Messages Persisted</div>
+          <div class="body-text">All messages stored in MongoDB with sender ID, timestamp, and conversation ID for audit trail.</div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--bd-lt);padding:20px 0;display:flex;align-items:flex-start;gap:24px;">
+        <div style="font-family:var(--ff-serif);font-size:36px;font-weight:600;color:var(--gold);line-height:1;flex-shrink:0;width:40px;">4</div>
+        <div>
+          <div style="font-family:var(--ff-serif);font-size:26px;font-weight:600;color:var(--ink);margin-bottom:4px;">Block &amp; Report Available</div>
+          <div class="body-text">Either party can block the other. Admins can review flagged conversations for policy violations.</div>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid var(--bd-lt);border-bottom:1px solid var(--bd-lt);padding:20px 0;display:flex;align-items:flex-start;gap:24px;">
+        <div style="font-family:var(--ff-serif);font-size:36px;font-weight:600;color:var(--gold);line-height:1;flex-shrink:0;width:40px;">5</div>
+        <div>
+          <div style="font-family:var(--ff-serif);font-size:26px;font-weight:600;color:var(--ink);margin-bottom:4px;">Real-Time Delivery</div>
+          <div class="body-text">Socket.IO emits events to both parties instantly; delivery is confirmed via acknowledgement callbacks.</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="foot-bar">
+    <span class="foot-left">Donation Platform</span>
+    <span class="foot-right">Mohammed Hamdi · 2026</span>
+  </div>
+</section>
+
+
+<!-- ========================================================
+     SLIDE 11 — SYSTEM ARCHITECTURE
+     Speaker notes: "The architecture follows a classic three-tier
+     model. The frontend is React with Vite and Tailwind CSS.
+     It communicates with the Express API backend over HTTP for
+     REST operations, and via WebSocket for real-time chat.
+     The data layer consists of MongoDB for persistence, Firebase
+     for Google OAuth, and bcrypt for password security."
+     ======================================================== -->
+<section class="slide dark" id="s11">
+  <div class="chrome-bar">
+    <span class="chrome-label">System Architecture</span>
+    <span class="chrome-counter">11 / 14</span>
+  </div>
+
+  <div class="slide-body" style="flex-direction:row;align-items:stretch;gap:0;padding:0 var(--px);">
+
+    <!-- Left: label + headline -->
+    <div class="reveal-l d1" style="flex:0 0 480px;display:flex;flex-direction:column;justify-content:center;border-right:1px solid var(--bd-dk);padding-right:56px;">
+      <div class="kicker" style="margin-bottom:var(--gap-sm);">Technical Design</div>
+      <div class="gold-rule"></div>
+      <div class="h1" style="color:var(--text-warm);margin-bottom:var(--gap-md);">A classic<br><em>three-tier</em><br>architecture.</div>
+      <div class="lead">Frontend, Backend API, and Data &amp; Services layers — each independently responsible and clearly separated.</div>
+    </div>
+
+    <!-- Right: architecture diagram -->
+    <div class="reveal d2" style="flex:1;display:flex;flex-direction:column;justify-content:center;padding-left:56px;gap:0;">
+
+      <!-- Layer 1: Frontend -->
+      <div class="arch-layer">
+        <div class="layer-label">Layer 01 — Frontend</div>
+        <div class="layer-title">React Application</div>
+        <div class="layer-items">
+          <span>React 18</span>
+          <span>Vite</span>
+          <span>Tailwind CSS</span>
+          <span>React Router</span>
+          <span>Socket.IO Client</span>
+        </div>
+      </div>
+
+      <div class="arch-connector">↓ &nbsp; REST API + WebSocket &nbsp; ↓</div>
+
+      <!-- Layer 2: Backend -->
+      <div class="arch-layer">
+        <div class="layer-label">Layer 02 — Backend API</div>
+        <div class="layer-title">Express.js Server</div>
+        <div class="layer-items">
+          <span>Node.js + Express</span>
+          <span>JWT Middleware</span>
+          <span>Role-Based Access Control</span>
+          <span>Rate Limiting</span>
+          <span>Mongoose ODM</span>
+        </div>
+      </div>
+
+      <div class="arch-connector">↓ &nbsp; Queries + Auth Calls &nbsp; ↓</div>
+
+      <!-- Layer 3: Data -->
+      <div class="arch-layer">
+        <div class="layer-label">Layer 03 — Data &amp; Services</div>
+        <div class="layer-title">Persistence &amp; Auth</div>
+        <div class="layer-items">
+          <span>MongoDB (Mongoose)</span>
+          <span>Socket.IO Server</span>
+          <span>Firebase Google OAuth</span>
+          <span>bcrypt</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="foot-bar">
+    <span class="foot-left">Donation Platform</span>
+    <span class="foot-right">Mohammed Hamdi · 2026</span>
+  </div>
+</section>
+
+
+<!-- ========================================================
+     SLIDE 12 — DATABASE OVERVIEW
+     Speaker notes: "The database is MongoDB, using Mongoose for
+     schema enforcement. Six main collections. Users stores both
+     donors and admins. Charities stores charity profiles with
+     verification status. Campaigns and Donations track the giving
+     flows. Messages stores all chat history. Reports tracks
+     flagged content for admin action."
+     ======================================================== -->
+<section class="slide light" id="s12">
+  <div class="chrome-bar">
+    <span class="chrome-label">Database Overview</span>
+    <span class="chrome-counter">12 / 14</span>
+  </div>
+
+  <div class="slide-body" style="justify-content:center;gap:var(--gap-md);">
+
+    <div class="reveal d1">
+      <div class="kicker" style="margin-bottom:var(--gap-sm);">MongoDB with Mongoose</div>
+      <div class="h2" style="color:var(--ink);">Six <em>collections</em>, one source of truth</div>
+    </div>
+
+    <div class="db-grid reveal-f d2">
+
+      <div class="db-card">
+        <div class="db-name">Users</div>
+        <div class="db-fields">
+          _id · name · email<br>
+          passwordHash · role<br>
+          createdAt · isBlocked
+        </div>
+      </div>
+
+      <div class="db-card">
+        <div class="db-name">Charities</div>
+        <div class="db-fields">
+          _id · userId · orgName<br>
+          documents · status<br>
+          verifiedAt · isBlocked
+        </div>
+      </div>
+
+      <div class="db-card">
+        <div class="db-name">Campaigns</div>
+        <div class="db-fields">
+          _id · charityId · title<br>
+          goalAmount · raised<br>
+          category · deadline
+        </div>
+      </div>
+
+      <div class="db-card">
+        <div class="db-name">Donations</div>
+        <div class="db-fields">
+          _id · donorId · campaignId<br>
+          amount · type (money/item)<br>
+          status · createdAt
+        </div>
+      </div>
+
+      <div class="db-card">
+        <div class="db-name">Messages</div>
+        <div class="db-fields">
+          _id · senderId · receiverId<br>
+          conversationId · content<br>
+          sentAt · isRead
+        </div>
+      </div>
+
+      <div class="db-card">
+        <div class="db-name">Reports</div>
+        <div class="db-fields">
+          _id · reporterId · targetId<br>
+          targetType · reason<br>
+          status · resolvedAt
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="foot-bar">
+    <span class="foot-left">Donation Platform</span>
+    <span class="foot-right">Mohammed Hamdi · 2026</span>
+  </div>
+</section>
+
+
+<!-- ========================================================
+     SLIDE 13 — SECURITY & PRIVACY
+     Speaker notes: "Security was not an afterthought — it was
+     built into every layer. JWT tokens authenticate every
+     request. bcrypt hashes all passwords. Role-based access
+     control prevents privilege escalation. Rate limiting blocks
+     brute-force attacks. The report-block system handles
+     community safety. The one known gap is that JWT tokens are
+     currently stored in localStorage — migrating to HttpOnly
+     cookies is a planned future improvement."
+     ======================================================== -->
+<section class="slide dark" id="s13">
+  <div class="chrome-bar">
+    <span class="chrome-label">Security &amp; Privacy</span>
+    <span class="chrome-counter">13 / 14</span>
+  </div>
+
+  <div class="slide-body" style="justify-content:center;gap:var(--gap-lg);">
+
+    <div class="reveal d1">
+      <div class="kicker" style="margin-bottom:var(--gap-sm);">Defence in Depth</div>
+      <div class="h2" style="color:var(--text-warm);">Security built at <em>every layer</em></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;" class="reveal-f d2">
+
+      <div style="border-top:2px solid var(--gold);padding:24px 32px 24px 0;">
+        <div style="font-family:var(--ff-mono);font-size:14px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;">Authentication</div>
+        <div style="font-family:var(--ff-serif);font-size:30px;font-weight:600;color:var(--text-warm);margin-bottom:8px;">JWT + Firebase OAuth</div>
+        <div class="body-text" style="color:var(--text-md-dk);">Signed tokens on every request. Google OAuth via Firebase for social login. Token expiry enforced server-side.</div>
+      </div>
+
+      <div style="border-top:2px solid var(--gold);padding:24px 0 24px 32px;">
+        <div style="font-family:var(--ff-mono);font-size:14px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;">Password Security</div>
+        <div style="font-family:var(--ff-serif);font-size:30px;font-weight:600;color:var(--text-warm);margin-bottom:8px;">bcrypt Hashing</div>
+        <div class="body-text" style="color:var(--text-md-dk);">All passwords hashed with bcrypt (salt rounds: 10). Plain-text passwords never stored or transmitted.</div>
+      </div>
+
+      <div style="border-top:2px solid var(--gold);padding:24px 32px 0 0;">
+        <div style="font-family:var(--ff-mono);font-size:14px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;">Access Control</div>
+        <div style="font-family:var(--ff-serif);font-size:30px;font-weight:600;color:var(--text-warm);margin-bottom:8px;">Role-Based (RBAC)</div>
+        <div class="body-text" style="color:var(--text-md-dk);">JWT middleware validates role on every protected route. Donor, charity, and admin routes are strictly separated.</div>
+      </div>
+
+      <div style="border-top:2px solid var(--gold);padding:24px 0 0 32px;">
+        <div style="font-family:var(--ff-mono);font-size:14px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;">Abuse Prevention</div>
+        <div style="font-family:var(--ff-serif);font-size:30px;font-weight:600;color:var(--text-warm);margin-bottom:8px;">Rate Limiting + Reports</div>
+        <div class="body-text" style="color:var(--text-md-dk);">Express rate limiter on auth endpoints. Community report-and-block system with admin enforcement actions.</div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="foot-bar">
+    <span class="foot-left">Donation Platform</span>
+    <span class="foot-right">Mohammed Hamdi · 2026</span>
+  </div>
+</section>
+
+
+<!-- ========================================================
+     SLIDE 14 — FUTURE IMPROVEMENTS & CONCLUSION
+     Speaker notes: "To conclude: the Donation Platform
+     successfully demonstrates how technology can solve the trust
+     problem in charitable giving. The core system works end-to-end.
+     Looking forward, five improvements would take this to
+     production-grade: a real payment gateway, HttpOnly cookies
+     for safer token storage, private cloud file storage,
+     AI-powered content moderation, and a mobile application.
+     Thank you — I'm happy to take your questions."
+     ======================================================== -->
+<section class="slide light" id="s14">
+
+  <div style="position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;justify-content:center;padding:0 var(--px);">
+
+    <div class="reveal d1" style="margin-bottom:var(--gap-sm);">
+      <span class="kicker">Looking Forward</span>
+    </div>
+    <div class="gold-rule reveal d1"></div>
+
+    <div class="h1 reveal d2" style="color:var(--ink);margin-bottom:var(--gap-lg);">
+      What comes <em>next</em>
+    </div>
+
+    <!-- Two columns: improvements + conclusion -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;align-items:start;">
+
+      <div class="reveal d3" style="border-right:1px solid var(--bd-lt);padding-right:64px;">
+        <div style="font-family:var(--ff-mono);font-size:var(--sz-label);color:var(--text-lt-lt);letter-spacing:.14em;text-transform:uppercase;margin-bottom:var(--gap-md);">Five Future Improvements</div>
+        <ul class="em-list large">
+          <li>Real payment gateway integration (Stripe / PayPal)</li>
+          <li>HttpOnly cookies for safer JWT storage</li>
+          <li>Private cloud file storage (AWS S3 / Cloudinary)</li>
+          <li>AI-powered content moderation for reports</li>
+          <li>Native mobile application (React Native)</li>
+        </ul>
+      </div>
+
+      <div class="reveal d4" style="padding-left:64px;display:flex;flex-direction:column;gap:var(--gap-md);">
+        <div style="font-family:var(--ff-mono);font-size:var(--sz-label);color:var(--text-lt-lt);letter-spacing:.14em;text-transform:uppercase;">Conclusion</div>
+        <div style="font-family:var(--ff-serif);font-size:38px;font-weight:600;color:var(--ink);line-height:1.25;">
+          The Donation Platform proves that <em>trust</em> in charitable giving can be built with the right technical architecture.
+        </div>
+        <div class="lead">Verification, transparency, and security — working together to connect donors with the charities that need them most.</div>
+
+        <div style="margin-top:var(--gap-md);padding-top:var(--gap-md);border-top:1px solid var(--bd-lt);">
+          <div style="font-family:var(--ff-serif);font-size:32px;font-weight:600;color:var(--ink);margin-bottom:4px;">Mohammed Hamdi</div>
+          <div style="font-family:var(--ff-mono);font-size:var(--sz-label);color:var(--text-lt-lt);letter-spacing:.12em;text-transform:uppercase;">Computer Science · 2026 · Thank You</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold) 0%,rgba(200,168,112,0) 60%);z-index:2;"></div>
+</section>
+
+
+</main><!-- end deck-stage -->
+</div><!-- end deck-viewport -->
+
+
+<script>
+/* ============================================================
+   SLIDE PRESENTATION CONTROLLER
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var slides     = document.querySelectorAll('.slide');
+  var stage      = document.getElementById('deckStage');
+  var dotsWrap   = document.getElementById('progress-dots');
+  var total      = slides.length;
+  var current    = 0;
+  var dots       = [];
+
+  /* --- Stage scaling --- */
+  function scaleStage() {
+    var s  = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    var tx = (window.innerWidth  - 1920 * s) / 2;
+    var ty = (window.innerHeight - 1080 * s) / 2;
+    stage.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + s + ')';
+  }
+  scaleStage();
+  window.addEventListener('resize', scaleStage);
+
+  /* --- Build progress dots --- */
+  for (var i = 0; i < total; i++) {
+    var d = document.createElement('span');
+    d.addEventListener('click', (function (idx) {
+      return function () { goTo(idx); };
+    })(i));
+    dotsWrap.appendChild(d);
+    dots.push(d);
+  }
+
+  /* --- Show slide --- */
+  function goTo(idx) {
+    idx = Math.max(0, Math.min(idx, total - 1));
+    slides[current].classList.remove('active', 'visible');
+    current = idx;
+    slides[current].classList.add('active', 'visible');
+    dots.forEach(function (d, i) { d.classList.toggle('on', i === current); });
+  }
+
+  /* Initial show */
+  goTo(0);
+
+  /* --- Keyboard navigation --- */
+  document.addEventListener('keydown', function (e) {
+    if (e.target && e.target.getAttribute('contenteditable')) return;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown': case ' ':
+        e.preventDefault(); goTo(current + 1); break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp':
+        e.preventDefault(); goTo(current - 1); break;
+      case 'Home': goTo(0); break;
+      case 'End':  goTo(total - 1); break;
+    }
+  });
+
+  /* --- Mouse wheel --- */
+  var wheelLocked = false;
+  document.addEventListener('wheel', function (e) {
+    if (wheelLocked) return;
+    wheelLocked = true;
+    setTimeout(function () { wheelLocked = false; }, 700);
+    if (e.deltaY > 0) goTo(current + 1);
+    else              goTo(current - 1);
+  }, { passive: true });
+
+  /* --- Touch / swipe --- */
+  var touchX = null, touchY = null;
+  document.addEventListener('touchstart', function (e) {
+    touchX = e.touches[0].clientX;
+    touchY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (touchX === null) return;
+    var dx = touchX - e.changedTouches[0].clientX;
+    var dy = touchY - e.changedTouches[0].clientY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      goTo(dx > 0 ? current + 1 : current - 1);
+    } else if (Math.abs(dy) > 40) {
+      goTo(dy > 0 ? current + 1 : current - 1);
+    }
+    touchX = null; touchY = null;
+  }, { passive: true });
+
+  /* ============================================================
+     INLINE EDITING
+     ============================================================ */
+  var editToggle = document.getElementById('editToggle');
+  var hotzone    = document.querySelector('.edit-hotzone');
+  var hideTimer  = null;
+  var isEditing  = false;
+
+  function setEditing(on) {
+    isEditing = on;
+    editToggle.textContent = on ? '✓ DONE (E)' : '✏ EDIT (E)';
+    editToggle.classList.toggle('active', on);
+    document.querySelectorAll('h1,h2,h3,.h-display,.h1,.h2,.h3,.lead,.body-text,.kicker,.stat-val,.node-title,.node-desc,.col-title,.layer-title,.db-name,.db-fields,.flow-node .node-desc').forEach(function (el) {
+      el.contentEditable = on ? 'true' : 'false';
+    });
+    if (!on) {
+      try { localStorage.setItem('dp-defense-html', document.documentElement.outerHTML); } catch(e){}
+    }
+  }
+
+  editToggle.addEventListener('click', function () { setEditing(!isEditing); });
+
+  hotzone.addEventListener('mouseenter', function () {
+    clearTimeout(hideTimer);
+    editToggle.classList.add('show');
+  });
+  hotzone.addEventListener('mouseleave', function () {
+    hideTimer = setTimeout(function () { if (!isEditing) editToggle.classList.remove('show'); }, 400);
+  });
+  editToggle.addEventListener('mouseenter', function () { clearTimeout(hideTimer); });
+  editToggle.addEventListener('mouseleave', function () {
+    hideTimer = setTimeout(function () { if (!isEditing) editToggle.classList.remove('show'); }, 400);
+  });
+  hotzone.addEventListener('click', function () { setEditing(!isEditing); });
+
+  document.addEventListener('keydown', function (e) {
+    if ((e.key === 'e' || e.key === 'E') && !e.target.getAttribute('contenteditable')) {
+      setEditing(!isEditing);
+    }
+  });
+
+}());
+</script>
+</body>
+</html>

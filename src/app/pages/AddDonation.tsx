@@ -115,6 +115,7 @@ export function AddDonation() {
         type: 'success',
         title: 'تم إرسال التبرع',
         message: 'تم إرسال تبرعك للمراجعة. سيتم نشره قريباً.',
+        priority: 'medium',
       });
       toast.success('تم إرسال التبرع بنجاح بانتظار موافقة الإدارة');
       navigate('/donations');

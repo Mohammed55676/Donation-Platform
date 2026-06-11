@@ -6,9 +6,20 @@ const mongoose = require('mongoose');
 
 const conversationSchema = new mongoose.Schema(
   {
+    // Legacy support
     post_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'CommunityRequest',
+      required: false,
+    },
+    // New generic context support
+    contextType: {
+      type: String,
+      enum: ['donation_request', 'donor_offer', 'community_request'],
+      required: false,
+    },
+    contextId: {
+      type: mongoose.Schema.Types.ObjectId,
       required: false,
     },
     requester_id: {

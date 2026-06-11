@@ -21,6 +21,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "../components/ui/accordion";
+import { DonationCard } from '../components/ui/DonationCard';
+import { SafeImage } from '../components/ui/SafeImage';
 
 export function Home() {
   const { user, toggleWishlist } = useAuth();
@@ -358,57 +360,16 @@ export function Home() {
 
           <motion.div {...slideUp} transition={{ duration: 0.5, delay: 0.15 }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {recentDonations.map((donation) => (
-              <Link key={donation.id} to={`/donations/${donation.id}`}>
-                <Card className="overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer h-full flex flex-col group border-none">
-                  <div className="relative h-52 overflow-hidden">
-                    <img
-                      src={donation.image}
-                      alt={donation.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                    <div className="absolute top-3 end-3 flex flex-col gap-2">
-                      <Badge className="bg-primary/90 text-white border-0 shadow font-semibold text-xs">
-                        جديد
-                      </Badge>
-                    </div>
-                    <Button
-                      size="icon"
-                      variant="secondary"
-                      className={`absolute top-3 start-3 h-9 w-9 rounded-full bg-white/90 dark:bg-black/60 shadow hover:bg-white ${user?.wishlist?.includes(donation.id) ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
-                        }`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toggleWishlist(donation.id);
-                      }}
-                    >
-                      <Heart className={`h-4 w-4 ${user?.wishlist?.includes(donation.id) ? 'fill-current' : ''}`} />
-                    </Button>
-                  </div>
-                  <CardHeader className="pb-2 pt-4">
-                    <CardTitle className="line-clamp-2 text-base leading-snug group-hover:text-primary transition-colors">
-                      {donation.title}
-                    </CardTitle>
-                    <CardDescription className="line-clamp-2 text-sm">{donation.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="mt-auto pt-3 pb-5 border-t border-border/50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <img
-                          src={donation.donor.avatar}
-                          alt={donation.donor.name}
-                          className="w-8 h-8 rounded-full object-cover ring-2 ring-background"
-                        />
-                        <span className="text-sm font-medium">{donation.donor?.name || 'فاعل خير'}</span>
-                      </div>
-                      <Badge variant="secondary" className="text-xs border border-border/50">
-                        {donation.location || 'غير محدد'}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+              <DonationCard
+                key={donation.id}
+                donation={donation}
+                user={user}
+                toggleWishlist={toggleWishlist}
+                onWishlistClick={() => {
+                  if (!user) { navigate('/login'); return; }
+                  toggleWishlist(donation.id);
+                }}
+              />
             ))}
           </motion.div>
         </div>

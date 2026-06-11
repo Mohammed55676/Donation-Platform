@@ -28,17 +28,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from '../components/ui/textarea';
 import api from '../utils/api';
 
-// Arabic labels for donation request statuses
-const REQUEST_STATUS_LABELS: Record<string, string> = {
-  pending_review: 'قيد المراجعة',
-  accepted:       'مقبول',
+const OFFER_STATUS_LABELS: Record<string, string> = {
+  new:            'عرض جديد',
+  accepted:       'مقبول (قيد التسليم)',
   rejected:       'مرفوض',
   cancelled:      'ملغي',
   received:       'تم الاستلام',
 };
 
-const REQUEST_STATUS_COLORS: Record<string, string> = {
-  pending_review: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30',
+const OFFER_STATUS_COLORS: Record<string, string> = {
+  new:            'bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400',
   accepted:       'bg-blue-100 text-blue-700 dark:bg-blue-900/30',
   rejected:       'bg-red-100 text-red-600 dark:bg-red-900/30',
   cancelled:      'bg-gray-100 text-gray-600 dark:bg-gray-800',
@@ -99,19 +98,19 @@ export function Dashboard() {
 
 
 
-  // For donor users: fetch real requests for their donations
-  const [myDonorRequests, setMyDonorRequests] = useState<any[]>([]);
-  const [requestsLoading, setRequestsLoading] = useState(false);
+  // For donor users: fetch real offers for their donations
+  const [myOffers, setMyOffers] = useState<any[]>([]);
+  const [offersLoading, setOffersLoading] = useState(false);
   useEffect(() => {
-    if (user?.user_type !== 'donor') return;
-    setRequestsLoading(true);
-    api.get('/donation-requests/for-donor')
-      .then(res => setMyDonorRequests(res.data.data || []))
-      .catch(() => setMyDonorRequests([]))
-      .finally(() => setRequestsLoading(false));
-  }, [user?.id, user?.user_type]);
+    if (user?.user_type !== 'donor' && user?.role !== 'admin') return;
+    setOffersLoading(true);
+    api.get('/donor-offers/my')
+      .then(res => setMyOffers(res.data.data || []))
+      .catch(() => setMyOffers([]))
+      .finally(() => setOffersLoading(false));
+  }, [user?.id, user?.user_type, user?.role]);
 
-  const requestsCount = myDonorRequests.length;
+  const offersCount = myOffers.length;
 
   const [showRating, setShowRating] = useState(false);
   const [ratingTarget, setRatingTarget] = useState<{ donationId: string; rateeId: string; rateeName: string } | null>(null);
@@ -141,7 +140,7 @@ export function Dashboard() {
   // Stats
   const stats = [
     { label: t('dashboard.stat_my_donations'), value: myDonations.length, icon: Package, color: 'text-primary', bgColor: 'bg-primary/10' },
-    { label: t('dashboard.stat_my_requests'), value: requestsCount, icon: Heart, color: 'text-secondary', bgColor: 'bg-secondary/10' },
+    { label: 'عروضي', value: offersCount, icon: Heart, color: 'text-secondary', bgColor: 'bg-secondary/10' },
     { label: t('dashboard.stat_active_tasks'), value: inProgressTasks + pendingTasks, icon: Clock, color: 'text-orange-500', bgColor: 'bg-orange-100 dark:bg-orange-900/30' },
     { label: t('dashboard.stat_completed'), value: completedTasks, icon: CheckCircle, color: 'text-green-500', bgColor: 'bg-green-100 dark:bg-green-900/30' },
   ];
@@ -247,7 +246,7 @@ export function Dashboard() {
           <TabsList className="flex flex-wrap gap-1 h-auto rounded-xl p-1 bg-muted">
             <TabsTrigger value="overview" className="rounded-lg">{t('dashboard.tab_overview')}</TabsTrigger>
             <TabsTrigger value="donations" className="rounded-lg">{t('dashboard.tab_donations')}</TabsTrigger>
-            <TabsTrigger value="requests" className="rounded-lg">{t('dashboard.tab_requests')}</TabsTrigger>
+            <TabsTrigger value="requests" className="rounded-lg">عروضي</TabsTrigger>
             <TabsTrigger value="volunteer" className="rounded-lg">{t('dashboard.tab_volunteer')}</TabsTrigger>
             <TabsTrigger value="saved" className="rounded-lg">{t('dashboard.tab_saved')}</TabsTrigger>
             <TabsTrigger value="profile" className="rounded-lg">{t('dashboard.tab_profile')}</TabsTrigger>
@@ -334,73 +333,56 @@ export function Dashboard() {
             </Card>
           </TabsContent>
 
-          {/* 3. MY REQUESTS */}
+          {/* 3. MY OFFERS */}
           <TabsContent value="requests" className="mt-6">
             <Card className="border-none card-shadow rounded-3xl bg-card overflow-hidden">
               <CardHeader>
-                <CardTitle>طلبات التبرع</CardTitle>
-                <CardDescription>الطلبات المقدمة على تبرعاتك</CardDescription>
+                <CardTitle>عروضي</CardTitle>
+                <CardDescription>العروض التي قدمتها للجمعيات الخيرية</CardDescription>
               </CardHeader>
               <CardContent>
-                {myDonorRequests.length === 0 ? (
+                {myOffers.length === 0 ? (
                   <div className="text-center py-12">
                     <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
-                    <p className="text-muted-foreground">{t('dashboard.no_requests')}</p>
-                    <Link to="/donations"><Button variant="outline" className="mt-4">{t('dashboard.browse_donations_btn')}</Button></Link>
+                    <p className="text-muted-foreground">لم تقم بتقديم أي عروض بعد</p>
+                    <Link to="/donations"><Button variant="outline" className="mt-4">استعرض الاحتياجات</Button></Link>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {myDonorRequests.map((request) => {
-                      const don = request.donation_id;
-                      const requester = request.charity;
-                      const statusLabel = REQUEST_STATUS_LABELS[request.status] || request.status;
-                      const statusColor = REQUEST_STATUS_COLORS[request.status] || '';
+                    {myOffers.map((offer) => {
+                      const charity = offer.charityId;
+                      const request = offer.donationRequestId;
+                      const statusLabel = OFFER_STATUS_LABELS[offer.status] || offer.status;
+                      const statusColor = OFFER_STATUS_COLORS[offer.status] || '';
                       return (
-                      <Card key={request.id} className="overflow-hidden border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 transition-all">
+                      <Card key={offer.id || offer._id} className="overflow-hidden border-none card-shadow rounded-2xl hover:shadow-lg hover:shadow-primary/10 transition-all">
                         <div className="flex flex-col sm:flex-row gap-4 p-4">
-                          {don?.image && <img src={don.image} alt={don?.title} className="w-full sm:w-28 h-28 object-cover rounded-xl flex-shrink-0" />}
                           <div className="flex-1 space-y-2">
                             <div className="flex items-start justify-between gap-2">
                               <div>
-                                <h3 className="font-semibold">{don?.title}</h3>
-                                <p className="text-sm font-medium text-primary">الجمعية: {requester?.charityName || requester?.name || requester?.anonymousCode}</p>
+                                <h3 className="font-semibold">طلب: {request?.title || 'طلب محذوف'}</h3>
+                                <p className="text-sm font-medium text-primary">الجمعية: {charity?.charityName || charity?.name || 'غير معروف'}</p>
                               </div>
                               <Badge className={statusColor}>{statusLabel}</Badge>
                             </div>
-                            {requester?.situation_explanation && <p className="text-sm text-muted-foreground line-clamp-2">ملاحظات: {requester.situation_explanation}</p>}
-                            <div className="flex flex-wrap gap-2">
-                              {don?.category && <Badge variant="outline">{don.category}</Badge>}
-                              <Badge variant="outline">📅 {new Date(request.createdAt).toLocaleDateString('ar-SA')}</Badge>
+                            <p className="text-sm text-muted-foreground font-medium mt-2">
+                              العرض: {offer.offeredQuantity} × {offer.offeredItem} ({offer.condition})
+                            </p>
+                            {offer.message && <p className="text-sm text-muted-foreground mt-1 bg-muted p-2 rounded-lg">رسالتك: {offer.message}</p>}
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              <Badge variant="outline">📅 {new Date(offer.createdAt).toLocaleDateString('ar-SA')}</Badge>
                             </div>
-                            <div className="flex items-center gap-2 pt-1">
-                              {don?.id && <Link to={`/donations/${don.id}`}><Button variant="outline" size="sm"><Eye className="me-2 h-4 w-4" />عرض</Button></Link>}
-                              {request.status === 'pending_review' && (
-                                <>
-                                  <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
-                                    try {
-                                      await api.put(`/donation-requests/${request.id}/donor-review`, { action: 'accept' });
-                                      toast.success('تم قبول الطلب!');
-                                      setMyDonorRequests(prev => prev.map(r => r.id === request.id ? { ...r, status: 'accepted' } : r));
-                                    } catch (e: any) {
-                                      toast.error(e.response?.data?.error || 'حدث خطأ');
-                                    }
-                                  }}><CheckCircle className="me-1 h-3.5 w-3.5"/> قبول</Button>
-                                  <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200" onClick={async () => {
-                                    try {
-                                      await api.put(`/donation-requests/${request.id}/donor-review`, { action: 'reject' });
-                                      toast.success('تم رفض الطلب');
-                                      setMyDonorRequests(prev => prev.map(r => r.id === request.id ? { ...r, status: 'rejected' } : r));
-                                    } catch (e: any) {
-                                      toast.error(e.response?.data?.error || 'حدث خطأ');
-                                    }
-                                  }}><XCircle className="me-1 h-3.5 w-3.5"/> رفض</Button>
-                                </>
-                              )}
-                              {request.status === 'received' && don?.id && (
-                                <Button variant="outline" size="sm" onClick={() => {
-                                  setRatingTarget({ donationId: don.id, rateeId: '', rateeName: 'الجمعية' });
-                                  setShowRating(true);
-                                }}><Star className="me-2 h-4 w-4" />تقييم</Button>
+                            <div className="flex items-center gap-2 pt-2 mt-2 border-t border-slate-100 dark:border-slate-800">
+                              {offer.status === 'new' && (
+                                <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200" onClick={async () => {
+                                  try {
+                                    await api.patch(`/donor-offers/${offer._id || offer.id}/cancel`);
+                                    toast.success('تم إلغاء العرض');
+                                    setMyOffers(prev => prev.map(o => (o._id || o.id) === (offer._id || offer.id) ? { ...o, status: 'cancelled' } : o));
+                                  } catch (e: any) {
+                                    toast.error(e.response?.data?.error || 'حدث خطأ');
+                                  }
+                                }}><XCircle className="me-1 h-3.5 w-3.5"/> إلغاء العرض</Button>
                               )}
                             </div>
                           </div>

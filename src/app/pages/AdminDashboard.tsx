@@ -36,6 +36,8 @@ import type { Campaign } from '../hooks/useCampaigns';
 import { useVolunteerOpportunities } from '../hooks/useVolunteerOpportunities';
 import type { VolunteerOpportunity } from '../hooks/useVolunteerOpportunities';
 
+import { DonationCentersAdmin } from '../components/admin/DonationCentersAdmin';
+
 // ── FormGroup Component ────────────────────────────────────────
 const FormGroup = ({ label, children, error }: { label: React.ReactNode, children: React.ReactNode, error?: string }) => (
   <div className="space-y-1">
@@ -258,6 +260,14 @@ export function AdminDashboard() {
       } else if (type === 'reject') {
         await updateDonationStatus(id, 'مرفوض');
         toast.error('تم رفض التبرع');
+      } else if (type === 'approve_request') {
+        await api.patch(`/donation-requests/admin/${id}/approve`);
+        toast.success('تم قبول طلب الاحتياج');
+        fetchAdminRequests();
+      } else if (type === 'reject_request') {
+        await api.patch(`/donation-requests/admin/${id}/reject`, { adminNote: 'مرفوض من قبل الإدارة' });
+        toast.success('تم رفض طلب الاحتياج');
+        fetchAdminRequests();
       }
     } catch (err) {
       toast.error('حدث خطأ أثناء تنفيذ الإجراء');
@@ -383,6 +393,7 @@ export function AdminDashboard() {
             <TabsTrigger value="campaigns" className="rounded-lg text-sm font-semibold">الحملات</TabsTrigger>
             <TabsTrigger value="volunteer" className="rounded-lg text-sm font-semibold">فرص التطوع</TabsTrigger>
             <TabsTrigger value="charities" className="rounded-lg text-sm font-semibold">الجمعيات الخيرية</TabsTrigger>
+            <TabsTrigger value="donation-centers" className="rounded-lg text-sm font-semibold">مراكز التبرع</TabsTrigger>
             {/* <TabsTrigger value="verifications" className="rounded-lg text-sm font-semibold">التحقق من الهوية</TabsTrigger> */}
             <TabsTrigger value="donation-requests" className="rounded-lg text-sm font-semibold">طلبات التبرع</TabsTrigger>
             <TabsTrigger value="reports" className="rounded-lg text-sm font-semibold">البلاغات</TabsTrigger>
@@ -601,6 +612,11 @@ export function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* DONATION CENTERS */}
+          <TabsContent value="donation-centers" className="mt-6">
+            <DonationCentersAdmin />
           </TabsContent>
 
           {/* VOLUNTEER OPPORTUNITIES */}
@@ -872,24 +888,27 @@ export function AdminDashboard() {
                           <CardContent className="p-4 space-y-3">
                             <div className="flex items-start justify-between gap-3 flex-wrap">
                               <div>
-                                <p className="font-semibold">{r.donation_id?.title || 'تبرع'}</p>
-                                <p className="text-sm text-muted-foreground">مقدم الطلب: {r.charity?.charityName || r.charity?.name || 'غير معروف'} — {r.charity?.email || 'لا يوجد إيميل'}</p>
-                                <p className="text-xs text-muted-foreground">رقم الهوية: <span dir="ltr">{r.national_id_number}</span></p>
+                                <p className="font-semibold">{r.title || 'طلب احتياج'}</p>
+                                <p className="text-sm text-muted-foreground">الجمعية: {r.charityId?.charityName || r.charityId?.name || 'غير معروف'} — {r.charityId?.email || 'لا يوجد إيميل'}</p>
+                                <p className="text-xs text-muted-foreground">الكمية المطلوبة: {r.quantityNeeded} • الفئة: {r.category}</p>
                                 <p className="text-xs text-muted-foreground">تاريخ الطلب: {new Date(r.createdAt).toLocaleDateString('ar-SA')}</p>
-                                {r.emergency_exception && (
-                                  <p className="text-xs text-amber-600 font-semibold">⚡ استثناء طارئ: {r.emergency_reason}</p>
-                                )}
                               </div>
                               <Badge className={reqStatusColors[r.status] || ''}>{reqStatusLabels[r.status] || r.status}</Badge>
                             </div>
 
-                            {r.admin_notes && (
-                              <p className="text-xs bg-muted p-2 rounded">ملاحظة: {r.admin_notes}</p>
+                            {r.description && (
+                              <p className="text-sm bg-muted p-2 rounded mt-2">{r.description}</p>
                             )}
 
-                            {/* Read-only oversight: donor handles accept/reject */}
-                            {r.donor_notes && (
-                              <p className="text-xs bg-muted p-2 rounded">ملاحظة المتبرع: {r.donor_notes}</p>
+                            {r.status === 'pending_review' && (
+                              <div className="flex gap-2 flex-shrink-0 mt-3 border-t border-slate-100 dark:border-slate-800 pt-3">
+                                <Button size="sm" className="h-8 bg-green-600 hover:bg-green-700 text-white gap-1" onClick={() => setConfirmAction({ type: 'approve_request', id: r.id, label: `قبول طلب "${r.title}"؟` })}>
+                                  <Check className="h-3.5 w-3.5" /> اعتماد الطلب
+                                </Button>
+                                <Button variant="outline" size="sm" className="h-8 text-destructive hover:text-destructive gap-1" onClick={() => setConfirmAction({ type: 'reject_request', id: r.id, label: `رفض طلب "${r.title}"؟` })}>
+                                  <X className="h-3.5 w-3.5" /> رفض
+                                </Button>
+                              </div>
                             )}
                           </CardContent>
                         </Card>

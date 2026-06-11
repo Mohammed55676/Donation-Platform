@@ -46,14 +46,14 @@ Run `npm i` in **both** root and `backend/` — they are independent packages.
 - Axios interceptor attaches `Bearer` header automatically
 - On 401: token is cleared **unless** the failing request is `/auth/me` (race condition safeguard)
 - Backend: JWT verify → query user from DB → check `status !== 'banned'`
-- Roles: `user`, `admin` (stored on User.role). `user_type`: `donor`, `beneficiary`
+- Roles: `user`, `admin` (stored on User.role). `user_type`: `donor`, `charity`
 - Protected routes use `<ProtectedRoute allowedRole={...}>` wrapper
 
 ## Database models (MongoDB/Mongoose)
 
 - User (name, email, password, role, user_type, wishlist, status)
-- Donation, DonationRequest, Campaign, VolunteerOpportunity
-- BeneficiaryProfile, CommunityRequest
+- Donation, DonationRequest, DonorOffer, Campaign, VolunteerOpportunity
+- CommunityRequest
 - Conversation, Message, Block (for Socket.IO messaging)
 
 ## Style system

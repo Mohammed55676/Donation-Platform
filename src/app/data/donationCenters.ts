@@ -6,41 +6,45 @@ export type DonationType =
   | "medicine"
   | "money"
   | "volunteer"
+  | "books"
+  | "toys"
   | "all";
 
-export type DeliveryMethod =
-  | "self_delivery"
-  | "home_pickup"
-  | "online"
-  | "mobile_campaign";
-
-export type CenterType =
-  | "hospital"
-  | "blood_bank"
-  | "food_bank"
-  | "charity"
-  | "takeya"
-  | "volunteer_center";
-
-export type DonationCenter = {
+export interface CenterBranch {
   id: string;
   name: string;
-  centerType: CenterType;
-  address: string;
   city: string;
-  lat: number;
-  lng: number;
-  acceptedTypes: DonationType[];
-  deliveryMethods: DeliveryMethod[];
+  area: string;
+  address: string;
+  mapsUrl?: string;
+  phone?: string;
+  workingHours?: string;
+  notes?: string;
+}
+
+export interface CenterContact {
   phone?: string;
   whatsapp?: string;
-  openingHours: string;
-  isOpen: boolean;
-  isUrgent?: boolean;
-  requiresAppointment?: boolean;
-  distanceKm?: number;
+  website?: string;
+  facebook?: string;
+}
+
+export type TrustedType = "charity" | "initiative" | "official";
+
+export interface DonationCenter {
+  id: string;
+  name: string;
+  category: string[];
+  acceptedItems: string[];
   description: string;
-};
+  trustedType: TrustedType;
+  pickupAvailable: boolean;
+  cities: string[];
+  branches: CenterBranch[];
+  contact: CenterContact;
+  notes?: string;
+  isActive: boolean;
+}
 
 export type DonationCampaign = {
   id: string;
@@ -105,112 +109,228 @@ export const mockCampaigns: DonationCampaign[] = [
 
 export const mockCenters: DonationCenter[] = [
   {
-    id: "center-1",
-    name: "بنك الدم الرئيسي - عمّان",
-    centerType: "blood_bank",
-    address: "شارع المستشفى، عمّان",
-    city: "عمان",
-    lat: 31.9539,
-    lng: 35.9106,
-    acceptedTypes: ["blood"],
-    deliveryMethods: ["self_delivery"],
-    phone: "06-555-0001",
-    openingHours: "مفتوح 24 ساعة",
-    isOpen: true,
-    isUrgent: true,
-    description: "يستقبل التبرعات بالدم لتغذية مخزون المستشفيات الحكومية والخاصة. (بيانات تجريبية)"
+    id: "bank-clothes-1",
+    name: "بنك الملابس الخيري",
+    category: ["ملابس", "أحذية", "ألعاب", "منسوجات"],
+    acceptedItems: ["ملابس نظيفة", "أحذية بحالة جيدة", "شراشف", "أغطية", "ألعاب سليمة"],
+    description: "جهة تستقبل التبرعات العينية وتعيد توزيعها على الأسر المحتاجة عبر صالة عرض تحفظ كرامة المنتفع.",
+    trustedType: "charity",
+    pickupAvailable: false,
+    cities: ["عمّان", "المحافظات الأخرى"],
+    isActive: true,
+    branches: [
+      {
+        id: "b1",
+        name: "المقر الرئيسي (صالة العرض)",
+        city: "عمّان",
+        area: "المحطة",
+        address: "مجمع بنك الملابس الخيري",
+        workingHours: "8:00 ص - 3:00 م (بحاجة للتحقق)",
+        notes: "استقبال التبرعات مباشرة"
+      },
+      {
+        id: "b2",
+        name: "صناديق التبرع",
+        city: "عمّان",
+        area: "مولات مختارة (مثل مكة مول، سيتي مول)",
+        address: "أماكن متفرقة (راجع الصفحة الرسمية)",
+        notes: "صندوق مخصص للملابس والأحذية فقط، متوفر في أوقات عمل المول"
+      }
+    ],
+    contact: {
+      phone: "06-xxxxxxx (يحتاج توثيق)",
+      website: "http://www.jhco.org.jo/",
+      facebook: "https://www.facebook.com/JHCO.org"
+    },
+    notes: "يُفضّل التأكد من مواقع الصناديق الحالية وساعات العمل من الصفحة الرسمية قبل الذهاب."
   },
   {
-    id: "center-2",
-    name: "مستودع الأثاث الخيري",
-    centerType: "charity",
-    address: "المنطقة الصناعية، الزرقاء",
-    city: "الزرقاء",
-    lat: 32.0728,
-    lng: 36.0880,
-    acceptedTypes: ["furniture", "clothes"],
-    deliveryMethods: ["self_delivery", "home_pickup"],
-    whatsapp: "962790000002",
-    openingHours: "8:00 ص - 4:00 م",
-    isOpen: true,
-    requiresAppointment: true,
-    description: "مستودع رئيسي لاستلام الأثاث والأجهزة الكهربائية وتخزين الملابس. (بيانات تجريبية)"
+    id: "fabricaid-1",
+    name: "مؤسسة فابريك إيد (FabricAid)",
+    category: ["ملابس", "أحذية", "منسوجات"],
+    acceptedItems: ["ملابس مستعملة", "أحذية", "حقائب"],
+    description: "مؤسسة اجتماعية تجمع الملابس المستعملة لإعادة تدويرها أو منحها حياة جديدة.",
+    trustedType: "initiative",
+    pickupAvailable: false,
+    cities: ["عمّان"],
+    isActive: true,
+    branches: [
+      {
+        id: "b3",
+        name: "صناديق فابريك إيد - فروع بنك الاتحاد",
+        city: "عمّان",
+        area: "فروع محددة",
+        address: "داخل أو أمام فروع بنك الاتحاد المشاركة",
+        workingHours: "حسب أوقات عمل الفرع",
+        notes: "راجع صفحة FabricAid أو بنك الاتحاد للتأكد من الفروع"
+      }
+    ],
+    contact: {
+      website: "https://www.fabricaid.me/",
+      facebook: "https://www.facebook.com/FabricAidME"
+    }
   },
   {
-    id: "center-3",
-    name: "مركز الطعام المتكامل",
-    centerType: "food_bank",
-    address: "شارع الجامعة، إربد",
-    city: "إربد",
-    lat: 32.5514,
-    lng: 35.8515,
-    acceptedTypes: ["food", "money"],
-    deliveryMethods: ["self_delivery", "online"],
-    phone: "02-555-0003",
-    openingHours: "9:00 ص - 5:00 م",
-    isOpen: false,
-    description: "استقبال التبرعات العينية من المواد الغذائية الجافة وتمويل الطرود. (بيانات تجريبية)"
+    id: "zara-collection-1",
+    name: "برنامج جمع الملابس - Zara",
+    category: ["ملابس", "منسوجات", "أحذية"],
+    acceptedItems: ["أي نوع من الملابس", "منسوجات", "أحذية", "إكسسوارات من أي علامة تجارية"],
+    description: "صناديق مخصصة داخل متاجر زارا لجمع الملابس المستعملة لإعادة تدويرها بالتعاون مع جمعيات محلية.",
+    trustedType: "official",
+    pickupAvailable: false,
+    cities: ["عمّان"],
+    isActive: true,
+    branches: [
+      {
+        id: "b4",
+        name: "فرع تاج مول",
+        city: "عمّان",
+        area: "عبدون",
+        address: "تاج مول - متجر Zara",
+        workingHours: "10:00 ص - 10:00 م",
+        notes: "يوجد صندوق داخل المتجر مخصص للتبرعات"
+      },
+      {
+        id: "b5",
+        name: "فرع سيتي مول",
+        city: "عمّان",
+        area: "دابوق",
+        address: "سيتي مول - متجر Zara",
+        workingHours: "10:00 ص - 10:00 م",
+        notes: "يوجد صندوق داخل المتجر"
+      }
+    ],
+    contact: {
+      website: "https://www.zara.com/jo/"
+    }
   },
   {
-    id: "center-4",
-    name: "تكية الخير للإطعام",
-    centerType: "takeya",
-    address: "وسط البلد، العقبة",
-    city: "العقبة",
-    lat: 29.5319,
-    lng: 35.0061,
-    acceptedTypes: ["food", "volunteer"],
-    deliveryMethods: ["self_delivery", "mobile_campaign"],
-    whatsapp: "962770000004",
-    openingHours: "10:00 ص - 6:00 م",
-    isOpen: true,
-    description: "تقديم وجبات ساخنة يومية. نرحب بالمتطوعين للمساعدة في التغليف. (بيانات تجريبية)"
+    id: "dwraha-balkhair-1",
+    name: "مبادرة دورها بالخير",
+    category: ["أثاث", "أجهزة كهربائية", "أدوات منزلية"],
+    acceptedItems: ["غرف نوم", "كنب", "طاولات", "ثلاجات", "غسالات", "غازات تعمل"],
+    description: "مبادرة نشطة في جمع وتجديد فائض الأثاث والأجهزة لتأمين بيوت الأسر العفيفة.",
+    trustedType: "initiative",
+    pickupAvailable: true,
+    cities: ["عمّان", "الزرقاء"],
+    isActive: true,
+    branches: [
+      {
+        id: "b6",
+        name: "الاستلام من المنزل",
+        city: "عمّان",
+        area: "جميع المناطق",
+        address: "يتطلب تنسيق مسبق للاستلام من المنزل",
+        notes: "نظراً لحجم التبرعات (أثاث)، يتم التنسيق للاستلام بسيارات المبادرة."
+      }
+    ],
+    contact: {
+      whatsapp: "(يحتاج توثيق)",
+      facebook: "مبادرة دورها بالخير (فيسبوك)"
+    },
+    notes: "يرجى إرسال صور الأثاث أو الأجهزة عبر الواتساب لتنسيق موعد الاستلام."
   },
   {
-    id: "center-5",
-    name: "الجمعية الطبية للمحتاجين",
-    centerType: "charity",
-    address: "الكرك، الشارع الرئيسي",
-    city: "الكرك",
-    lat: 31.1811,
-    lng: 35.7042,
-    acceptedTypes: ["medicine", "money"],
-    deliveryMethods: ["self_delivery", "online"],
-    phone: "03-555-0005",
-    openingHours: "8:00 ص - 2:00 م",
-    isOpen: true,
-    description: "نستقبل الأدوية غير منتهية الصلاحية ليتم فحصها وتوزيعها مجاناً. (بيانات تجريبية)"
+    id: "jhco-1",
+    name: "الهيئة الخيرية الأردنية الهاشمية",
+    category: ["أثاث", "أجهزة كهربائية", "أدوات منزلية", "مستلزمات عامة"],
+    acceptedItems: ["أجهزة أساسية", "سجاد", "مستلزمات منزلية صالحة للاستخدام"],
+    description: "الهيئة الرسمية للإغاثة والأعمال الخيرية، تستقبل التبرعات العينية لتوزيعها على المحتاجين.",
+    trustedType: "official",
+    pickupAvailable: false,
+    cities: ["عمّان"],
+    isActive: true,
+    branches: [
+      {
+        id: "b7",
+        name: "المستودعات الرئيسية",
+        city: "عمّان",
+        area: "طبربور / المحطة (يحتاج توثيق الموقع الدقيق)",
+        address: "مقر الهيئة الخيرية الأردنية الهاشمية",
+        workingHours: "أوقات الدوام الرسمي",
+        notes: "يجب التواصل المسبق لمعرفة إمكانية استقبال القطع الكبيرة."
+      }
+    ],
+    contact: {
+      phone: "+962 6 552 4666 (للتأكد)",
+      website: "http://www.jhco.org.jo/"
+    }
   },
   {
-    id: "center-6",
-    name: "مركز الدعم المجتمعي",
-    centerType: "volunteer_center",
-    address: "جبل الحسين، عمّان",
-    city: "عمان",
-    lat: 31.9631,
-    lng: 35.9142,
-    acceptedTypes: ["volunteer", "clothes"],
-    deliveryMethods: ["self_delivery", "home_pickup"],
-    whatsapp: "962780000006",
-    openingHours: "10:00 ص - 8:00 م",
-    isOpen: true,
-    requiresAppointment: false,
-    description: "نقطة تجمع للمتطوعين واستلام الملابس لتوزيعها أسبوعياً. (بيانات تجريبية)"
+    id: "islamic-center-1",
+    name: "جمعية المركز الإسلامي الخيرية",
+    category: ["أثاث", "أجهزة كهربائية", "ملابس", "أدوات منزلية"],
+    acceptedItems: ["أثاث بحالة جيدة", "أجهزة", "ملابس"],
+    description: "تستقبل التبرعات العينية في فروعها وتقوم لجان الرعاية بفرزها وتوزيعها على العائلات المسجلة.",
+    trustedType: "charity",
+    pickupAvailable: false,
+    cities: ["عمّان", "معظم المحافظات"],
+    isActive: true,
+    branches: [
+      {
+        id: "b8",
+        name: "المراكز الفرعية",
+        city: "عمّان",
+        area: "مناطق متعددة",
+        address: "راجع الموقع الرسمي لمعرفة أقرب فرع",
+        workingHours: "8:00 ص - 3:00 م (تقريباً)",
+        notes: "لجنة الرعاية في منطقتك تستطيع توجيهك."
+      }
+    ],
+    contact: {
+      phone: "+962 6 568 2599 (للتأكد)",
+      website: "https://www.iccjo.org/"
+    }
   },
   {
-    id: "center-7",
-    name: "مستشفى الأمل - قسم التبرعات",
-    centerType: "hospital",
-    address: "دوار الداخلية، عمّان",
-    city: "عمان",
-    lat: 31.9654,
-    lng: 35.9126,
-    acceptedTypes: ["blood", "money"],
-    deliveryMethods: ["self_delivery"],
-    phone: "06-555-0007",
-    openingHours: "مفتوح 24 ساعة",
-    isOpen: true,
-    isUrgent: true,
-    description: "مطلوب وحدات دم بشكل عاجل لفئة O سالب. (بيانات تجريبية)"
+    id: "gaza-hashem-1",
+    name: "جمعية غزة هاشم الخيرية",
+    category: ["ألعاب", "قرطاسية", "حقائب", "ملابس"],
+    acceptedItems: ["ألعاب بحالة جيدة", "حقائب مدرسية", "قرطاسية", "ملابس أطفال"],
+    description: "تنظم حملات لجمع الألعاب والحقائب والقرطاسية لدعم الأطفال في المخيمات والمناطق الأقل حظاً.",
+    trustedType: "charity",
+    pickupAvailable: false,
+    cities: ["عمّان", "جرش (مخيم غزة)"],
+    isActive: true,
+    branches: [
+      {
+        id: "b9",
+        name: "المقر الرئيسي / الجمعية",
+        city: "عمّان",
+        area: "البقعة / عمان (يحتاج تحقق)",
+        address: "يرجى التحقق من العنوان الدقيق",
+        workingHours: "أوقات العمل الرسمية",
+        notes: "تنشط التبرعات قبل المواسم المدرسية والأعياد."
+      }
+    ],
+    contact: {
+      phone: "(يحتاج توثيق)",
+      facebook: "جمعية غزة هاشم الخيرية (فيسبوك)"
+    }
+  },
+  {
+    id: "koshk-1",
+    name: "مبادرة كشك الثقافة العربية",
+    category: ["كتب", "قرطاسية"],
+    acceptedItems: ["كتب مستعملة", "روايات", "كتب علمية وثقافية"],
+    description: "مبادرة تجمع الكتب المستعملة لإعادة توزيعها أو إقامة مكتبات عامة في المحافظات.",
+    trustedType: "initiative",
+    pickupAvailable: false,
+    cities: ["عمّان"],
+    isActive: true,
+    branches: [
+      {
+        id: "b10",
+        name: "كشك الثقافة (حسن أبو علي أو أكشاك وسط البلد)",
+        city: "عمّان",
+        area: "وسط البلد",
+        address: "شارع فيصل",
+        workingHours: "9:00 ص - 9:00 م",
+        notes: "يرجى التنسيق المسبق لمعرفة إذا كانوا بحاجة لنوع الكتب."
+      }
+    ],
+    contact: {
+      phone: "(يحتاج توثيق)"
+    }
   }
 ];

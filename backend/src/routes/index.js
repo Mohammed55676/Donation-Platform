@@ -14,6 +14,7 @@ router.use('/community',         require('./community.routes'));
 router.use('/conversations',     require('./conversation.routes'));
 
 router.use('/donation-requests', require('./donationRequest.routes'));
+router.use('/donor-offers',      require('./donorOffer.routes'));
 router.use('/contact',           require('./contact.routes'));
 router.use('/ratings',           require('./rating.routes'));
 router.use('/charity',           require('./charity.routes'));
