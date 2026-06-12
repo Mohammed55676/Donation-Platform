@@ -11,6 +11,7 @@ router.use('/donations',         require('./donation.routes'));
 router.use('/campaigns',         require('./campaign.routes'));
 router.use('/volunteer',         require('./volunteer.routes'));
 router.use('/community',         require('./community.routes'));
+router.use('/donation-claims',   require('./donationClaim.routes'));
 router.use('/conversations',     require('./conversation.routes'));
 
 router.use('/donation-requests', require('./donationRequest.routes'));

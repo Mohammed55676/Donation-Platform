@@ -89,7 +89,7 @@ export function Signup() {
         return;
       }
       if (result.requiresOTP) {
-        navigate('/verify-otp', { state: { email: result.email, previewUrl: result.previewUrl, devOtp: result.devOtp } });
+        navigate('/verify-otp', { state: { email: result.email, previewUrl: result.previewUrl } });
         return;
       }
       toast.success(t('auth.signup_success'));

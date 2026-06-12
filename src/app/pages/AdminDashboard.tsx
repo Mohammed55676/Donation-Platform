@@ -77,11 +77,6 @@ interface ManagedUser {
   donations: number;
 }
 
-const urgentCases = [
-  { id: 'u1', title: 'أسرة محتاجة بعجلة', description: 'أسرة من 5 أفراد تحتاج ملابس شتوية وغذاء عاجل', category: 'ملابس + غذاء', location: 'عمان - عبدون', severity: 'critical' },
-  { id: 'u2', title: 'طفل يحتاج كتبًا مدرسية', description: 'طالب لم يستطع الحصول على كتبه هذا الفصل', category: 'كتب', location: 'إربد - شارع الجامعة', severity: 'high' },
-  { id: 'u3', title: 'عائلة بدون طعام', description: 'توصلنا بطلب عاجل من عائلة تفتقر لمواد غذائية', category: 'طعام', location: 'الزرقاء - وسط المدينة', severity: 'critical' },
-];
 
 // Empty campaign form
 const emptyCampaign: Omit<Campaign, 'id'> = {
@@ -118,8 +113,6 @@ export function AdminDashboard() {
     api.get('/users').then(res => setUsers(Array.isArray(res.data.data) ? res.data.data : [])).catch(console.error);
   }, []);
   const [confirmAction, setConfirmAction] = useState<{ type: string; id: string; label: string } | null>(null);
-  const [assignCase, setAssignCase] = useState<typeof urgentCases[0] | null>(null);
-  const [selectedVolunteer, setSelectedVolunteer] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
@@ -164,7 +157,7 @@ export function AdminDashboard() {
   const fetchAdminRequests = async () => {
     setAdminRequestsLoading(true);
     try {
-      const res = await api.get('/donation-requests/admin');
+      const res = await api.get('/donation-requests/admin/pending');
       setAdminRequests(Array.isArray(res.data.data) ? res.data.data : []);
     } catch { setAdminRequests([]); }
     finally { setAdminRequestsLoading(false); }
@@ -397,10 +390,6 @@ export function AdminDashboard() {
             {/* <TabsTrigger value="verifications" className="rounded-lg text-sm font-semibold">التحقق من الهوية</TabsTrigger> */}
             <TabsTrigger value="donation-requests" className="rounded-lg text-sm font-semibold">طلبات التبرع</TabsTrigger>
             <TabsTrigger value="reports" className="rounded-lg text-sm font-semibold">البلاغات</TabsTrigger>
-            <TabsTrigger value="urgent" className="rounded-lg text-sm font-semibold">
-              <span>الحالات العاجلة</span>
-              <span className="me-1 text-red-500">🔥</span>
-            </TabsTrigger>
           </TabsList>
 
           {/* ANALYTICS */}
@@ -812,45 +801,6 @@ export function AdminDashboard() {
             </Card>
           </TabsContent>
 
-          {/* URGENT */}
-          <TabsContent value="urgent" className="mt-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl">
-                <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
-                <p className="text-sm font-medium text-red-700 dark:text-red-400">{urgentCases.length} حالات عاجلة تحتاج تدخلاً فورياً</p>
-              </div>
-              {urgentCases.map((c) => (
-                <Card key={c.id} className={`border-none card-shadow rounded-2xl ${c.severity === 'critical' ? 'bg-red-50/50 dark:bg-red-950/20' : 'bg-orange-50/50 dark:bg-orange-950/20'}`}>
-                  <CardContent className="p-5">
-                    <div className="flex items-start gap-3">
-                      <div className="text-2xl">{c.severity === 'critical' ? '🔥' : '⚠️'}</div>
-                      <div className="flex-1">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <h3 className="font-bold">{c.title}</h3>
-                          <Badge className={c.severity === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/30' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30'}>
-                            {c.severity === 'critical' ? 'حرج جداً' : 'عاجل'}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">{c.description}</p>
-                        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                          <span>📦 {c.category}</span>
-                          <span>📍 {c.location}</span>
-                        </div>
-                        <div className="flex gap-2 mt-3">
-                          <Button size="sm" className="bg-primary text-white text-xs h-8" onClick={() => { setAssignCase(c); setSelectedVolunteer(''); }}>
-                            تعيين متطوع
-                          </Button>
-                          <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => toast.info(`📋 ${c.title} — ${c.description}`)}>
-                            عرض التفاصيل
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
 
           {/* ══ DONATION REQUESTS TAB ═══════════════════════════════════ */}
           <TabsContent value="donation-requests" className="mt-6">
@@ -1016,46 +966,6 @@ export function AdminDashboard() {
 
       </div>
 
-      {/* ── Assign Volunteer Dialog ─────────────────────────────── */}
-      <Dialog open={!!assignCase} onOpenChange={(open) => { if (!open) setAssignCase(null); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>تعيين متطوع للحالة</DialogTitle>
-            <DialogDescription>{assignCase?.title}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">{assignCase?.description}</p>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">اختر متطوعاً</label>
-              <Select value={selectedVolunteer} onValueChange={setSelectedVolunteer}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر من قائمة المتطوعين" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.filter((u) => u.role === 'volunteer' && u.status === 'active').map((v) => (
-                    <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignCase(null)}>إلغاء</Button>
-            <Button className="bg-primary text-white" disabled={!selectedVolunteer} onClick={async () => {
-              const vol = users.find((u) => u.id === selectedVolunteer);
-              try {
-                await api.post(`/admin/cases/${assignCase?.id}/assign`, { volunteerId: selectedVolunteer });
-                toast.success(`تم تعيين ${vol?.name} للحالة: ${assignCase?.title}`);
-              } catch {
-                toast.error('حدث خطأ أثناء تعيين المتطوع');
-              }
-              setAssignCase(null);
-            }}>
-              تأكيد التعيين
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* ── Global Confirm Dialog ───────────────────────────────── */}
       <AlertDialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>

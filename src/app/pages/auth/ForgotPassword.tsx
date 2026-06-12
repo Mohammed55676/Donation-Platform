@@ -21,9 +21,9 @@ export function ForgotPassword() {
     setLoading(true);
     try {
       const res = await api.post('/auth/forgot-password', { email });
-      const { email: returnedEmail, previewUrl, devOtp } = res.data.data || {};
+      const { email: returnedEmail, previewUrl } = res.data.data || {};
       toast.success('تم إرسال رمز التحقق إلى بريدك الإلكتروني');
-      navigate('/verify-otp', { state: { email: returnedEmail || email, previewUrl, devOtp, type: 'reset' } });
+      navigate('/verify-otp', { state: { email: returnedEmail || email, previewUrl, type: 'reset' } });
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.response?.data?.error || 'حدث خطأ أثناء الإرسال');
     } finally {

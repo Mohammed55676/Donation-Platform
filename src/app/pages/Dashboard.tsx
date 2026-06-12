@@ -101,17 +101,24 @@ export function Dashboard() {
   // For donor users: fetch real offers for their donations
   const [myOffers, setMyOffers] = useState<any[]>([]);
   const [offersLoading, setOffersLoading] = useState(false);
+  const [myClaims, setMyClaims] = useState<any[]>([]);
+
   useEffect(() => {
     if (user?.user_type !== 'donor' && user?.role !== 'admin') return;
     setOffersLoading(true);
-    api.get('/donor-offers/my')
-      .then(res => setMyOffers(res.data.data || []))
-      .catch(() => setMyOffers([]))
+    Promise.all([
+      api.get('/donor-offers/my').catch(() => ({ data: { data: [] } })),
+      api.get('/donation-claims/for-donor').catch(() => ({ data: { data: [] } }))
+    ])
+      .then(([offersRes, claimsRes]) => {
+        setMyOffers(offersRes.data?.data || []);
+        setMyClaims(claimsRes.data?.data || []);
+      })
       .finally(() => setOffersLoading(false));
   }, [user?.id, user?.user_type, user?.role]);
 
   const offersCount = myOffers.length;
-
+  const pendingClaimsCount = myClaims.filter(c => c.status === 'pending_review').length;
   const [showRating, setShowRating] = useState(false);
   const [ratingTarget, setRatingTarget] = useState<{ donationId: string; rateeId: string; rateeName: string } | null>(null);
 
@@ -318,8 +325,16 @@ export function Dashboard() {
                               <Badge variant="outline">{donation.category}</Badge>
                               <span className="text-xs text-muted-foreground mt-1">📅 {new Date(donation.createdAt).toLocaleDateString('ar-SA')}</span>
                             </div>
+                            
+                            {/* Show Claims Badge if any */}
+                            {myClaims.filter(c => (c.donation_id?.id === donation.id || c.donation_id?._id === donation.id) && c.status === 'pending_review').length > 0 && (
+                              <div className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 text-xs font-semibold px-3 py-1 rounded-full w-fit">
+                                🔔 هناك طلبات من جمعيات بانتظار موافقتك!
+                              </div>
+                            )}
+
                             <div className="flex gap-2 pt-1">
-                              <Link to={`/donations/${donation.id}`}><Button variant="outline" size="sm"><Eye className="me-2 h-4 w-4" />عرض</Button></Link>
+                              <Link to={`/donations/${donation.id}`}><Button variant="outline" size="sm"><Eye className="me-2 h-4 w-4" />عرض الطلبات</Button></Link>
                               <Button variant="outline" size="sm" onClick={() => { setDonationToEdit(donation); setIsEditDonationOpen(true); }}><Edit className="me-2 h-4 w-4" />تعديل</Button>
                               <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setItemToDelete(donation.id); setIsDeleteDialogOpen(true); }}><Trash2 className="me-2 h-4 w-4" />حذف</Button>
                             </div>

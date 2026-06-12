@@ -119,7 +119,7 @@ async function register(req, res, next) {
     await user.save({ validateBeforeSave: false });
 
     // Respond immediately — OTP is in DB, email goes out in background
-    sendSuccess(res, { requiresOTP: true, email: user.email, devOtp: otp }, 'تم إنشاء الحساب. تحقق من بريدك الإلكتروني.', 201);
+    sendSuccess(res, { requiresOTP: true, email: user.email }, 'تم إنشاء الحساب. تحقق من بريدك الإلكتروني.', 201);
     sendOtpBackground(user.email, otp, 'تحقق من بريدك الإلكتروني');
   } catch (err) {
     next(err);
@@ -150,7 +150,7 @@ async function login(req, res, next) {
     await user.save({ validateBeforeSave: false });
 
     // Respond immediately — OTP is in DB, email goes out in background
-    sendSuccess(res, { requiresOTP: true, email: user.email, devOtp: otp }, 'تم إرسال رمز التحقق إلى بريدك الإلكتروني.');
+    sendSuccess(res, { requiresOTP: true, email: user.email }, 'تم إرسال رمز التحقق إلى بريدك الإلكتروني.');
     sendOtpBackground(user.email, otp, 'رمز تسجيل الدخول');
   } catch (err) {
     next(err);
@@ -196,7 +196,7 @@ async function resendOtp(req, res, next) {
     await user.save({ validateBeforeSave: false });
 
     sendOtpBackground(user.email, otp, 'رمز التحقق الجديد');
-    return sendSuccess(res, { message: 'تم إرسال رمز التحقق بنجاح.', devOtp: otp });
+    return sendSuccess(res, { message: 'تم إرسال رمز التحقق بنجاح.' });
   } catch (err) {
     next(err);
   }

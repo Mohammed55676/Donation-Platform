@@ -49,7 +49,7 @@ export function Login() {
     setLoading(false);
     if (result.success) {
       if (result.requiresOTP) {
-        navigate('/verify-otp', { state: { email: result.email, previewUrl: result.previewUrl, devOtp: result.devOtp } });
+        navigate('/verify-otp', { state: { email: result.email, previewUrl: result.previewUrl } });
         return;
       }
       toast.success(t('auth.welcome'));

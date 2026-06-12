@@ -19,16 +19,11 @@ export function VerifyOtp() {
 
   const email = (location.state as any)?.email as string | undefined;
   const previewUrl = (location.state as any)?.previewUrl as string | undefined;
-  const devOtp = (location.state as any)?.devOtp as string | undefined;
   const type = (location.state as any)?.type as 'reset' | undefined;
 
   useEffect(() => {
     if (!email) navigate('/login', { replace: true });
-    if (devOtp) {
-      setOtp(devOtp);
-      toast.info('تم تعبئة رمز التحقق تلقائياً (بيئة التطوير)');
-    }
-  }, [email, navigate, devOtp]);
+  }, [email, navigate]);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -80,10 +75,6 @@ export function VerifyOtp() {
     if (result.success) {
       setResendCooldown(60);
       setInfo('تم إرسال رمز جديد إلى بريدك الإلكتروني');
-      if (result.devOtp) {
-        setOtp(result.devOtp);
-        toast.info('تم تعبئة رمز التحقق تلقائياً (بيئة التطوير)');
-      }
     } else {
       setError(result.error || 'فشل إعادة الإرسال');
     }

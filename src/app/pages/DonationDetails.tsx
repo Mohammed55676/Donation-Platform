@@ -56,7 +56,7 @@ export function DonationDetails() {
   useEffect(() => {
     if (!isDonationOwner) return;
     setDonorRequestsLoading(true);
-    api.get('/donation-requests/for-donor')
+    api.get('/donation-claims/for-donor')
       .then(res => {
         const all: any[] = res.data.data || [];
         setDonorRequests(all.filter(r => r.donation_id?.id === id || r.donation_id?._id === id));
@@ -68,7 +68,7 @@ export function DonationDetails() {
   const handleDonorReview = async (requestId: string, action: 'accept' | 'reject') => {
     setReviewingId(requestId);
     try {
-      await api.put(`/donation-requests/${requestId}/donor-review`, { action });
+      await api.put(`/donation-claims/${requestId}/donor-review`, { action });
       toast.success(action === 'accept' ? 'تم قبول الطلب وحجز التبرع' : 'تم رفض الطلب');
       setDonorRequests(prev => prev.map(r =>
         r.id === requestId ? { ...r, status: action === 'accept' ? 'accepted' : 'rejected' } : r
@@ -112,7 +112,7 @@ export function DonationDetails() {
     // 4. Verified — submit request, donor will approve
     setIsRequesting(true);
     try {
-      await api.post('/donation-requests', { donation_id: id });
+      await api.post('/donation-claims', { donation_id: id });
       toast.success('تم تقديم طلبك! في انتظار موافقة المتبرع.');
       setRequestDone(true);
     } catch (err: any) {
