@@ -131,8 +131,8 @@ export function Signup() {
                 }`}
             >
               <Gift className="h-6 w-6" />
-              <span className="text-sm font-semibold">متبرع</span>
-              <span className="text-xs opacity-70">أتبرع بالأشياء</span>
+              <span className="text-sm font-semibold">متبرع / مستفيد</span>
+              <span className="text-xs opacity-70">أتبرع أو أستفيد من المنصة</span>
             </button>
             <button
               type="button"

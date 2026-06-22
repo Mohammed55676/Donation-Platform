@@ -108,15 +108,24 @@ async function updateUser(req, res, next) {
     const isAdmin = req.user.role === 'admin';
     if (!isSelf && !isAdmin) throw new AppError('غير مسموح لك بإجراء هذا التعديل.', 403);
 
-    // Prevent non-admins from elevating role
-    if (!isAdmin) {
-      delete req.body.role;
-      delete req.body.status;
-    }
     // Never allow password change via this route
     delete req.body.password;
 
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+    let update;
+    if (isAdmin) {
+      update = req.body;
+    } else {
+      // Non-admins may only edit their own basic profile. An allowlist (not a
+      // blocklist) prevents privilege escalation via mass assignment, e.g.
+      // self-setting charityStatus/charityBadge/isVerified/average_rating/role.
+      const ALLOWED = ['name', 'phone', 'location', 'avatar'];
+      update = {};
+      for (const key of ALLOWED) {
+        if (req.body[key] !== undefined) update[key] = req.body[key];
+      }
+    }
+
+    const user = await User.findByIdAndUpdate(req.params.id, update, {
       new: true,
       runValidators: true,
     });

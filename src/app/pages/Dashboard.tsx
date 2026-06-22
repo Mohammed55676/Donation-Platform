@@ -524,7 +524,7 @@ export function Dashboard() {
                       <h3 className="text-xl font-bold">{user?.name}</h3>
                       <p className="text-muted-foreground">{user?.email}</p>
                       <Badge className="mt-1 bg-primary/10 text-primary">
-                        {user?.role === 'admin' ? 'مدير' : user?.user_type === 'charity' ? 'جمعية' : 'متبرع'}
+                        {user?.role === 'admin' ? 'مدير' : user?.user_type === 'charity' ? 'جمعية' : 'متبرع / مستفيد'}
                       </Badge>
                     </div>
                     <div className="flex flex-col gap-2">

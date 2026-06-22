@@ -5,6 +5,16 @@ const nodemailer = require('nodemailer');
 const { sendSuccess } = require('../utils/apiResponse');
 const { AppError } = require('../middleware/error.middleware');
 
+// Escape HTML so user-supplied values can't inject markup into the email body.
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 async function sendContactMessage(req, res, next) {
   try {
     const { user_name, user_email, subject, message } = req.body;
@@ -16,11 +26,11 @@ async function sendContactMessage(req, res, next) {
     const htmlMessage = `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
         <h2>رسالة جديدة من نموذج اتصل بنا</h2>
-        <p><strong>الاسم:</strong> ${user_name}</p>
-        <p><strong>البريد الإلكتروني:</strong> ${user_email}</p>
-        <p><strong>الموضوع:</strong> ${subject}</p>
+        <p><strong>الاسم:</strong> ${escapeHtml(user_name)}</p>
+        <p><strong>البريد الإلكتروني:</strong> ${escapeHtml(user_email)}</p>
+        <p><strong>الموضوع:</strong> ${escapeHtml(subject)}</p>
         <div style="margin-top: 20px; padding: 15px; border: 1px solid #eee; background-color: #f9f9f9;">
-          <p style="white-space: pre-wrap;">${message}</p>
+          <p style="white-space: pre-wrap;">${escapeHtml(message)}</p>
         </div>
       </div>
     `;

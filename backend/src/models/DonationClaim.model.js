@@ -25,6 +25,10 @@ const donationClaimSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// A charity can claim a given donation only once. Enforced at the DB level so
+// concurrent requests can't both pass the controller's read-then-write check.
+donationClaimSchema.index({ donation_id: 1, charity: 1 }, { unique: true });
+
 donationClaimSchema.set('toJSON', {
   transform(_, ret) {
     ret.id = ret._id.toString();

@@ -29,6 +29,8 @@ const { errorHandler } = require('./middleware/error.middleware');
 const { sendError } = require('./utils/apiResponse');
 const User = require('./models/User.model');
 const Message = require('./models/Message.model');
+const Conversation = require('./models/Conversation.model');
+const Block = require('./models/Block.model');
 
 // ── App init ─────────────────────────────────────────────────────────
 const app = express();
@@ -149,28 +151,54 @@ io.on('connection', (socket) => {
   socket.join(userId);
 
   // ── sendMessage event ──────────────────────────────────────────────
-  socket.on('sendMessage', async ({ receiverId, text }) => {
+  // Mirrors the authorization of the REST POST /conversations/:id/messages:
+  // the sender must be a participant of an active conversation, and neither
+  // party may have blocked the other.
+  socket.on('sendMessage', async ({ conversationId, message }) => {
     try {
-      if (!receiverId || !text || !text.trim()) return;
+      if (!conversationId || !message || !message.trim()) return;
 
-      // Save to DB — sender is always taken from the authenticated socket.user
+      const conv = await Conversation.findById(conversationId);
+      if (!conv) return socket.emit('messageError', { error: 'Conversation not found.' });
+
+      // Authorization: sender must be a participant of this conversation
+      const senderId = socket.user._id.toString();
+      const isParticipant =
+        conv.requester_id.toString() === senderId ||
+        conv.receiver_id.toString() === senderId;
+      if (!isParticipant) return socket.emit('messageError', { error: 'Unauthorized.' });
+
+      if (conv.status !== 'active') {
+        return socket.emit('messageError', { error: 'Conversation is not active.' });
+      }
+
+      // Block check (either direction)
+      const blocked = await Block.findOne({
+        $or: [
+          { blocker_id: conv.requester_id, blocked_id: conv.receiver_id },
+          { blocker_id: conv.receiver_id, blocked_id: conv.requester_id },
+        ],
+      });
+      if (blocked) return socket.emit('messageError', { error: 'Cannot communicate with this user.' });
+
+      // Persist using the actual schema fields
       const msg = await Message.create({
-        sender: socket.user._id,
-        receiver: receiverId,
-        text: text.trim(),
+        conversation_id: conv._id,
+        sender_id: socket.user._id,
+        message: message.trim(),
       });
 
-      const populated = await Message.findById(msg._id)
-        .populate('sender', 'id name avatar')
-        .populate('receiver', 'id name avatar');
+      conv.last_message_at = new Date();
+      await conv.save();
 
-      const payload = populated.toJSON();
+      const payload = msg.toJSON();
 
-      // Emit to receiver's room
-      io.to(receiverId).emit('receiveMessage', payload);
-
-      // Emit back to sender's room (so all sender tabs also update)
-      io.to(userId).emit('receiveMessage', payload);
+      // Deliver to the OTHER participant and back to the sender's own tabs
+      const otherId = conv.requester_id.toString() === senderId
+        ? conv.receiver_id.toString()
+        : conv.requester_id.toString();
+      io.to(otherId).emit('receiveMessage', payload);
+      io.to(senderId).emit('receiveMessage', payload);
     } catch (err) {
       console.error('[Socket] sendMessage error:', err.message);
       socket.emit('messageError', { error: 'Failed to send message' });

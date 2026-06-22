@@ -15,6 +15,7 @@ const nodemailer = require('nodemailer');
 const User = require('../models/User.model');
 const { sendSuccess } = require('../utils/apiResponse');
 const { AppError } = require('../middleware/error.middleware');
+const { getFirebaseAdmin } = require('../config/firebaseAdmin');
 
 // Cached transporter — created once, reused for every request
 let _transporter = null;
@@ -40,7 +41,7 @@ async function getTransporter() {
 }
 
 function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 async function sendOtpEmail(to, otp, subject = 'رمز التحقق') {
@@ -62,11 +63,13 @@ async function sendOtpEmail(to, otp, subject = 'رمز التحقق') {
   return info;
 }
 
-// Fire-and-forget helper — responds immediately, sends email in background
 function sendOtpBackground(email, otp, subject) {
-  console.log(`\n=========================================\n[DEV] OTP for ${email}: ${otp}\n=========================================\n`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`\n=========================================\n[DEV] OTP for ${email}: ${otp}\n=========================================\n`);
+  }
   sendOtpEmail(email, otp, subject)
     .then(info => {
+      console.log('[Email] OTP accepted by provider. Message ID:', info.messageId);
       if (!process.env.SMTP_EMAIL) {
         console.log('[Email] Preview URL:', nodemailer.getTestMessageUrl(info));
       }
@@ -139,7 +142,7 @@ async function login(req, res, next) {
 
     if (user.status === 'banned') throw new AppError('لقد تم إيقاف حسابك.', 403);
 
-    if (user.user_type === 'charity') {
+    if (user.user_type === 'charity' || user.role === 'admin') {
       const token = signToken(user._id);
       return sendSuccess(res, { token, user }, 'تم تسجيل الدخول بنجاح.');
     }
@@ -215,19 +218,46 @@ async function getMe(req, res) {
 // ── POST /api/auth/google ────────────────────────────────────────────
 async function googleLogin(req, res, next) {
   try {
-    const { email, name, avatar, user_type } = req.body;
-    if (!email) throw new AppError('البريد الإلكتروني مطلوب.', 400);
+    const { idToken, user_type } = req.body;
+    if (!idToken) throw new AppError('Google ID token is required.', 400);
 
-    let user = await User.findOne({ email: email.toLowerCase() });
+    const fbAdmin = getFirebaseAdmin();
+    
+    let decoded;
+    if (fbAdmin) {
+      try {
+        decoded = await fbAdmin.auth().verifyIdToken(idToken);
+      } catch {
+        throw new AppError('Invalid or expired Google token.', 401);
+      }
+    } else {
+      // Fallback for local development if Firebase Admin is not configured
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[DEV] Firebase Admin not configured. Decoding token without signature verification.');
+        decoded = jwt.decode(idToken);
+        if (!decoded) throw new AppError('Invalid Google token format.', 400);
+      } else {
+        throw new AppError('Google sign-in is not configured on the server.', 503);
+      }
+    }
+
+    const email = decoded.email?.toLowerCase();
+    if (!email || decoded.email_verified === false) {
+      throw new AppError('Google account email is not verified.', 401);
+    }
+    const name   = decoded.name || req.body.name || 'Google User';
+    const avatar = decoded.picture || req.body.avatar || null;
+
+    let user = await User.findOne({ email });
     let isNewUser = false;
 
     if (!user) {
       const randomPass = `Google_${crypto.randomBytes(12).toString('hex')}Aa1!`;
       user = await User.create({
-        name: name || 'Google User',
-        email: email.toLowerCase(),
+        name,
+        email,
         password: randomPass,
-        avatar: avatar || null,
+        avatar,
         provider: 'google',
         user_type: user_type || 'donor',
         isVerified: true,

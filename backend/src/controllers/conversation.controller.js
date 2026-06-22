@@ -9,6 +9,12 @@ const User = require('../models/User.model');
 const { sendSuccess } = require('../utils/apiResponse');
 const { AppError } = require('../middleware/error.middleware');
 
+// Helper: is the given user a participant in the conversation?
+function isParticipant(conv, userId) {
+  const id = userId.toString();
+  return conv.requester_id.toString() === id || conv.receiver_id.toString() === id;
+}
+
 // Helper to check if blocked
 async function isBlocked(user1, user2) {
   const block = await Block.findOne({
@@ -235,6 +241,8 @@ async function sendMessage(req, res, next) {
     const conv = await Conversation.findById(id);
     if (!conv) throw new AppError('Conversation not found.', 404);
 
+    if (!isParticipant(conv, req.user._id)) throw new AppError('Unauthorized.', 403);
+
     if (conv.status !== 'active') {
       throw new AppError('Cannot send messages to inactive conversation.', 403);
     }
@@ -265,6 +273,8 @@ async function confirmAgreement(req, res, next) {
     const conv = await Conversation.findById(id);
     if (!conv) throw new AppError('Conversation not found.', 404);
 
+    if (!isParticipant(conv, req.user._id)) throw new AppError('Unauthorized.', 403);
+
     const userId = req.user._id.toString();
     if (!conv.agreement_confirmed_by.includes(userId)) {
       conv.agreement_confirmed_by.push(userId);
@@ -290,6 +300,8 @@ async function confirmDelivery(req, res, next) {
     const { id } = req.params;
     const conv = await Conversation.findById(id);
     if (!conv) throw new AppError('Conversation not found.', 404);
+
+    if (!isParticipant(conv, req.user._id)) throw new AppError('Unauthorized.', 403);
 
     if (!conv.agreed_at) {
       throw new AppError('Agreement must be confirmed first.', 400);

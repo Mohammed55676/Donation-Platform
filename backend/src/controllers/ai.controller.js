@@ -4,7 +4,7 @@ const VolunteerOpportunity = require('../models/VolunteerOpportunity.model');
 
 async function getLiveStatsPrompt() {
   try {
-    const activeCampaigns = await Campaign.find({ isActive: true }).limit(5);
+    const activeCampaigns = await Campaign.find({ status: 'active' }).limit(5);
     const activeVolunteers = await VolunteerOpportunity.find({ isActive: true }).limit(5);
     const availableDonationsCount = await Donation.countDocuments({ status: 'متاح' });
 

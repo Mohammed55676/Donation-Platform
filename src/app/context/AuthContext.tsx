@@ -118,12 +118,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await signInWithPopup(auth, googleProvider);
       const gUser = result.user;
 
-      const email = gUser.email || '';
       const name = gUser.displayName || 'Google User';
+      // Send the verified Firebase ID token; the server derives the identity
+      // from it rather than trusting a client-supplied email.
+      const idToken = await gUser.getIdToken();
 
       try {
         const res = await api.post('/auth/google', {
-          email,
+          idToken,
           name,
           avatar: gUser.photoURL,
         });

@@ -85,10 +85,14 @@ async function updateDonation(req, res, next) {
     const isAdmin = req.user.role === 'admin';
     if (!isOwner && !isAdmin) throw new AppError('Forbidden.', 403);
 
+    // Allowlist editable fields — prevents mass assignment of donor/claimedBy/etc.
+    const ALLOWED = ['title', 'description', 'category', 'condition', 'location', 'urgency', 'image'];
+    for (const key of ALLOWED) {
+      if (req.body[key] !== undefined) donation[key] = req.body[key];
+    }
     // Only admin can change status
-    if (!isAdmin) delete req.body.status;
+    if (isAdmin && req.body.status !== undefined) donation.status = req.body.status;
 
-    Object.assign(donation, req.body);
     await donation.save();
 
     return sendSuccess(res, donation, 'Donation updated.');
