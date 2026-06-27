@@ -1,212 +1,355 @@
-# Donation Platform Documentation (منصة الخير) - Developer Guide
+# Donation Platform (منصة الخير) — Full Project Documentation & Developer Guide
 
-Welcome to the **Donation Platform** codebase! If you are a beginner developer (or just new to this project), this file is written specifically for you. It explains what this project is, how it's built under the hood, and how you can comfortably navigate, edit, and expand it.
-
----
-
-## 1. What the Project Does
-Imagine a digital bulletin board where people who want to give away items (clothing, food, furniture) can connect directly with charities, volunteers, and individuals in need. 
-
-The Donation Platform is an Arabic-first web application that digitizes the entire charitable cycle:
-* **Donors** can list items they want to give away.
-* **Charities** can request those items or post their own requests for help in a community feed.
-* **Volunteers** can find upcoming events (like packing food boxes) and register to help.
-
-**To a developer:** It is a front-end React application utilizing simulated client-side state (React Context/Local Storage) to mock a full-stack experience (user auth, data fetching, database updates).
+Welcome to the official, comprehensive documentation for the **Donation Platform (منصة الخير)**. Whether you are a new frontend developer joining the team, a backend engineer managing APIs, or an architect evaluating the system, this document serves as the single source of truth for understanding, running, maintaining, and expanding the platform.
 
 ---
 
-## 2. Why it Exists
-Charitable giving in many regions still relies on word-of-mouth or fragmented social media groups. This project exists to provide a **centralized, modern, and dedicated digital platform**. 
-
-From a technical standpoint, it exists to demonstrate a scalable frontend architecture. It shows how modern tools (Vite, Tailwind, React Router v7, and shadcn/ui) can be combined to build applications that look premium and function flawlessly across all devices.
-
----
-
-## 3. All Pages and Their Purpose
-Pages are top-level React components located in the `src/app/pages/` directory. They represent the "screens" the user sees.
-
-* **Home (`/`)**: The landing page. It introduces the platform and provides quick call-to-actions (CTAs).
-* **Donations (`/donations`)**: The marketplace. Users come here to scroll through cards representing donated items. It includes dynamic category filters.
-* **Donation Details (`/donations/:id`)**: Shows the full details of a specific item. The `:id` is a URL parameter used to fetch that specific item from the state.
-* **Add Donation (`/add-donation`)**: A comprehensive form for listing new donations (handles image uploads, descriptions, categories).
-* **Volunteer (`/volunteer`)**: Lists active volunteering opportunities.
-* **Community Feed (`/community`)**: A social media-like feed where users post text-based requests or updates.
-* **Create Post (`/community/create`)**: The form to submit a new feed post.
-* **Post Details (`/community/:postId`)**: A focused view of one post and its comment section.
-* **Auth Pages (`/login`, `/signup`, `/forgot-password`)**: Simple, isolated forms that manage user onboarding. They don't have the main navbar or footer.
-* **Dashboard (`/dashboard`)**: A private tabbed control center for a standard user to view their active donations, pending requests, and personal settings.
-* **Admin Dashboard (`/dashboard/admin`)**: A specialized control center where administrators can view platform analytics, approve pending donations, and manage users.
+## Table of Contents
+1. [Executive Summary & System Overview](#1-executive-summary--system-overview)
+2. [System Architecture & Tech Stack](#2-system-architecture--tech-stack)
+3. [User Roles, Permissions & Privacy Matrix](#3-user-roles-permissions--privacy-matrix)
+4. [Core Features & Workflows](#4-core-features--workflows)
+5. [Database Schema & Data Models](#5-database-schema--data-models)
+6. [Frontend Codebase Structure & Navigation](#6-frontend-codebase-structure--navigation)
+7. [Backend API Reference & Endpoints](#7-backend-api-reference--endpoints)
+8. [Setup, Installation & Environment Variables](#8-setup-installation--environment-variables)
+9. [Development Commands & Scripts](#9-development-commands--scripts)
+10. [Technical Gotchas & Best Practices](#10-technical-gotchas--best-practices)
 
 ---
 
-## 4. All Components and What Each One Does
-Components are the reusable building blocks of pages. They are separated into different folders based on their purpose:
+## 1. Executive Summary & System Overview
 
-### A. The Core UI Components (`src/app/components/ui/`)
-This project uses **shadcn/ui**, meaning the base UI elements (Buttons, Inputs, Cards, Dialogs) aren't imported from an npm library (like Material UI). Instead, their source code lives directly in your project.
-* **Why?** It gives you 100% control over the styling.
-* **Example Use**: Instead of building `<button class="...">` from scratch, you import it like this:
-  ```tsx
-  import { Button } from '../components/ui/button';
-  return <Button variant="destructive">Delete Item</Button>
-  ```
+### Vision & Mission
+The **Donation Platform (منصة الخير)** is an Arabic-first, dual-language full-stack web application designed to bridge the gap between generous donors and individuals or organizations in genuine need. It digitizes the entire charitable cycle by bringing item donations, monetary fundraising campaigns, volunteer opportunities, and community aid requests under one unified, secure, and transparent digital ecosystem.
 
-### B. Structural Layout Components
-* **`Navbar.tsx`**: Contains the logo, navigation links, translation button, dark mode toggle, and the user profile dropdown. It's fully responsive (turns into a hamburger menu on mobile).
-* **`Footer.tsx`**: The bottom section of the site containing links and copyright info.
-* **`Layout.tsx`**: A wrapper component. When you visit a page, this component dictates "Put the Navbar at the top, put the Page Content in the middle, and put the Footer at the bottom."
+### The Problem
+In many communities, charitable giving faces critical hurdles:
+- **Trust Deficit:** Donors struggle to verify if organizations or individuals soliciting aid are legitimate.
+- **Privacy Risks:** Direct public communication often exposes vulnerable individuals or donors to unwanted solicitations and harassment.
+- **Fragmented Operations:** Charities manage volunteer schedules, physical donation intakes, and monetary fundraising across disconnected spreadsheets and social media groups.
 
-### C. Feature Components
-These are complex pieces of UI extracted so pages don't become overwhelmingly large:
-* **`ChatDialog.tsx`**: A popup modal that simulates a messaging interface between users.
-* **`MapView.tsx`**: A map component (using Leaflet) to show the geographical location of a donation.
-* **`NotificationDropdown.tsx`**: The bell icon in the navbar that shows recent alerts to the user.
-* **`ProtectedRoute.tsx`**: An invisible component wrapped around private pages. If a user isn't logged in, it intercepts their request and forces them to `/login`.
+### The Solution
+The platform resolves these bottlenecks by acting as a privacy-first, verified intermediary:
+- **Strict Verification Lifecycle:** Charities must undergo mandatory admin verification before their profiles and campaigns become publicly visible.
+- **Privacy-Restricted Messaging:** Donors cannot directly message unverified individuals or other donors. Communication is strictly governed by role-based access control (RBAC).
+- **All-in-One Hub:** Donors can give physical items (clothing, furniture, food), contribute to monetary campaigns, or volunteer their time from a single dashboard.
 
 ---
 
-## 5. Routing Structure
-The project uses the modern object-based router from `react-router` located in `src/app/routes.tsx`.
+## 2. System Architecture & Tech Stack
 
-Instead of writing `<Route path="/foo".../>`, the app defines an array of route objects:
-```tsx
-export const router = createBrowserRouter([
-  {
-    // The main public layout wrapper
-    path: '/',
-    Component: Layout,
-    children: [
-      { index: true, Component: Home }, // Loading the home page
-      { path: 'donations', Component: Donations },
-      // Protected community route
-      { 
-        path: 'community', 
-        element: <ProtectedRoute><Feed /></ProtectedRoute> 
-      },
-    ],
+The application follows a modern **MERN-like architecture** (MongoDB, Express.js, React 19, Node.js), decoupled into two distinct packages: a React single-page application (SPA) and an Express REST API backend with real-time WebSocket capabilities.
+
+```mermaid
+graph TD
+    subgraph Frontend [Frontend Client - React 19 + Vite]
+        UI[Pages & shadcn/ui Components]
+        Context[Auth / Language / Contexts]
+        Axios[Axios HTTP Client + JWT Interceptor]
+        SocketClient[Socket.IO Client]
+    end
+
+    subgraph Backend [Backend Server - Node.js + Express]
+        API[REST API Routes]
+        AuthMW[JWT & Role Middleware]
+        SocketServer[Socket.IO Chat Server]
+        Controller[Controllers & Business Logic]
+    end
+
+    subgraph Database & Services
+        Mongo[(MongoDB Database)]
+        Firebase[Firebase OAuth Google]
+    end
+
+    UI --> Context
+    Context --> Axios
+    Context --> SocketClient
+    Axios -- "HTTP / API Requests (Bearer Token)" --> API
+    SocketClient -- "Bi-directional Real-Time Chat" --> SocketServer
+    API --> AuthMW --> Controller
+    Controller --> Mongo
+    SocketServer --> Mongo
+    UI -- "Google Popup Auth" --> Firebase
+```
+
+### Core Technologies
+| Layer | Technology | Version / Details | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Frontend Framework** | React + Vite | React 19, Vite 5+ | Ultra-fast client rendering and modular component design |
+| **Styling & UI** | Tailwind CSS v4 | `@tailwindcss/vite` plugin | Zero-config utility-first styling with RTL support |
+| **UI Primitives** | shadcn/ui + Radix + MUI 7 | Custom accessible components | High-control, customizable UI building blocks |
+| **Routing** | React Router v7 | Object-based routing | Dynamic page layouts, protected routes, URL state |
+| **Backend Framework** | Node.js + Express | Express 4.x | RESTful API server handling business logic |
+| **Database & ODM** | MongoDB + Mongoose | Mongoose ODM | Schema validation, relational references, indexing |
+| **Real-Time Communication** | Socket.IO | v4.x | Instant messaging, chat room management, status alerts |
+| **Authentication** | JWT + Firebase Auth | Custom JWT + Google OAuth | Dual authentication flow supporting secure tokens & OAuth |
+
+---
+
+## 3. User Roles, Permissions & Privacy Matrix
+
+The platform employs a flexible **Unified Role Architecture** combining `role` (system access level) and `user_type` (platform persona).
+
+### Role Definitions
+1. **Donor (`role: 'user'`, `user_type: 'donor'`):**
+   - Can browse campaigns, donate items, volunteer, and request community help.
+   - Can initiate messaging **only** with verified charities or regarding specific item donation offers.
+2. **Charity (`role: 'user'`, `user_type: 'charity'`):**
+   - Must submit licensing documentation upon registration (`status: 'pending'`).
+   - Once verified (`status: 'verified'`), can create monetary campaigns, post volunteer opportunities, request community donations, and respond to donor chats.
+3. **Admin (`role: 'admin'`):**
+   - Full oversight over the platform via the secure Admin Dashboard.
+   - Responsible for approving/rejecting charity registrations, managing user bans, monitoring platform analytics, and resolving submitted content reports.
+
+### Privacy & Access Control Matrix
+| Action / Feature | Donor | Unverified Charity | Verified Charity | Admin |
+| :--- | :---: | :---: | :---: | :---: |
+| Browse public campaigns & donations | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| Donate physical items | ✅ Yes | ❌ No | ❌ No | ✅ Yes |
+| Create monetary campaigns | ❌ No | ❌ No | ✅ Yes | ✅ Yes |
+| Post volunteer roles | ❌ No | ❌ No | ✅ Yes | ✅ Yes |
+| Direct chat with another Donor | ❌ **No (Privacy)** | ❌ No | ❌ No | ✅ Yes |
+| Direct chat with Verified Charity | ✅ Yes | ❌ No | ✅ Yes | ✅ Yes |
+| Access Admin Dashboard | ❌ No | ❌ No | ❌ No | ✅ Yes |
+
+> [!IMPORTANT]
+> **Privacy Safeguard:** Phone numbers and email addresses are stripped or hidden by default in public views and chats unless explicitly shared by the user inside a secure conversation room.
+
+---
+
+## 4. Core Features & Workflows
+
+### 1. Dual Authentication & Security Flow
+Users can authenticate seamlessly via two pathways:
+- **Email/Password:** Standard signup with OTP (One-Time Password) email verification and JWT session generation.
+- **Google OAuth:** One-click Google Sign-in handled via Firebase SDK, which synchronizes with the backend to issue a local JWT.
+- **Session Persistence:** Tokens are stored in `localStorage` under the key `token`. An Axios interceptor automatically attaches `Authorization: Bearer <token>` to all outgoing HTTP requests. If a `401 Unauthorized` response occurs (excluding `/auth/me`), the token is cleared and the user is redirected to `/login`.
+
+### 2. Charity Verification Lifecycle
+```mermaid
+stateDiagram-v2
+    [*] --> Registration: Charity signs up & uploads license
+    Registration --> Pending: Status set to 'pending'
+    Pending --> UnderReview: Admin inspects documents in Dashboard
+    UnderReview --> Verified: Admin approves (Publicly visible)
+    UnderReview --> Rejected: Admin rejects (Reason provided)
+    Verified --> [*]
+```
+
+### 3. Item Donations Marketplace
+- Donors post physical items (clothes, furniture, food, electronics) with photos, descriptions, condition tags (*New, Like New, Gently Used*), and location maps (Leaflet).
+- Users filter items by category and urgency. Donors can manage their active listings directly from their user dashboard.
+
+### 4. Monetary Fundraising Campaigns
+- Verified charities launch targeted campaigns featuring fundraising goals, progress bars, deadline countdowns, and detailed case descriptions.
+- Includes simulated checkout flows for instant contribution tracking.
+
+### 5. Real-Time Chat & Messaging System
+- Built on **Socket.IO** with manual connection handling (`autoConnect: false`) triggered upon authentication.
+- Chat rooms are dynamically created when a donor contacts a charity regarding an item or campaign.
+- Supports real-time typing indicators, read receipts, and blocking mechanisms.
+
+---
+
+## 5. Database Schema & Data Models
+
+The backend utilizes **Mongoose ODM** to manage data relationships in MongoDB. Below are the primary models and their essential fields:
+
+### `User`
+```javascript
+{
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String }, // Optional if using Google Auth
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  user_type: { type: String, enum: ['donor', 'charity'], default: 'donor' },
+  status: { type: String, enum: ['pending', 'verified', 'rejected', 'banned'], default: 'verified' },
+  wishlist: [{ type: Mongoose.Schema.Types.ObjectId, ref: 'Donation' }],
+  charityDetails: {
+    licenseNumber: String,
+    description: String,
+    documentUrl: String
   }
-]);
+}
 ```
-**How to think about it:** The router reads the URL bar. If it sees `/donations`, it goes into the layout, and replaces the middle "children" area with the `Donations` page component.
 
----
+### `Donation` (Physical Items)
+```javascript
+{
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  category: { type: String, enum: ['clothes', 'food', 'furniture', 'electronics', 'books', 'other'] },
+  condition: { type: String, enum: ['new', 'like_new', 'good', 'fair'] },
+  images: [{ type: String }],
+  donor: { type: Mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  status: { type: String, enum: ['available', 'reserved', 'completed'], default: 'available' },
+  location: { address: String, lat: Number, lng: Number }
+}
+```
 
-## 6. Authentication Flow
-Authentication determines "Who is the user?" The logic lives in `src/app/context/AuthContext.tsx`.
+### `Campaign` (Monetary Fundraising)
+```javascript
+{
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  targetAmount: { type: Number, required: true },
+  currentAmount: { type: Number, default: 0 },
+  charity: { type: Mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  deadline: { type: Date },
+  status: { type: String, enum: ['active', 'completed', 'cancelled'], default: 'active' }
+}
+```
 
-1. **The Context**: Think ofContext as a global variable available to any component.
-2. **Logging In**: When a user fills out `/login`, the component calls the `login(email, password)` function from the AuthContext.
-3. **Session Simulation**: The AuthContext validates the credentials against some mock data, creates a User object, and saves it in the browser's `localStorage` (so the user stays logged in if they refresh the page).
-4. **Using Auth**: Any component can grab the user like this:
-   ```tsx
-   import { useAuth } from '../context/AuthContext';
+### `Conversation` & `Message`
+```javascript
+// Conversation
+{
+  participants: [{ type: Mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  relatedItem: { type: Mongoose.Schema.Types.ObjectId, refPath: 'itemModel' },
+  itemModel: { type: String, enum: ['Donation', 'Campaign', 'CommunityRequest'] },
+  lastMessage: { type: Mongoose.Schema.Types.ObjectId, ref: 'Message' }
+}
 
-   function WelcomeCard() {
-     const { user, isAuthenticated } = useAuth();
-     
-     if (!isAuthenticated) return <p>Please log in.</p>;
-     return <p>Welcome back, {user.name}!</p>
-   }
-   ```
-
----
-
-## 7. Dashboard Logic
-The Dashboard (`/dashboard`) is a complex, data-heavy page. Here is how it keeps everything organized:
-
-* **Tab Navigation**: It uses a `<Tabs>` component (from shadcn/ui) to prevent the user from scrolling endlessly. Clicking "My Donations", "My Requests", or "Settings" instantly flips the displayed content without changing the URL.
-* **Data Hydration**: When the Dashboard mounts, it pulls data from the global Contexts (`useDonations()`, `useCommunity()`) and filters them down to items owned by the currently logged-in user.
-* **Example**:
-  ```tsx
-  const { donations } = useDonations();
-  const { user } = useAuth();
-  // We only want to show the donations THIS user created
-  const myDonations = donations.filter(d => d.donor.name === user.name);
-  ```
-
----
-
-## 8. User Role Logic
-Unlike traditional apps that separate users into rigid roles immediately during signup, this platform uses a dynamic "Unified Role" approach.
-
-* A standard account (`role: 'user'`) can both donate items and request items.
-* An administrator account (`role: 'admin'`) is used for platform modification.
-* To lock a page to admins only, the `ProtectedRoute` component accepts a role prop:
-  ```tsx
-  <ProtectedRoute allowedRole="admin">
-    <AdminDashboard />
-  </ProtectedRoute>
-  ```
-  If regular users access this, the app detects their role mismatch and redirects them back to `/`.
-
----
-
-## 9. Styling Decisions
-The platform relies entirely on **Tailwind CSS**. If you've only used traditional CSS (`style.css`), this will look different. You do not write CSS files; instead, you apply utility classes directly to the HTML.
-
-* Regular CSS:
-  ```css
-  .my-button { display: flex; align-items: center; padding: 1rem; background: blue; border-radius: 4px; }
-  ```
-* Tailwind CSS:
-  ```tsx
-  <button className="flex items-center p-4 bg-blue-500 rounded-md">
-  ```
-This makes development incredibly fast and prevents "CSS bloat" (where your CSS files grow forever because developers are afraid to delete old classes).
-
----
-
-## 10. How Arabic RTL is Implemented
-Building RTL (Right-to-Left) applications involves two major considerations: the HTML direction and the CSS spacing.
-
-1. **HTML & Context**: We use a custom `LanguageContext.tsx`. When a user toggles the language to Arabic, it executes:
-   ```javascript
-   document.documentElement.dir = 'rtl';
-   document.documentElement.lang = 'ar';
-   ```
-2. **Logical CSS Properties**: With Tailwind, we do not use "Left" or "Right" modifiers, because "Right" in English is "Left" in Arabic. Instead, we use `start` and `end`.
-   * **Do not use**: `ml-4` (Margin Left). In Arabic, the margin would stay on the left side, pushing the text into the wrong space.
-   * **Use this**: `ms-4` (Margin Start). In English, 'start' is the left side. In Arabic, the browser knows 'start' is the right side, so it automatically flips the margin!
-
----
-
-## 11. How Responsiveness is Handled
-The app is entirely "Mobile-First". This means the default Tailwind classes you write apply to cell phones. To make things change on a Desktop, you use responsive prefixes like `md:` (medium screen/tablet) or `lg:` (large screen/desktop).
-
-**Example**: A grid of donations that is a single column on mobile, but grows to 3 columns on a laptop.
-```tsx
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-  {donations.map(donation => <Card />)}
-</div>
+// Message
+{
+  conversationId: { type: Mongoose.Schema.Types.ObjectId, ref: 'Conversation' },
+  sender: { type: Mongoose.Schema.Types.ObjectId, ref: 'User' },
+  text: { type: String, required: true },
+  readBy: [{ type: Mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  createdAt: { type: Date, default: Date.now }
+}
 ```
 
 ---
 
-## 12. How to Edit and Maintain the Project Later
-If you want to add a brand new page (for example, an "About Us" page), here are the exact steps you follow:
+## 6. Frontend Codebase Structure & Navigation
 
-1. **Create the File**: Go to `src/app/pages/` and create `About.tsx`.
-2. **Build the Component**: 
-   ```tsx
-   export function About() {
-     return <div className="container mx-auto py-10"><h1>About Us</h1></div>
-   }
-   ```
-3. **Register the Route**: Open `src/app/routes.tsx`. Inside the `children` of the Main Layout, add:  
-   `{ path: 'about', Component: About },`
-4. **Add to Navbar**: Open `src/app/components/Navbar.tsx`. Find the `navItems` array and append your new page:
-   ```tsx
-   { name: t('nav.about') || 'من نحن', path: '/about', icon: Info },
-   ```
-5. **Run the App**: Open your terminal and run `npm run dev`. Navigate to `http://localhost:5173/about` to see your changes in real time.
+The frontend is structured cleanly within `/src` following industry-standard React feature modularization:
+
+```text
+src/
+├── main.tsx                # App bootstrap & global provider wrappers
+├── App.tsx                 # Router initialization
+├── app/
+│   ├── routes.tsx          # Object-based route definitions & layout wrapping
+│   ├── pages/              # Top-level view components (Home, Donations, Dashboard, etc.)
+│   ├── components/         # Reusable structural and feature components
+│   │   ├── ui/             # shadcn-style raw primitive components (Button, Input, Dialog)
+│   │   ├── Navbar.tsx      # Responsive header with RTL toggle & user menu
+│   │   ├── Footer.tsx      # Platform links and copyright
+│   │   ├── Layout.tsx      # Main wrapper encapsulating Navbar + Page Content + Footer
+│   │   └── ChatDialog.tsx  # Socket.IO real-time messaging modal
+│   ├── context/            # Global React Context providers
+│   │   ├── AuthContext.tsx # User session, login/logout, token management
+│   │   └── LanguageContext.tsx # RTL/LTR switching (Arabic/English)
+│   ├── lib/                # Third-party client initializers (Firebase, Socket.IO)
+│   ├── services/           # API helper modules communicating with backend
+│   ├── utils/              # Axios instance configured with JWT interceptors
+│   ├── hooks/              # Custom hooks (e.g., useCampaigns, useVolunteerOpportunities)
+│   └── i18n/               # Translation dictionaries (en.json, ar.json)
+```
+
+### RTL & Localization Implementation
+The application is built Arabic-first. When toggled via `LanguageContext`:
+```javascript
+document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+document.documentElement.lang = language;
+```
+> [!TIP]
+> **Tailwind RTL Rule:** Always use logical spacing utilities (`ms-4` for margin-start, `me-4` for margin-end, `ps-4` for padding-start) instead of physical direction utilities (`ml-4` or `mr-4`). This ensures layout mirroring happens automatically without writing duplicate CSS.
 
 ---
 
-## 13. Future Improvements (For the Next Developer)
-Right now, the app is a powerful front-end shell, but all data lives in the browser's temporary memory (`localStorage` and React Context). When moving to a production environment, the next developer should focus on:
+## 7. Backend API Reference & Endpoints
 
-1. **Database Migration**: Remove Context state logic and hook up a database like PostgreSQL or MongoDB. The `addDonation()` function should be converted into `fetch('/api/donations', { method: 'POST', body: ... })`. Next.js or Vite + Express are great choices here.
-2. **Real Authentication**: Replace the mock `AuthContext` with a robust service like Firebase, Supabase, or Auth0 to handle real passwords and email verifications securely.
-3. **Asset Hosting**: Currently, uploaded images are stored as Base64 data strings in the browser. You need to connect an S3 bucket or Cloudinary to host image files dynamically.
-4. **WebSockets**: The Community feed would greatly benefit from `Socket.io` or Pusher, allowing new posts and chat messages to appear instantly without requiring the user to refresh the page.
+The backend exposes a RESTful API anchored at `http://localhost:5000/api`. Below is a summary of the core modules:
+
+| Module | Method | Endpoint | Description | Protected |
+| :--- | :---: | :--- | :--- | :---: |
+| **Auth** | `POST` | `/api/auth/register` | Register new user or charity account | ❌ No |
+| | `POST` | `/api/auth/login` | Authenticate with email/password & return JWT | ❌ No |
+| | `POST` | `/api/auth/google` | Verify Google OAuth token & login/register | ❌ No |
+| | `GET` | `/api/auth/me` | Fetch currently logged-in user profile | ✅ Yes |
+| **Donations** | `GET` | `/api/donations` | List all available physical donations | ❌ No |
+| | `POST` | `/api/donations` | Create a new item donation listing | ✅ Yes |
+| | `GET` | `/api/donations/:id` | Get detailed view of a specific item | ❌ No |
+| **Campaigns** | `GET` | `/api/campaigns` | List active fundraising campaigns | ❌ No |
+| | `POST` | `/api/campaigns` | Create campaign (Verified Charity only) | ✅ Yes (Charity) |
+| **Chat** | `GET` | `/api/conversations` | Get all active chat threads for current user | ✅ Yes |
+| | `GET` | `/api/messages/:convId`| Fetch message history for a conversation | ✅ Yes |
+| **Admin** | `GET` | `/api/admin/charities/pending` | Get list of charities awaiting verification | ✅ Yes (Admin) |
+| | `PUT` | `/api/admin/charities/:id/status` | Approve or reject a charity registration | ✅ Yes (Admin) |
+
+---
+
+## 8. Setup, Installation & Environment Variables
+
+### Prerequisites
+- **Node.js**: v18.0+ or v20.0+ recommended
+- **MongoDB**: Local instance (`mongodb://localhost:27017`) or MongoDB Atlas cloud cluster
+
+### Step 1: Clone & Install Dependencies
+Since the project consists of independent frontend and backend packages, install dependencies in **both** directories:
+
+```bash
+# 1. Install frontend dependencies (root)
+npm install
+
+# 2. Install backend dependencies
+cd backend
+npm install
+cd ..
+```
+
+### Step 2: Configure Environment Variables
+Create `.env` in the root directory (Frontend):
+```env
+VITE_API_URL=http://localhost:5000/api
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+VITE_FIREBASE_PROJECT_ID=your_firebase_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_firebase_sender_id
+VITE_FIREBASE_APP_ID=your_firebase_app_id
+```
+
+Create `.env` inside the `/backend` directory (Backend):
+```env
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/donation_platform
+JWT_SECRET=super_secret_jwt_key_change_in_production
+CLIENT_ORIGIN=http://localhost:5173
+```
+
+---
+
+## 9. Development Commands & Scripts
+
+Use the table below to operate the application locally:
+
+| Location | Command | Action / Purpose |
+| :--- | :--- | :--- |
+| **Root** | `npm run dev` | Launches the Vite frontend development server on **port 5173** |
+| **Root** | `npm run build` | Compiles and optimizes frontend assets into `/dist` for production |
+| **`/backend`** | `npm run dev` | Launches the Express backend via Nodemon on **port 5000** |
+| **`/backend`** | `npm run seed` | Populates MongoDB with sample donors, charities, donations, and campaigns |
+| **`/backend`** | `npm start` | Launches the backend server in production mode via `node src/server.js` |
+
+### Quick Start Workflow
+1. Open Terminal 1: Navigate to `/backend`, run `npm run seed` (first time only), then run `npm run dev`.
+2. Open Terminal 2: In the root directory, run `npm run dev`.
+3. Open browser at `http://localhost:5173`.
+
+---
+
+## 10. Technical Gotchas & Best Practices
+
+> [!WARNING]
+> **Socket.IO AutoConnect:** The Socket.IO client in `src/app/lib/socket.ts` is explicitly configured with `autoConnect: false`. Do not change this to true. The connection must be triggered manually inside `AuthContext` only after a valid JWT token is verified, ensuring unauthenticated sockets do not flood the server.
+
+> [!NOTE]
+> **Tailwind CSS v4 Configuration:** The project utilizes the modern Tailwind CSS v4 setup via `@tailwindcss/vite`. Because of this, `postcss.config.mjs` is intentionally left empty, and there is no `tailwind.config.js` file. Design tokens are defined directly via CSS variables in `src/index.css` as documented in `DESIGN.md`.
+
+> [!TIP]
+> **Axios Interceptor Safeguard:** When testing auth race conditions on page load, remember that the Axios interceptor ignores clearing the token on `401 Unauthorized` errors specifically for the `/auth/me` endpoint. This prevents premature session terminations when verifying expired tokens on startup.
