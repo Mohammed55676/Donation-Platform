@@ -81,7 +81,8 @@ export function Volunteer() {
       addNotification({ 
         type: 'success', 
         title: 'تم تسجيلك بنجاح', 
-        message: 'لقد تم تسجيلك في فرصة التطوع بنجاح.' 
+        message: 'لقد تم تسجيلك في فرصة التطوع بنجاح.',
+        priority: 'medium',
       });
 
       setFormData({ name: '', email: '', phone: '', nationality: 'أردني', program: '', message: '' });
@@ -115,7 +116,7 @@ export function Volunteer() {
     setIsContactSending(true);
     try {
       await api.post('/contact', contactForm);
-      addNotification({ type: 'success', title: 'تم إرسال رسالتك', message: 'شكراً لتواصلك معنا! سنرد عليك قريباً.' });
+      addNotification({ type: 'success', title: 'تم إرسال رسالتك', message: 'شكراً لتواصلك معنا! سنرد عليك قريباً.', priority: 'medium' });
       toast.success('تم إرسال رسالتك بنجاح ❤️');
       setContactForm({ name: '', email: '', message: '' });
       setContactErrors({});
