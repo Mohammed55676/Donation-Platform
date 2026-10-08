@@ -1,0 +1,6 @@
+# Generated analysis artifacts are not application source.
+graphify-out/** linguist-generated=true
+# The project defense presentation is documentation.
+donation-platform-defense.html linguist-documentation=true
+# Third-party agent tooling is not application code.
+.claude/skills/** linguist-vendored=true
